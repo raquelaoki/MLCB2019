@@ -3,8 +3,12 @@ rm(list=ls())
 #References: https://github.com/mariodeng/FirebrowseR/blob/master/vignettes/FirebrowseR.Rmd
 #Install and load packages 
 if (!require("FirebrowseR")) devtools::install_github("mariodeng/FirebrowseR")
+if (!require("FirebrowseR")) install.packages("ggplot2")
+
+
 #require(XML)
 require(FirebrowseR)
+require(ggplot2)
 
 #Workdiretory 
 setwd("~/GitHub/project_spring2019")
@@ -59,10 +63,15 @@ mRNA.Exp = do.call(rbind, mRNA.Exp)
 dim(mRNA.Exp)
 
 
-library(ggplot2)
 p = ggplot(mRNA.Exp, aes(factor(gene), z.score))
 p +
   geom_boxplot(aes(fill = factor(sample_type))) +
   # we drop some outlier, so plot looks nicer, this also causes the warning
   scale_y_continuous(limits = c(-1, 5)) +
   scale_fill_discrete(name = "Tissue")
+
+
+
+#Data from cbioportal
+#http://www.cbioportal.org/rmatlab
+#
