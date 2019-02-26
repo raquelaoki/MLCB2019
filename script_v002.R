@@ -38,40 +38,66 @@ require("openxlsx")
 tcga_clini <- read.xlsx("Data\\liu_s1_tcga_clinicalinformation.xlsx", sheet=1) 
 tcga_tests <- read.xlsx("Data\\liu_s1_tcga_clinicalinformation.xlsx", sheet=5)[,-c(7,8,9)] 
 
+#To identify metastase new_tumor_event_type
+#There is several types, identify which ones I want to work with 
+#Fixing labels - check with someone else if this is ok 
 
+tcga_clini$new_tumor_event_type = as.character(tcga_clini$new_tumor_event_type)
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Distant Metastasis|[Not Available]']='Distant Metastasis'
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='[Not Available]|[Not Available]']='[Not Available]'
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Distant Metastasis|Distant Metastasis']='Distant Metastasis'
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Distant Metastasis|Distant Metastasis|Distant Metastasis']='Distant Metastasis'
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Distant Metastasis|Distant Metastasis|Distant Metastasis|Distant Metastasis']='Distant Metastasis'
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Distant Metastasis|Distant Metastasis|Distant Metastasis|Distant Metastasis|Distant Metastasis|Distant Metastasis']='Distant Metastasis'
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Distant Metastasis|Distant Metastasis|Distant Metastasis|Distant Metastasis|Distant Metastasis|Distant Metastasis|Distant Metastasis|Distant Metastasis|Distant Metastasis|Distant Metastasis']='Distant Metastasis'
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Distant Metastasis|Distant Metastasis|Distant Metastasis|Distant Metastasis|Locoregional Recurrence']='Distant Metastasis'
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Distant Metastasis|Distant Metastasis|Regional lymph node']='Distant Metastasis'
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Distant Metastasis|Locoregional Recurrence']='Distant Metastasis'
 
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Distant Metastasis|New Primary Tumor']='Distant Metastasis'
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Distant Metastasis|Regional lymph node']='Distant Metastasis'
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Locoregional Recurrence|Distant Metastasis']='Distant Metastasis'
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Locoregional Recurrence|Locoregional Recurrence|Locoregional Recurrence|Distant Metastasis|Distant Metastasis']='Distant Metastasis'
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Regional lymph node|Distant Metastasis']='Distant Metastasis'
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Regional lymph node|Distant Metastasis|Distant Metastasis']='Distant Metastasis'
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Regional lymph node|Distant Metastasis|Distant Metastasis|Distant Metastasis|Distant Metastasis|Locoregional Recurrence|Distant Metastasis']='Distant Metastasis'
+tcga_clini$new_tumor_event_type[tcga_clini$new_tumor_event_type=='Regional lymph node|Regional lymph node|Distant Metastasis|Regional lymph node|Distant Metastasis|Distant Metastasis']='Distant Metastasis'
+tcga_clini$new_tumor_event_type[is.na(tcga_clini$new_tumor_event_type)] = 'Not obs new'
 
-# 
-# if (!require("FirebrowseR")) devtools::install_github("mariodeng/FirebrowseR")
-# if (!require("ggplot2")) install.packages("ggplot2")
-# 
-# 
-# #require(XML)
-# require(FirebrowseR)
-# require(ggplot2)
-# 
-# 
+data.frame(table(tcga_clini$new_tumor_event_type))
+s1 = subset(tcga_clini, type == "BRCA")
+
+data.frame(table(s1$new_tumor_event_type))
+
+#
+#Firebroese seems not be good
+#Comparing with FirebrowseR dataset 
+if (!require("FirebrowseR")) devtools::install_github("mariodeng/FirebrowseR")
+require(FirebrowseR)
+
+ 
 # ##Reading Data
-# cohorts = Metadata.Cohorts(format = "csv") # Download all available cohorts
-# cancer.Type = cohorts[grep("breast", cohorts$description, ignore.case = T), 1]
+cohorts = Metadata.Cohorts(format = "csv") # Download all available cohorts
+cancer.Type = cohorts[grep("breast", cohorts$description, ignore.case = T), 1]
 # 
-# all.Received = F
-# page.Counter = 1
-# page.size = 150
-# brca.Pats = list()
-# while(all.Received == F){
-#   brca.Pats[[page.Counter]] = Samples.Clinical(format = "csv",
-#                                                cohort = cancer.Type,
-#                                                page_size = page.size,
-#                                                page = page.Counter)
-#   if(page.Counter > 1)
-#     colnames(brca.Pats[[page.Counter]]) = colnames(brca.Pats[[page.Counter-1]])
-#   if(nrow(brca.Pats[[page.Counter]]) < page.size){
-#     all.Received = T
-#   } else{
-#     page.Counter = page.Counter + 1
-#   }
-# }
-# brca.Pats = do.call(rbind, brca.Pats)
-# dim(brca.Pats)
-# bd1 = brca.Pats
+all.Received = F
+page.Counter = 1
+page.size = 150
+brca.Pats = list()
+while(all.Received == F){
+  brca.Pats[[page.Counter]] = Samples.Clinical(format = "csv",
+                                               cohort = cancer.Type,
+                                               page_size = page.size,
+                                               page = page.Counter)
+  if(page.Counter > 1)
+    colnames(brca.Pats[[page.Counter]]) = colnames(brca.Pats[[page.Counter-1]])
+  if(nrow(brca.Pats[[page.Counter]]) < page.size){
+    all.Received = T
+  } else{
+    page.Counter = page.Counter + 1
+  }
+}
+f1= do.call(rbind, brca.Pats)
+head(f1)
+
+data.frame(table(f1$distant_metastasis_present_ind2))
