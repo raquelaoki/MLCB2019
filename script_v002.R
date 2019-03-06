@@ -85,7 +85,8 @@ page.Counter = 1
 page.size = 150
 brca.Pats = list()
 while(all.Received == F){
-  brca.Pats[[page.Counter]] = Samples.Clinical(format = "csv",
+  brca.Pats[[page.Counter]] = Samples.mRNASeq(format = 'csv', gene = 'BRCA',
+  #brca.Pats[[page.Counter]] = Samples.Clinical(format = "csv",
                                                cohort = cancer.Type,
                                                page_size = page.size,
                                                page = page.Counter)
@@ -101,3 +102,31 @@ f1= do.call(rbind, brca.Pats)
 head(f1)
 
 data.frame(table(f1$distant_metastasis_present_ind2))
+
+
+
+mRNA.Exp = Samples.mRNASeq(format = "csv",gene = c("PTEN", "RUNX1")) #,
+                           tcga_participant_barcode = c("TCGA-GF-A4EO", "TCGA-AC-A2FG"))
+
+
+mRNA.Exp = Samples.mRNASeq(format = "csv",tcga_participant_barcode = c("TCGA-GF-A4EO", "TCGA-AC-A2FG"))
+
+
+
+#link with links
+#http://gdac.broadinstitute.org/
+#click cohort + data 
+#http://gdac.broadinstitute.org/runs/stddata__2016_01_28/data/SKCM/20160128/
+  
+  
+  
+  
+  
+#Tests 
+#bd1 = read.table('Data/SKCM.clin.merged.picked.txt', sep = '\t')  
+#head(t(bd1))
+
+bd2 = read.csv('Data/SKCM.merged_only_clinical_clin_format.txt', sep = '\t', header=T) #clinical info
+bd4 = read.csv('Data/SKCM.rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.data.txt',sep='\t') #normalized 
+
+#removing some columns 
