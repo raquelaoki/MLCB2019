@@ -130,3 +130,4 @@ bd2 = read.csv('Data/SKCM.merged_only_clinical_clin_format.txt', sep = '\t', hea
 bd4 = read.csv('Data/SKCM.rnaseqv2__illuminahiseq_rnaseqv2__unc_edu__Level_3__RSEM_genes_normalized__data.data.txt',sep='\t') #normalized 
 
 #removing some columns 
+clinical = as.character(bd2$V1)
