@@ -35,8 +35,8 @@ fname <- paste("nationwidechildrens.org_clinical_patient_",allTcgaClinAbrvs,".tx
 
 
 fname <- paste("Data\\clinical\\nationwidechildrens.org_clinical_patient_",allTcgaClinAbrvs,".txt" , sep='')
-cnames = c("bcr_patient_barcode","gender", 'race' , "ethnicity",  "vital_status", "tumor_status",'abr')  
-
+cnames = c("bcr_patient_barcode","gender", 'race' , "ethnicity",  "vital_status", "tumor_status",'new_tumor_event_dx_indicator','abr')  
+#metastases is new_tumor_event
 
 #check each cancer type for metastases, clinical_stage, dasys to birth and days to death
 
@@ -44,7 +44,9 @@ i = 1
 bd.aux = read.csv(fname[i], sep = "\t") 
 bd.aux = subset(bd.aux, gender== "MALE" | gender == 'FEMALE')
 bd.aux$abr = allTcgaClinAbrvs[i]
+cnames1 = c(cnames)
 bd.c = subset(bd.aux, select = cnames)
+
 
 for(i in 2:length(fname)){
   bd.aux = read.csv(fname[i], sep = "\t", header = T) 
@@ -56,10 +58,18 @@ for(i in 2:length(fname)){
                subset(bd.aux, select = cnames))
 }
 
-#i = i + 1
-#bd = read.csv(fname[i], sep = "\t") 
-#print(setdiff(cnames1,names(bd)))
-#names(bd) 
-head(bd.c)
+i = i + 1
+bd.aux = read.csv(fname[i], sep = "\t") 
+names(bd.aux) 
 
+
+for(i in 2:length(fname)){
+  bd.aux = read.csv(fname[i], sep = "\t", header = T) 
+  bd.aux = subset(bd.aux, gender== "MALE" | gender == 'FEMALE')
+  bd.aux$abr = allTcgaClinAbrvs[i]
+  #(paste(i, '-', length(intersect(names(bd.aux),cnames))))
+  print(setdiff(cnames1,names(bd.aux)))
+ # bd.c = rbind(bd.c, 
+  #             subset(bd.aux, select = cnames))
+}
 
