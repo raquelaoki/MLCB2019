@@ -18,9 +18,11 @@ diseaseAbbrvs <- c("ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD", "COADREAD", "D
 
 #eliminited some weid download datasets
 allTcgaClinAbrvs <- c("acc", "blca", "brca", "cesc", "chol", "coad", "dlbc", "esca",  
-                      "gbm", "hnsc", "kich", "kirc", "kirp", "laml", "lgg", "lihc", "luad", "lusc", 
+                      "gbm", "hnsc", "kich", "kirc", "kirp", "lgg", "lihc", "luad", "lusc", 
                       "meso", "ov", "paad", "pcpg", "prad", "read", "sarc", "skcm", "stad", "tgct", 
                       "thca", "thym", "ucec", "ucs", "uvm") 
+
+#no tumor status , "laml"
 
 
 fname <- paste("nationwidechildrens.org_clinical_patient_",allTcgaClinAbrvs,".txt" , sep='')
@@ -33,42 +35,31 @@ fname <- paste("nationwidechildrens.org_clinical_patient_",allTcgaClinAbrvs,".tx
 
 
 fname <- paste("Data\\clinical\\nationwidechildrens.org_clinical_patient_",allTcgaClinAbrvs,".txt" , sep='')
-cnames = c("bcr_patient_barcode",
-           "gender", 
-           "race" , 
-           "ethnicity", 
-           "tumor_status", 
-           "vital_status",  
-          # "metastatic_dx_confirmed_by" ,  
-          # "metastatic_dx_confirmed_by_other", 
-           "metastatic_tumor_site" , #metastasis_site
-           "clinical_stage" ,  
-           "days_to_birth" ,#birth_days_to
-           "days_to_death" ) #death_days_to
+cnames = c("bcr_patient_barcode","gender", 'race' , "ethnicity",  "vital_status", "tumor_status",'abr')  
 
 
-cnames1 = c("bcr_patient_barcode",
-           "gender", 
-           "race" , 
-           "ethnicity", 
-           "tumor_status", 
-           "vital_status",  
-           "metastasis_site" , 
-           "clinical_stage" ,  
-           "birth_days_to" ,
-           "death_days_to" ) 
+#check each cancer type for metastases, clinical_stage, dasys to birth and days to death
 
-print(paste("columns:",length(cnames)))
-for(i in 1:length(fname)){
-  bd = read.csv(fname[i], sep = "\t") 
-  print(paste(i, '-', length(intersect(names(bd),cnames))))
-  print(setdiff(cnames,names(bd)))
+i = 1
+bd.aux = read.csv(fname[i], sep = "\t") 
+bd.aux = subset(bd.aux, gender== "MALE" | gender == 'FEMALE')
+bd.aux$abr = allTcgaClinAbrvs[i]
+bd.c = subset(bd.aux, select = cnames)
+
+for(i in 2:length(fname)){
+  bd.aux = read.csv(fname[i], sep = "\t", header = T) 
+  bd.aux = subset(bd.aux, gender== "MALE" | gender == 'FEMALE')
+  bd.aux$abr = allTcgaClinAbrvs[i]
+  #(paste(i, '-', length(intersect(names(bd.aux),cnames))))
+  #print(setdiff(cnames,names(bd.aux)))
+  bd.c = rbind(bd.c, 
+               subset(bd.aux, select = cnames))
 }
 
-i = i + 1
-bd = read.csv(fname[i], sep = "\t") 
-print(setdiff(cnames1,names(bd)))
-names(bd) 
-
+#i = i + 1
+#bd = read.csv(fname[i], sep = "\t") 
+#print(setdiff(cnames1,names(bd)))
+#names(bd) 
+head(bd.c)
 
 
