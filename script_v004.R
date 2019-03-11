@@ -10,6 +10,7 @@ setwd("C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019")
 # check reference on email sent to Olga on March 2019
 # Almost no modifications in the download section of this code
 
+
 #theRootDir <- "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data"
 #diseaseAbbrvs <- c("ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",  "DLBC", "ESCA",
 #                   "GBM", "HNSC", "KICH", "KIRC", "KIRP", "LGG", "LIHC", "LUAD", "LUSC", 
@@ -69,6 +70,8 @@ head(bd.c)
 bd.d = subset(bd.c, new_tumor_event_dx_indicator == "YES" | new_tumor_event_dx_indicator == "NO")
 table(as.character(bd.d$abr), as.character(bd.d$new_tumor_event_dx_indicator))
 
+write.table(bd.d, "clinical.txt", row.names = F, sep=';')
+
 
 #-------RNA
 #__data.data
@@ -108,4 +111,8 @@ for(i in 2:length(fname2)){
   bd.e = rbind(bd.e,load_rna(fname2[1]))
 }
 
+write.table(bd.e, "Data\\rnaseq.txt", sep=';',row.names = F)
 #missing genes names
+
+
+bd.f = read.csv("Data\\rnaseq.txt",sep=';')
