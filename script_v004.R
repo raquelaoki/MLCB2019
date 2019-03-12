@@ -3,52 +3,42 @@ rm(list=ls())
 #AUTHOR: Raquel Aoki
 #DATE: 2019/03/07
 #-----#-----#-----#-----#-----#-----#-----#-----#-----#-----#-----#
-#Workdiretory 
-setwd("C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019")
+#------------------------- Work diretory 
+#setwd("C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019")
+setwd("~/GitHub/project_spring2019")
 
-#------------------------- Processing DATASET 
+#------------------------- References
 # check reference on email sent to Olga on March 2019
 # Almost no modifications in the download section of this code
+#paulgeeleher, firebrownse 
 
-
-#theRootDir <- "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data"
-#diseaseAbbrvs <- c("ACC", "BLCA", "BRCA", "CESC", "CHOL", "COAD",  "DLBC", "ESCA",
-#                   "GBM", "HNSC", "KICH", "KIRC", "KIRP", "LGG", "LIHC", "LUAD", "LUSC", 
-#                   "MESO", "OV", "PAAD", "PCPG", "PRAD", "READ", "SARC", "SKCM", "STAD", "TGCT", 
-#                   "THCA",  "THYM", "UCEC", "UCS", "UVM")
-
-#eliminited some weid download datasets
-#allTcgaClinAbrvs <- c("acc", "blca", "brca", "cesc", "chol", "coad", "dlbc", "esca",  
-#                      "gbm", "hnsc", "kich", "kirc", "kirp", "lgg", "lihc", "luad", "lusc", 
-#                      "meso", "ov", "paad", "pcpg", "prad", "read", "sarc", "skcm", "stad", "tgct", 
-#                      "thca", "thym", "ucec", "ucs", "uvm") 
-
+#------------------------- Processing DATASET 
+# Cancer types 
 diseaseAbbrvs <- c("ACC", "BLCA", "CHOL", "ESCA",  "HNSC","LGG", "LIHC", "LUSC", "MESO", "PAAD",  "PRAD",  "SARC", "SKCM",  "TGCT", "UCS")
-
 diseaseAbbrvs_lower <- c("acc", "chol", "blca", "esca", "hnsc", "lgg", "lihc", "lusc", "meso", "paad", "prad", "sarc", "skcm",  "tgct", "ucs")
-
-fname <- paste("nationwidechildrens.org_clinical_patient_",diseaseAbbrvs_lower,".txt" , sep='')
-
-
-#Selecting important features
-#There are 33 cancers, might be easier to do manually one by one
-#After standartize, than we can see which cancers make sense
-#than work with RnA 
+#there are more cancer types available, I filtered these because I think they are more balanced between metastase/not metastase 
 
 
+#Files names
 fname <- paste("Data\\clinical\\nationwidechildrens.org_clinical_patient_",diseaseAbbrvs_lower,".txt" , sep='')
+fname2 <- paste("Data\\rnaSeq\\gdac.broadinstitute.org_",diseaseAbbrvs, "\\" , diseaseAbbrvs,'.rnaseqv2.txt',sep='')
+#For the RNAseq I had to manually change a bit the folder and files names. It was very long and R weren't reading it.
+
+
+#------------ Clinical Information
+
+#Clinical information names 
 cnames = c("bcr_patient_barcode","gender", 'race' , "ethnicity",  "vital_status", "tumor_status",'new_tumor_event_dx_indicator','abr')  
 #metastases is new_tumor_event
-
 #check each cancer type for metastases, clinical_stage, dasys to birth and days to death
 
+#Rotine to read the files, select the important features, and bind in a unique dataset
 i = 1
 bd.aux = read.csv(fname[i], sep = "\t") 
 bd.aux = subset(bd.aux, gender== "MALE" | gender == 'FEMALE')
 bd.aux$abr = diseaseAbbrvs[i]
 cnames1 = c(cnames)
 bd.c = subset(bd.aux, select = cnames)
-
 
 for(i in 2:length(fname)){
   bd.aux = read.csv(fname[i], sep = "\t", header = T) 
@@ -60,24 +50,16 @@ for(i in 2:length(fname)){
                subset(bd.aux, select = cnames))
 }
 
-
+#clinical dataset 
 head(bd.c)
 
-
-
-#test
-
+#clinical dataset with the filter for metastase
 bd.d = subset(bd.c, new_tumor_event_dx_indicator == "YES" | new_tumor_event_dx_indicator == "NO")
 table(as.character(bd.d$abr), as.character(bd.d$new_tumor_event_dx_indicator))
 tab = data.frame(table(as.character(bd.d$abr)))
-#write.table(bd.d, "clinical.txt", row.names = F, sep=';')
 
 
-#-------RNA
-#__data.data
-fname2 <- paste("Data\\rnaSeq\\gdac.broadinstitute.org_",diseaseAbbrvs,
-                "\\" , diseaseAbbrvs,'.rnaseqv2.txt',sep='')
-
+#------------ RNA
 
 #creating function to extract the raw_count 
 load_rna <- function(fname2){
@@ -105,7 +87,7 @@ load_rna <- function(fname2){
   return (bd.aux)
 }
 
-
+#Rotine to extract all RNA counts from the cancer types selected 
 bd.e = load_rna(fname2[1])
 tab[tab$Var1==diseaseAbbrvs[1],]
 for(i in 2:length(fname2)){
@@ -116,8 +98,16 @@ for(i in 2:length(fname2)){
   dim(bd.e)
 }
 
+#------------------------- Savinf files
+
+#write.table(bd.d, "clinical.txt", row.names = F, sep=';')
 write.table(bd.e, "Data\\rnaseq.txt", sep=';',row.names = F)
-#missing genes names
+
+#------------------------- Extra filters 
+
+#keeping only the patients present in both datasets
+bd.rna = read.csv("Data\\rnaseq.txt",sep=';')
+bd.cli = read.csv("Data\\clinical.txt",sep=';')
 
 
-bd.f = read.csv("Data\\rnaseq.txt",sep=';')
+
