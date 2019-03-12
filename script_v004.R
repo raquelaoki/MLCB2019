@@ -69,8 +69,8 @@ head(bd.c)
 
 bd.d = subset(bd.c, new_tumor_event_dx_indicator == "YES" | new_tumor_event_dx_indicator == "NO")
 table(as.character(bd.d$abr), as.character(bd.d$new_tumor_event_dx_indicator))
-
-write.table(bd.d, "clinical.txt", row.names = F, sep=';')
+tab = data.frame(table(as.character(bd.d$abr)))
+#write.table(bd.d, "clinical.txt", row.names = F, sep=';')
 
 
 #-------RNA
@@ -107,8 +107,13 @@ load_rna <- function(fname2){
 
 
 bd.e = load_rna(fname2[1])
+tab[tab$Var1==diseaseAbbrvs[1],]
 for(i in 2:length(fname2)){
-  bd.e = rbind(bd.e,load_rna(fname2[1]))
+  print(diseaseAbbrvs[i])
+  dim(bd.e)
+  bd.e = rbind(bd.e,load_rna(fname2[i]))
+  tab[tab$Var1==diseaseAbbrvs[i],]
+  dim(bd.e)
 }
 
 write.table(bd.e, "Data\\rnaseq.txt", sep=';',row.names = F)
