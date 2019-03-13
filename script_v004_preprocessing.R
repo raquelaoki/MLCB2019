@@ -84,14 +84,12 @@ load_rna <- function(fname2){
     gene[i] = colname[[i]][1]
     gene_id[i] = colname[[i]][2]
   }
-  n = sum(gene=='?')
-  gene[gene=='?'] = paste('g',1:n,sep='')
+  gene[gene=='?'] = paste('g',gene_id[gene=='?'],sep='')
   
   bd.aux = data.frame(t(bd.aux[,-1]))
   names(bd.aux) = gene
-  #head(bd.aux[,c(1:10)])
   bd.aux = data.frame(patients, bd.aux)
-  genes_code = data.frame(gene,gene_id)
+  #genes_code = data.frame(gene,gene_id)
   return (bd.aux)
 }
 
@@ -101,10 +99,13 @@ bd.e  = load_rna(fname2[1])
 tab[tab$Var1==diseaseAbbrvs[1],]
 for(i in 2:length(fname2)){
   print(diseaseAbbrvs[i])
-  dim(bd.e)
-  bd.e = rbind(bd.e,load_rna(fname2[i]))
-  tab[tab$Var1==diseaseAbbrvs[i],]
-  dim(bd.e)
+  bd.aux = load_rna(fname2[i])
+  print(paste('columns: ', dim(bd.e)[2], "---", sum(names(bd.aux)==names(bd.e))))
+  if(sum(names(bd.aux)==names(bd.e))!=dim(bd.e)[2]){
+    print('Error!')
+  }
+  bd.e = rbind(bd.e,bd.aux)
+  
 }
 
 #------------------------- Savinf files
