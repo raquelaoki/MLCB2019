@@ -73,10 +73,11 @@ load_rna <- function(fname2){
       patients = c(patients,as.character(bd[1,i]))
     }
   }
+  #removing other columns
   bd.aux = data.frame(bd[,-remove.c])
-  #bd.aux = bd.aux[,]
-  #dim(bd.aux)
+  #removing first lines 
   bd.aux = bd.aux[-c(1,2),]
+  #organizing the columns names 
   colname = strsplit(as.character(bd.aux$V1), split = "|", fixed = T)
   gene = c()
   gene_id = c()
@@ -85,11 +86,10 @@ load_rna <- function(fname2){
     gene_id[i] = colname[[i]][2]
   }
   gene[gene=='?'] = paste('g',gene_id[gene=='?'],sep='')
-  
+  #transpose dataset
   bd.aux = data.frame(t(bd.aux[,-1]))
   names(bd.aux) = gene
   bd.aux = data.frame(patients, bd.aux)
-  #genes_code = data.frame(gene,gene_id)
   return (bd.aux)
 }
 
@@ -100,6 +100,7 @@ tab[tab$Var1==diseaseAbbrvs[1],]
 for(i in 2:length(fname2)){
   print(diseaseAbbrvs[i])
   bd.aux = load_rna(fname2[i])
+  #checking if the columns names are the same and if they are in the same order
   print(paste('columns: ', dim(bd.e)[2], "---", sum(names(bd.aux)==names(bd.e))))
   if(sum(names(bd.aux)==names(bd.e))!=dim(bd.e)[2]){
     print('Error!')
