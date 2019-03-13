@@ -75,20 +75,28 @@ load_rna <- function(fname2){
   }
   bd.aux = data.frame(bd[,-remove.c])
   #bd.aux = bd.aux[,]
-  dim(bd.aux)
+  #dim(bd.aux)
   bd.aux = bd.aux[-c(1,2),]
-  bd.aux$V1 = as.character(bd.aux$V1)
-  bd.aux$V1 = gsub("?|","g",bd.aux$V1, fixed = T)
-  colname = bd.aux$V1
+  colname = strsplit(as.character(bd.aux$V1), split = "|", fixed = T)
+  gene = c()
+  gene_id = c()
+  for(i in 1:length(colname)){
+    gene[i] = colname[[i]][1]
+    gene_id[i] = colname[[i]][2]
+  }
+  n = sum(gene=='?')
+  gene[gene=='?'] = paste('g',1:n,sep='')
+  
   bd.aux = data.frame(t(bd.aux[,-1]))
-  names(bd.aux) = colname
-  head(bd.aux[,c(1:10)])
+  names(bd.aux) = gene
+  #head(bd.aux[,c(1:10)])
   bd.aux = data.frame(patients, bd.aux)
+  genes_code = data.frame(gene,gene_id)
   return (bd.aux)
 }
 
 #Rotine to extract all RNA counts from the cancer types selected 
-bd.e = load_rna(fname2[1])
+bd.e  = load_rna(fname2[1])
 tab[tab$Var1==diseaseAbbrvs[1],]
 for(i in 2:length(fname2)){
   print(diseaseAbbrvs[i])
