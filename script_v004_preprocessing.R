@@ -104,10 +104,55 @@ for(i in 2:length(fname2)){
 write.table(bd.e, "Data\\rnaseq.txt", sep=';',row.names = F)
 
 #------------------------- Extra filters 
-
 #keeping only the patients present in both datasets
-bd.rna = read.csv("Data\\rnaseq.txt",sep=';')
-bd.cli = read.csv("Data\\clinical.txt",sep=';')
+#Temp local
+temp = "C:\\Users\\raque\\Google Drive\\SFU\\Project 2 - Spring 2019\\Data"
+
+#reading datasets 
+bd.rna = read.csv(paste(temp, "\\rnaseq.txt",sep=""),sep=';')
+bd.cli = read.csv(paste(temp,"\\clinical.txt",sep=""),sep=';')
+
+#creating a auxliar databade
+#bd.aux = bd.cli[,c(1,2)]
+names(bd.cli)[1]='patients'
+bd.cli$aux = 1
+
+#fixind the patient id
+bd.rna$patients =  as.character(bd.rna$patients)
+bd.rna$patients2 =  as.character(bd.rna$patients)
+
+bd.rna$patients = gsub('-01A-.*','',bd.rna$patients)
+bd.rna$patients = gsub('-01B-.*','',bd.rna$patients)
+bd.rna$patients = gsub('-02A-.*','',bd.rna$patients)
+bd.rna$patients = gsub('-02B-.*','',bd.rna$patients)
+bd.rna$patients = gsub('-05A-.*','',bd.rna$patients)
+bd.rna$patients = gsub('-06A-.*','',bd.rna$patients)
+bd.rna$patients = gsub('-06B-.*','',bd.rna$patients)
+bd.rna$patients = gsub('-07A-.*','',bd.rna$patients)
+bd.rna$patients = gsub('-11A-.*','',bd.rna$patients)
+bd.rna$patients = gsub('-11B-.*','',bd.rna$patients)
+
+#removing duplicateds 
+bd.rna = bd.rna[order(bd.rna$patients2),]
+bd.rna = subset(bd.rna, !duplicated(patients))
 
 
+bd.rna2 = merge(bd.rna, bd.cli, by = 'patients', all = T)
+bd.rna2 = subset(bd.rna2,!is.na(aux) & !is.na(patients2))
+write.table(bd.rna2, paste(temp,'\\tcga_clinical_rna.txt',sep=''),sep=';')
 
+# t1 = subset(bd.rna2, is.na(aux)) #no cli
+# t2 = subset(bd.rna2, !is.na(aux) & !is.na(patients2)) #ideal
+# t3 = subset(bd.rna2, !is.na(aux) & is.na(patients2)) #no RNA
+# 
+# t1$patients= as.character(t1$patients)
+# t2$patients= as.character(t2$patients)
+# t3$patients= as.character(t3$patients)
+# 
+# t1 = t1[order(t1$patients),]
+# t2 = t2[order(t2$patients),]
+# t3 = t3[order(t3$patients),]
+# 
+# table(t2$abr)
+# table(t3$abr)
+# 
