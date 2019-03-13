@@ -117,6 +117,7 @@ write.table(bd.e, "Data\\rnaseq.txt", sep=';',row.names = F)
 #keeping only the patients present in both datasets
 #Temp local
 temp = "C:\\Users\\raque\\Google Drive\\SFU\\Project 2 - Spring 2019\\Data"
+#temp = "Data"
 
 #reading datasets 
 bd.rna = read.csv(paste(temp, "\\rnaseq.txt",sep=""),sep=';')
@@ -159,7 +160,7 @@ dim(bd.rna3)
 dim(bd.rna4)
 head(bd.rna4[,c(1:10)])
 #write.table(bd.rna3, paste(temp,'\\tcga_cli.txt',sep=''),sep=';')
-write.table(bd.rna4, paste(temp,'\\tcga_rna.txt',sep=''),sep=';')
+#write.table(bd.rna4, paste(temp,'\\tcga_rna.txt',sep=''),sep=';')
 
 
 
