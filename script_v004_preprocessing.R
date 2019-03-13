@@ -148,7 +148,7 @@ bd.rna4 = subset(bd.rna2, select = names(bd.rna))
 dim(bd.rna3)
 dim(bd.rna4)
 head(bd.rna4[,c(1:10)])
-write.table(bd.rna3, paste(temp,'\\tcga_cli.txt',sep=''),sep=';')
+#write.table(bd.rna3, paste(temp,'\\tcga_cli.txt',sep=''),sep=';')
 write.table(bd.rna4, paste(temp,'\\tcga_rna.txt',sep=''),sep=';')
 
 
