@@ -95,6 +95,7 @@ load_rna <- function(fname2){
   return (bd.aux)
 }
 
+
 #Rotine to extract all RNA counts from the cancer types selected 
 bd.e  = load_rna(fname2[1])
 tab[tab$Var1==diseaseAbbrvs[1],]
