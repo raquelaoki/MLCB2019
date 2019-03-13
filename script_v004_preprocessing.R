@@ -139,20 +139,17 @@ bd.rna = subset(bd.rna, !duplicated(patients))
 
 bd.rna2 = merge(bd.rna, bd.cli, by = 'patients', all = T)
 bd.rna2 = subset(bd.rna2,!is.na(aux) & !is.na(patients2))
-write.table(bd.rna2, paste(temp,'\\tcga_clinical_rna.txt',sep=''),sep=';')
+#write.table(bd.rna2, paste(temp,'\\tcga_clinical_rna.txt',sep=''),sep=';')
 
-# t1 = subset(bd.rna2, is.na(aux)) #no cli
-# t2 = subset(bd.rna2, !is.na(aux) & !is.na(patients2)) #ideal
-# t3 = subset(bd.rna2, !is.na(aux) & is.na(patients2)) #no RNA
-# 
-# t1$patients= as.character(t1$patients)
-# t2$patients= as.character(t2$patients)
-# t3$patients= as.character(t3$patients)
-# 
-# t1 = t1[order(t1$patients),]
-# t2 = t2[order(t2$patients),]
-# t3 = t3[order(t3$patients),]
-# 
-# table(t2$abr)
-# table(t3$abr)
-# 
+#Saving in 2 separated files 
+bd.rna3 = subset(bd.rna2, select = names(bd.cli))
+bd.rna4 = subset(bd.rna2, select = names(bd.rna))
+
+dim(bd.rna3)
+dim(bd.rna4)
+head(bd.rna4[,c(1:10)])
+write.table(bd.rna3, paste(temp,'\\tcga_cli.txt',sep=''),sep=';')
+write.table(bd.rna4, paste(temp,'\\tcga_rna.txt',sep=''),sep=';')
+
+
+
