@@ -177,4 +177,4 @@ head(bd[,c(1:10)])
 #temp = "\\Data"
 temp = 'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data'
 bd.rna = read.csv(paste(temp, "\\tcga_rna.txt",sep=""),sep=';')
-bd.cli = read.csv(paste(temo, "\\tcga_cli.txt",sep=""),sep=';')
+bd.cli = read.csv(paste(temp, "\\tcga_cli.txt",sep=""),sep=';')
