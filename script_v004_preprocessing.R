@@ -73,6 +73,7 @@ load_rna <- function(fname2){
       patients = c(patients,as.character(bd[1,i]))
     }
   }
+  
   #removing other columns
   bd.aux = data.frame(bd[,-remove.c])
   #removing first lines 
@@ -89,6 +90,10 @@ load_rna <- function(fname2){
   #transpose dataset
   bd.aux = data.frame(t(bd.aux[,-1]))
   names(bd.aux) = gene
+  row.names(bd.aux)=NULL
+  for(i in 1:dim(bd.aux)[2]){
+    bd.aux[,i]= format(as.numeric(as.character(bd.aux[,i])), digits = 17)
+  }
   bd.aux = data.frame(patients, bd.aux)
   return (bd.aux)
 }
@@ -96,9 +101,10 @@ load_rna <- function(fname2){
 
 #Rotine to extract all RNA counts from the cancer types selected 
 bd.e  = load_rna(fname2[1])
+print(paste('total ->', length(fname2)))
 tab[tab$Var1==diseaseAbbrvs[1],]
 for(i in 2:length(fname2)){
-  print(diseaseAbbrvs[i])
+  print(paste(i,'-' ,diseaseAbbrvs[i]))
   bd.aux = load_rna(fname2[i])
   #checking if the columns names are the same and if they are in the same order
   print(paste('columns: ', dim(bd.e)[2], "---", sum(names(bd.aux)==names(bd.e))))
@@ -106,10 +112,10 @@ for(i in 2:length(fname2)){
     print('Error!')
   }
   bd.e = rbind(bd.e,bd.aux)
-  
+  write.csv(bd.e,"Data\\rnaseq_intermediate.txt", sep=';', row.names = F)  
 }
 
-#------------------------- Savinf files
+#------------------------- Saving files
 
 write.table(bd.d, "Data\\clinical.txt", row.names = F, sep=';')
 write.table(bd.e, "Data\\rnaseq.txt", sep=';',row.names = F)
@@ -166,3 +172,9 @@ write.table(bd.rna4, paste(temp,'\\tcga_rna.txt',sep=''),sep=';')
 
 subset(bd.rna4, patients=="TCGA-OR-A5J1")[,c(1:10)]
 head(bd[,c(1:10)])
+
+#reading datasets
+#temp = "\\Data"
+temp = 'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data'
+bd.rna = read.csv(paste(temp, "\\tcga_rna.txt",sep=""),sep=';')
+bd.cli = read.csv(paste(temo, "\\tcga_cli.txt",sep=""),sep=';')
