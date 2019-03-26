@@ -61,13 +61,13 @@ tab = data.frame(table(as.character(bd.d$abr)))
 
 #------------ RNA
 
-#creating function to extract the raw_count 
+#creating function to extract the scaled_estimate 
 load_rna <- function(fname2){
   bd = read.csv(fname2, sep='\t',header = F)
   remove.c = c()
   patients = c()
   for(i in 2:dim(bd)[2]){
-    if(bd[2,i]!='raw_count'){
+    if(as.character(bd[2,i])!='scaled_estimate'){
       remove.c = c(remove.c,i)
     }else{
       patients = c(patients,as.character(bd[1,i]))
@@ -111,14 +111,14 @@ for(i in 2:length(fname2)){
 
 #------------------------- Savinf files
 
-#write.table(bd.d, "clinical.txt", row.names = F, sep=';')
+write.table(bd.d, "Data\\clinical.txt", row.names = F, sep=';')
 write.table(bd.e, "Data\\rnaseq.txt", sep=';',row.names = F)
 
 #------------------------- Extra filters 
 #keeping only the patients present in both datasets
 #Temp local
-temp = "C:\\Users\\raque\\Google Drive\\SFU\\Project 2 - Spring 2019\\Data"
-#temp = "Data"
+#temp = "C:\\Users\\raque\\Google Drive\\SFU\\Project 2 - Spring 2019\\Data"
+temp = "Data"
 
 #reading datasets 
 bd.rna = read.csv(paste(temp, "\\rnaseq.txt",sep=""),sep=';')
@@ -160,8 +160,9 @@ bd.rna4 = subset(bd.rna2, select = names(bd.rna))
 dim(bd.rna3)
 dim(bd.rna4)
 head(bd.rna4[,c(1:10)])
-#write.table(bd.rna3, paste(temp,'\\tcga_cli.txt',sep=''),sep=';')
-#write.table(bd.rna4, paste(temp,'\\tcga_rna.txt',sep=''),sep=';')
+write.table(bd.rna3, paste(temp,'\\tcga_cli.txt',sep=''),sep=';')
+write.table(bd.rna4, paste(temp,'\\tcga_rna.txt',sep=''),sep=';')
 
 
-
+subset(bd.rna4, patients=="TCGA-OR-A5J1")[,c(1:10)]
+head(bd[,c(1:10)])
