@@ -30,7 +30,7 @@ class PMF(object):
         # 1-p-i, 2-m-c
         num_user = int(max(np.amax(train_vec[:, 0]), np.amax(test_vec[:, 0]))) + 1  # 第0列，user总数
         num_item = int(max(np.amax(train_vec[:, 1]), np.amax(test_vec[:, 1]))) + 1  # 第1列，movie总数
-        print("Inside the function",num_user, num_item)
+        print("Inside the function: user: ",num_user," items " ,num_item)
         
         incremental = False  # 增量
         if ((not incremental) or (self.w_Item is None)):
