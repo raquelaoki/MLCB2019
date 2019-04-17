@@ -12,6 +12,10 @@ setwd("~/GitHub/project_spring2019")
 # Almost no modifications in the download section of this code
 #paulgeeleher, firebrownse 
 
+
+#because the model I'm using it's necessary work with the RAW COUNT. 
+#gene expression is usually modeled as a negative binomial, a discrete distribution. 
+
 #------------------------- Processing DATASET 
 # Cancer types 
 diseaseAbbrvs <- c("ACC", "BLCA", "CHOL", "ESCA",  "HNSC","LGG", "LIHC", "LUSC", "MESO", "PAAD",  "PRAD",  "SARC", "SKCM",  "TGCT", "UCS")
@@ -67,7 +71,7 @@ load_rna <- function(fname2){
   remove.c = c()
   patients = c()
   for(i in 2:dim(bd)[2]){
-    if(as.character(bd[2,i])!='scaled_estimate'){
+    if(as.character(bd[2,i])!='raw_count'){#scaled_estimate
       remove.c = c(remove.c,i)
     }else{
       patients = c(patients,as.character(bd[1,i]))
@@ -175,6 +179,6 @@ head(bd[,c(1:10)])
 
 #reading datasets
 #temp = "\\Data"
-temp = 'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data'
-bd.rna = read.csv(paste(temp, "\\tcga_rna.txt",sep=""),sep=';')
-bd.cli = read.csv(paste(temp, "\\tcga_cli.txt",sep=""),sep=';')
+#temp = 'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data'
+#bd.rna = read.csv(paste(temp, "\\tcga_rna.txt",sep=""),sep=';')
+#bd.cli = read.csv(paste(temp, "\\tcga_cli.txt",sep=""),sep=';')
