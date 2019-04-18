@@ -172,13 +172,3 @@ dim(bd.rna4)
 head(bd.rna4[,c(1:10)])
 write.table(bd.rna3, paste(temp,'\\tcga_cli.txt',sep=''),sep=';')
 write.table(bd.rna4, paste(temp,'\\tcga_rna.txt',sep=''),sep=';')
-
-
-subset(bd.rna4, patients=="TCGA-OR-A5J1")[,c(1:10)]
-head(bd[,c(1:10)])
-
-#reading datasets
-#temp = "\\Data"
-#temp = 'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data'
-#bd.rna = read.csv(paste(temp, "\\tcga_rna.txt",sep=""),sep=';')
-#bd.cli = read.csv(paste(temp, "\\tcga_cli.txt",sep=""),sep=';')
