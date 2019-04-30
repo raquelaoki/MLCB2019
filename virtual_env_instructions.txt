@@ -6,6 +6,10 @@ conda activate py37
 
 conda install pandas
 pip install pandas
+conda install matplotlib
+conda install numpy 
+conda install scipy
+
 
 conda list --explicit > requiriments.txt
 conda deactivate py37
