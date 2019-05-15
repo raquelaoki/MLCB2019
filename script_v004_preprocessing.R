@@ -172,3 +172,11 @@ dim(bd.rna4)
 head(bd.rna4[,c(1:10)])
 write.table(bd.rna3, paste(temp,'\\tcga_cli.txt',sep=''),sep=';')
 write.table(bd.rna4, paste(temp,'\\tcga_rna.txt',sep=''),sep=';')
+
+
+
+
+for(i in 20:dim(bd)[2]){
+  bd[,i] = log(bd[,i])
+}
+write.table(bd,'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\data_final_log.csv',row.names = F, sep=',')
