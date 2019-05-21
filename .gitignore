@@ -1,6 +1,8 @@
 Data/
 Files/
 DatadataIn/
+__pycache__/
+latent_variable_jason_work
 
 .ipynb_checkpoints/
 .Rhistory

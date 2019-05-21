@@ -1,3 +1,10 @@
+#
+import numpy as np 
+import math
+import pandas as pd 
+from scipy.stats import dirichlet, beta, nbinom, norm
+from scipy.special import loggamma,gamma
+import gc
 
 '''
 Proposal distribution
@@ -174,6 +181,7 @@ def MCMC(startvalue, iterations, data,k, lr,y):
             a = a_F*100/i
             b = a_P*100/i
             print('iteration ',i,' acceptance ', "%0.2f" % a,'-', "%0.2f" % b)
+            gc.collect()
         #prob_f = np.exp(posterior(param_new_f,data_F,data_P,y,k)-posterior(param_cur_f,data_F,data_P,y,k))
         prob_f = np.exp(ration_f(param_new_f,param_cur_f, data_F,k))
         if np.random.uniform(0,1,1)<prob_f:
@@ -227,8 +235,16 @@ def output_part1(output_p,output_f,sim,id):
     np.savetxt('Data\\output'+id+'_factor_la_cj.txt', output_factor_la_cj, delimiter=',') 
     np.savetxt('Data\\output'+id+'_factor_la_ev.txt', output_factor_la_ev, delimiter=',') 
 
-output_factor_lm_phi= np.concatenate((output_f[0].lm_phi,output_f[1].lm_phi),axis = 0)
-output_factor_lm_tht= np.concatenate((output_f[0].lm_tht,output_f[1].lm_tht),axis = 0)
+class parameters:
+    def __init__(self, latent_v,latent_cj,latent_sk,latent_ev,latent_phi ,latent_tht, prediction):
+        self.ln = latent_v #array with parameters that are only one number [0-c0,1-gamma0]
+        self.la_cj = latent_cj #aaray J
+        self.la_sk = latent_sk #array K
+        self.la_ev = latent_ev #array V
+        self.lm_phi = latent_phi #matrix (jk)
+        self.lm_tht = latent_tht #matrix  (kv)      
+        self.p = prediction #array [intercept, gender, 15 cancer types, k genes]
+
 
 def output_part2(output_p,output_f,sim,id):
     #Saving in the format J*K x sim. By adding many columns I'm having memory problems

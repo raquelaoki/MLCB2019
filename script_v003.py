@@ -2,28 +2,29 @@
 import pandas as pd 
 import numpy as np 
 import time
-import math
-import matplotlib.pyplot as plt
-from scipy.stats import dirichlet, beta, nbinom, norm
-from scipy.special import loggamma,gamma
+#import matplotlib.pyplot as plt
+import sys 
 from sklearn.model_selection import train_test_split
+import gc
+sys.path.append('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\script_v003.p')
 
 #import scrip_v003_def as pgm
-from scrip_v003_def import proposal_f,proposal_p, ratio_f, ratio_p, MCMC, output_part1,output_part2,output_part3
+from script_v003_def import *
 
 '''
 Notes: 
-- using pure python for simulations - save time 
-- check if output is correct, use a small sample to check if it's saving correctly
+- check if output functions is correct, use a small sample to check if it's saving correctly
 - if theta.csv still having problems, i can save only average value for logisct regression 
 and deal with this later. 
 - make code to do predictions
+- memory problems, i might need to save files in the middle and free memory, not sure how
+- limite was 920, using gc it was 990. 
 '''
 
 
 '''Important parameters I need to constantly change'''
 k = 100
-sim = 500
+sim = 3000
 start_time = time.time()
 id = '0001'
 
