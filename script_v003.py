@@ -13,18 +13,20 @@ from script_v003_def import *
 
 '''
 Notes: 
+- change implementation for more than 500i and save the intermidiate values.
+- change matrix to jason, also to save (?) 
 - check if output functions is correct, use a small sample to check if it's saving correctly
 - if theta.csv still having problems, i can save only average value for logisct regression 
 and deal with this later. 
 - make code to do predictions
-- memory problems, i might need to save files in the middle and free memory, not sure how
 - limite was 920, using gc it was 990. 
+--- previous result: 500i, 70% memory, 983s
 '''
 
 
 '''Important parameters I need to constantly change'''
 k = 100
-sim = 3000
+sim = 500
 start_time = time.time()
 id = '0001'
 
@@ -57,6 +59,7 @@ however, i encouter problems to change the size of arrays and matrices
 according with my currently k
 '''
 class parameters:
+    __slots__ = ('ln', 'la_cj','la_sk','la_ev','lm_phi','lm_tht','p')   
     def __init__(self, latent_v,latent_cj,latent_sk,latent_ev,latent_phi ,latent_tht, prediction):
         self.ln = latent_v #array with parameters that are only one number [0-c0,1-gamma0]
         self.la_cj = latent_cj #aaray J
@@ -84,7 +87,7 @@ start = parameters([1.65,1.65], #ln [0-c0,1-gamma0]
 
 
 start_time = time.time()
-output_p, output_f, acept_P,acept_F = MCMC(start,sim,data,k,lr,y)
+output, acept_P,acept_F = MCMC2(start,sim,data,k,lr,y)
 end_time = time.time() - start_time
 np.set_printoptions(threshold=50)
 
@@ -98,6 +101,12 @@ print("--- %s seconds ---" % (time.time() - start_time))
 #output_part2(output_p,output_f,sim,id)
 #output_part3(output_p,output_f,sim,id)
 
+
+#test = {}
+#test[1]=[1,2,3.4,7]
+#a = json.dumps(test)
+##test[2] = [3,4,5]
+#a = json.dumps(test)
 
 
 '''2 - Accuracy  Traning set '''

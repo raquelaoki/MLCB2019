@@ -5,6 +5,7 @@ import pandas as pd
 from scipy.stats import dirichlet, beta, nbinom, norm
 from scipy.special import loggamma,gamma
 import gc
+import json
 
 '''
 Proposal distribution
@@ -205,7 +206,68 @@ def MCMC(startvalue, iterations, data,k, lr,y):
 
     return chain_p, chain_f, a_P, a_F
         
-     
+
+'''Changing to json format'''     
+def MCMC2(startvalue, iterations, data,k, lr,y):
+    '''Splitting dataset'''
+    data_P = data[lr]
+    #print('\n P',data_P.head())
+    data_F = data.drop(lr,axis = 1)
+    data_F = data_F.drop(y,axis = 1)
+    y = data[y]
+    a_P = 0
+    a_F = 0
+    output = []
+    output.append(startvalue)
+    '''
+    Initialization of the chains
+    testing use json instead of matrix
+    output = {}
+    output[0] = {}
+    output[0]['ln'] = startvalue.ln
+    output[0]['la_cj'] = startvalue.la_cj
+    output[0]['la_sk'] =startvalue.la_sk
+    output[0]['la_ev'] = startvalue.la_ev
+    output[0]['lm_phi'] =startvalue.lm_phi
+    output[0]['lm_tht'] =startvalue.lm_tht
+    output[0]['p']  = startvalue.p
+    output[0]['class'] = startvalue
+    '''
+    for i in np.arange(1,iterations):
+        '''Factor Analysis - Latent Features'''
+        #use chain_f or chain_p don't make difference here because
+        #the only parameters changed are the logistic regression and 
+        #they aren't used in the factor analysis part. 
+        param_new_f = proposal_f(output[i-1])
+        param_cur_f = output[i-1]
+        if i%100 == 0: 
+            a = a_F*100/i
+            b = a_P*100/i
+            print('iteration ',i,' acceptance ', "%0.2f" % a,'-', "%0.2f" % b)
+            gc.collect()
+        #prob_f = np.exp(posterior(param_new_f,data_F,data_P,y,k)-posterior(param_cur_f,data_F,data_P,y,k))
+        prob_f = np.exp(ration_f(param_new_f,param_cur_f, data_F,k))
+        if np.random.uniform(0,1,1)<prob_f:
+            output.append(param_new_f)
+            a_F+=1
+        else:
+            output.append(param_cur_f)
+        '''Logistic Regression - Prediction'''
+        #chain_f[i] has the most update latent parameters and haven't changed the 
+        #prediction parameters from [i-1] iteration
+        param_new_p = proposal_p(output[i-1])
+        param_cur_p = output[i-1]
+        #print(param_new_p.p[0:20],param_cur_p.p[0:20])
+        prob_p = np.exp(ratio_p(param_new_p,param_cur_p,data_P,k,y))
+        #print('F: ',prob_f, 'P: ',prob_p,'\n')
+        if np.random.uniform(0,1,1)<prob_p:
+            output[i].p = param_new_p.p
+            a_P+=1
+        else:
+            output[i].p = param_cur_p.p     
+
+    return output, a_P, a_F
+        
 '''Organizing outputs - 1'''
 
 def output_part1(output_p,output_f,sim,id):
@@ -236,6 +298,7 @@ def output_part1(output_p,output_f,sim,id):
     np.savetxt('Data\\output'+id+'_factor_la_ev.txt', output_factor_la_ev, delimiter=',') 
 
 class parameters:
+    __slots__ = ('ln', 'la_cj','la_sk','la_ev','lm_phi','lm_tht','p')   
     def __init__(self, latent_v,latent_cj,latent_sk,latent_ev,latent_phi ,latent_tht, prediction):
         self.ln = latent_v #array with parameters that are only one number [0-c0,1-gamma0]
         self.la_cj = latent_cj #aaray J
@@ -257,6 +320,10 @@ def output_part2(output_p,output_f,sim,id):
             print(i,output_factor_lm_tht.shape)
     np.savetxt('Data\\output'+id+'_factor_lm_tht.txt', output_factor_lm_tht, delimiter=',') 
     
+
+
+
+
     
 def output_part3(output_p,output_f,sim,id):
     #Saving in the format J*K x sim. By adding many columns I'm having memory problems
