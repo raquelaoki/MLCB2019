@@ -7,10 +7,12 @@ import sys
 from sklearn.model_selection import train_test_split
 import gc
 sys.path.append('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\script_v003.p')
+from pympler import muppy, summary
+
 
 #import scrip_v003_def as pgm
-from script_v003_def import *
-
+#from script_v003_def import *
+from script_v004_def import *
 '''
 Notes: 
 - change implementation for more than 500i and save the intermidiate values.
@@ -21,14 +23,18 @@ and deal with this later.
 - make code to do predictions
 - limite was 920, using gc it was 990. 
 --- previous result: 500i, 70% memory, 983s
+--- previous result: 500i, 72% memory, 960s
+
+--- instead of matrix, save as string and convert matrix and list everytime i need it
+
 '''
 
 
 '''Important parameters I need to constantly change'''
 k = 100
-sim = 500
+sim = 1001
 start_time = time.time()
-id = '0001'
+id = '0002'
 
 
 '''Loading dataset'''
@@ -58,16 +64,16 @@ I thought about using the default values as chain starting values,
 however, i encouter problems to change the size of arrays and matrices 
 according with my currently k
 '''
-class parameters:
-    __slots__ = ('ln', 'la_cj','la_sk','la_ev','lm_phi','lm_tht','p')   
-    def __init__(self, latent_v,latent_cj,latent_sk,latent_ev,latent_phi ,latent_tht, prediction):
-        self.ln = latent_v #array with parameters that are only one number [0-c0,1-gamma0]
-        self.la_cj = latent_cj #aaray J
-        self.la_sk = latent_sk #array K
-        self.la_ev = latent_ev #array V
-        self.lm_phi = latent_phi #matrix (jk)
-        self.lm_tht = latent_tht #matrix  (kv)      
-        self.p = prediction #array [intercept, gender, 15 cancer types, k genes]
+#class parameters:
+#    __slots__ = ('ln', 'la_cj','la_sk','la_ev','lm_phi','lm_tht','p')   
+#    def __init__(self, latent_v,latent_cj,latent_sk,latent_ev,latent_phi ,latent_tht, prediction):
+#        self.ln = latent_v #array with parameters that are only one number [0-c0,1-gamma0]
+#        self.la_cj = latent_cj #aaray J
+##        self.la_sk = latent_sk #array K
+ #       self.la_ev = latent_ev #array V
+ #       self.lm_phi = latent_phi #matrix (jk)
+  #      self.lm_tht = latent_tht #matrix  (kv)      
+   #     self.p = prediction #array [intercept, gender, 15 cancer types, k genes]
 
 
 
@@ -85,12 +91,18 @@ start = parameters([1.65,1.65], #ln [0-c0,1-gamma0]
                    np.repeat(7.42,(data.shape[0])*k).reshape(k,(data.shape[0])), #lm_theta k x j
                    np.concatenate(([-(k*7.42)], np.repeat(1,k+aux-1))))  #p, k+aux-1  because intercept is already counted
 
-
+'''Runnning in batches and saving the partial outputs in files'''
 start_time = time.time()
-output, acept_P,acept_F = MCMC2(start,sim,data,k,lr,y)
+sim = 150
+MCMC(start,sim,data,k,lr,y,id)
+#    start = output[-1]
+#    output_part1(output,sim,id,i)
+#    output_part2(output,sim,id,i)
+#    output_part3(output,sim,id,i)
+#    output = []
+#print('partial time: ',time.time() - start_time)
+    
 end_time = time.time() - start_time
-np.set_printoptions(threshold=50)
-
 print("--- %s seconds ---" % (time.time() - start_time))
 
 
@@ -143,3 +155,12 @@ print("--- %s seconds ---" % (time.time() - start_time))
 #plt.show()
 #plt.savefig('Data\\plot'+id+'lr_k.png')
 
+all_objects = muppy.get_objects()
+sum1 = summary.summarize(all_objects)
+# Prints out a summary of the large objects
+summary.print_(sum1)
+# Get references to certain types of objects such as dataframe
+dataframes = [ao for ao in all_objects if isinstance(ao, pd.DataFrame)]
+for d in dataframes:
+  print d.columns.values
+  print len(d)

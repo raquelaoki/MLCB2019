@@ -152,125 +152,115 @@ k = number of latent variables
 remove, lr, y = columns names to be removed, presente only in the logistic regression part and y
 )
 '''
-def MCMC(startvalue, iterations, data,k, lr,y):
-    #print('all',data.head())
-    '''Splitting dataset'''
-    data_P = data[lr]
-    #print('\n P',data_P.head())
-    data_F = data.drop(lr,axis = 1)
-    data_F = data_F.drop(y,axis = 1)
-    y = data[y]
-    a_P = 0
-    a_F = 0
-    '''
-    Initialization of the chains
-    Note: chain_f has elements from chain_p and vice-versa. Take care to not use incorrectly
-    '''     
-    chain_f = []
-    chain_p = []
-    chain_f.append(startvalue)
-    chain_p.append(startvalue)
-     
-    for i in np.arange(1,iterations):
-        '''Factor Analysis - Latent Features'''
-        #use chain_f or chain_p don't make difference here because
-        #the only parameters changed are the logistic regression and 
-        #they aren't used in the factor analysis part. 
-        param_new_f = proposal_f(chain_f[i-1])
-        param_cur_f = chain_f[i-1] 
-        if i%10 == 0: 
-            a = a_F*100/i
-            b = a_P*100/i
-            print('iteration ',i,' acceptance ', "%0.2f" % a,'-', "%0.2f" % b)
-            gc.collect()
-        #prob_f = np.exp(posterior(param_new_f,data_F,data_P,y,k)-posterior(param_cur_f,data_F,data_P,y,k))
-        prob_f = np.exp(ration_f(param_new_f,param_cur_f, data_F,k))
-        if np.random.uniform(0,1,1)<prob_f:
-            chain_f.append(param_new_f)
-            a_F+=1
-        else:
-            chain_f.append(param_cur_f) 
-        '''Logistic Regression - Prediction'''
-        #chain_f[i] has the most update latent parameters and haven't changed the 
-        #prediction parameters from [i-1] iteration
-        param_new_p = proposal_p(chain_f[i-1])
-        param_cur_p = chain_f[i-1]
-        #print(param_new_p.p[0:20],param_cur_p.p[0:20])
-        prob_p = np.exp(ratio_p(param_new_p,param_cur_p,data_P,k,y))
-        #print('F: ',prob_f, 'P: ',prob_p,'\n')
-        if np.random.uniform(0,1,1)<prob_p:
-            chain_p.append(param_new_p)
-            a_P+=1
-        else:
-            chain_p.append(param_cur_p)     
+       
 
-    return chain_p, chain_f, a_P, a_F
-        
+'''list of obj'''     
+def MCMC(startvalue, iterations, data,k, lr,y,id):
+    for ite in np.arange(0,iterations//50):
+        '''Splitting dataset'''
+        data_P = data[lr]
+        #print('\n P',data_P.head())
+        data_F = data.drop(lr,axis = 1)
+        data_F = data_F.drop(y,axis = 1)
+        y = data[y]
+        a_P = 0
+        a_F = 0
+        output = []
+        output.append(startvalue)
+        for i in np.arange(1,50):
+            '''Factor Analysis - Latent Features'''
+            #use chain_f or chain_p don't make difference here because
+            #the only parameters changed are the logistic regression and 
+            #they aren't used in the factor analysis part. 
+            param_new_f = proposal_f(output[i-1])
+            param_cur_f = output[i-1]
+            if i%100 == 0: 
+                a = a_F*100/i
+                b = a_P*100/i
+                print('iteration ',i,' acceptance ', "%0.2f" % a,'-', "%0.2f" % b)
+                gc.collect()
+            prob_f = np.exp(ration_f(param_new_f,param_cur_f, data_F,k))
+            if np.random.uniform(0,1,1)<prob_f:
+                output.append(param_new_f)
+                a_F+=1
+            else:
+                output.append(param_cur_f)
+            '''Logistic Regression - Prediction'''
+            #chain_f[i] has the most update latent parameters and haven't changed the 
+            #prediction parameters from [i-1] iteration
+            param_new_p = proposal_p(output[i-1])
+            param_cur_p = output[i-1]
+            prob_p = np.exp(ratio_p(param_new_p,param_cur_p,data_P,k,y))
+            if np.random.uniform(0,1,1)<prob_p:
+                output[i].p = param_new_p.p
+                a_P+=1
+            #else:
+            #    output[i].p = param_cur_p.p     
+        startvalue = output[-1]
+        output_part1(output,500,id,ite)
+        output_part2(output,500,id,ite)
+        output_part3(output,500,id,ite)
+    return #output, a_P, a_F
         
 '''Organizing outputs - 1'''
-
-def output_part1(output_p,output_f,sim,id):
-    #Logistic Regression Parameters 
-    output_logistic = np.concatenate((output_p[0].p,output_p[1].p),axis = 0)
-    #Factor Model parameters
-    output_factor_ln = np.concatenate((output_f[0].ln,output_f[1].ln),axis = 0)
-    output_factor_la_sk = np.concatenate((output_f[0].la_sk,output_f[1].la_sk),axis = 0)
-    output_factor_la_cj = np.concatenate((output_f[0].la_cj,output_f[1].la_cj),axis = 0)
-    output_factor_la_ev = np.concatenate((output_f[0].la_ev,output_f[1].la_ev),axis = 0)
-    for i in np.arange(2,sim):
-        output_logistic = np.concatenate((output_logistic,output_p[i].p),axis = 0)
-        output_factor_ln = np.concatenate((output_factor_ln,output_f[i].ln),axis = 0)
-        output_factor_la_sk = np.concatenate((output_factor_la_sk,output_f[i].la_sk),axis = 0)
-        output_factor_la_cj = np.concatenate((output_factor_la_cj,output_f[i].la_cj),axis = 0)
-        output_factor_la_ev = np.concatenate((output_factor_la_ev,output_f[i].la_ev),axis = 0)
-
-    output_logistic = output_logistic.reshape(sim,len(output_p[0].p) )    
-    output_factor_ln = output_factor_ln.reshape(sim,len(output_f[0].ln) )
-    output_factor_la_sk = output_factor_la_sk.reshape(sim,len(output_f[0].la_sk))   
-    output_factor_la_cj = output_factor_la_cj.reshape(sim,len(output_f[0].la_cj))   
-    output_factor_la_ev = output_factor_la_ev.reshape(sim,len(output_f[0].la_ev))   
-
-    np.savetxt('Data\\output'+id+'_logistic.txt', output_logistic, delimiter=',')  
-    np.savetxt('Data\\output'+id+'_factor_ln.txt', output_factor_ln, delimiter=',')  
-    np.savetxt('Data\\output'+id+'_factor_la_sk.txt', output_factor_la_sk, delimiter=',')  
-    np.savetxt('Data\\output'+id+'_factor_la_cj.txt', output_factor_la_cj, delimiter=',') 
-    np.savetxt('Data\\output'+id+'_factor_la_ev.txt', output_factor_la_ev, delimiter=',') 
-
 class parameters:
     __slots__ = ('ln', 'la_cj','la_sk','la_ev','lm_phi','lm_tht','p')   
     def __init__(self, latent_v,latent_cj,latent_sk,latent_ev,latent_phi ,latent_tht, prediction):
         self.ln = latent_v #array with parameters that are only one number [0-c0,1-gamma0]
-        self.la_cj = latent_cj #aaray J
-        self.la_sk = latent_sk #array K
-        self.la_ev = latent_ev #array V
-        self.lm_phi = latent_phi #matrix (jk)
-        self.lm_tht = latent_tht #matrix  (kv)      
-        self.p = prediction #array [intercept, gender, 15 cancer types, k genes]
+        self.la_cj = latent_cj #string of array J 
+        self.la_sk = latent_sk #string of array K
+        self.la_ev = latent_ev #string of  array V
+        self.lm_phi = latent_phi #string of matrix (jk) in array format
+        self.lm_tht = latent_tht #string of matrix  (kv) in array format      
+        self.p = prediction #string of array [intercept, gender, 15 cancer types, k genes]
 
 
-def output_part2(output_p,output_f,sim,id):
-    #Saving in the format J*K x sim. By adding many columns I'm having memory problems
-    output_factor_lm_tht= np.concatenate((output_f[0].lm_tht.reshape(-1,1),
-                                          output_f[1].lm_tht.reshape(-1,1)),axis = 1)
-    for i in np.arange(2,sim):#sim
-        output_factor_lm_tht = np.concatenate((output_factor_lm_tht,
-                                               output_f[i].lm_tht.reshape(-1,1)),axis = 1)
-        if i%100==0:
-            print(i,output_factor_lm_tht.shape)
-    np.savetxt('Data\\output'+id+'_factor_lm_tht.txt', output_factor_lm_tht, delimiter=',') 
+
+def output_part1(output,sim,id,id2):
+    output_logistic = np.concatenate((output[0].p,output[1].p),axis = 0)
+    output_factor_ln = np.concatenate((output[0].ln,output[1].ln),axis = 0)
+    output_factor_la_sk = np.concatenate((output[0].la_sk,output[1].la_sk),axis = 0)
+    output_factor_la_cj = np.concatenate((output[0].la_cj,output[1].la_cj),axis = 0)
+    output_factor_la_ev = np.concatenate((output[0].la_ev,output[1].la_ev),axis = 0)
+    for i in np.arange(2,sim):
+        output_logistic = np.concatenate((output_logistic,output[i].p),axis = 0)
+        output_factor_ln = np.concatenate((output_factor_ln,output[i].ln),axis = 0)
+        output_factor_la_sk = np.concatenate((output_factor_la_sk,output[i].la_sk),axis = 0)
+        output_factor_la_cj = np.concatenate((output_factor_la_cj,output[i].la_cj),axis = 0)
+        output_factor_la_ev = np.concatenate((output_factor_la_ev,output[i].la_ev),axis = 0)
+
+    output_logistic = output_logistic.reshape(sim,len(output[0].p) )    
+    output_factor_ln = output_factor_ln.reshape(sim,len(output[0].ln) )
+    output_factor_la_sk = output_factor_la_sk.reshape(sim,len(output[0].la_sk))   
+    output_factor_la_cj = output_factor_la_cj.reshape(sim,len(output[0].la_cj))   
+    output_factor_la_ev = output_factor_la_ev.reshape(sim,len(output[0].la_ev))   
+
+    np.savetxt('Data\\output'+id+'_'+id2+'_logistic.txt', output_logistic, delimiter=',')  
+    np.savetxt('Data\\output'+id+'_'+id2+'_factor_ln.txt', output_factor_ln, delimiter=',')  
+    np.savetxt('Data\\output'+id+'_'+id2+'_factor_la_sk.txt', output_factor_la_sk, delimiter=',')  
+    np.savetxt('Data\\output'+id+'_'+id2+'_factor_la_cj.txt', output_factor_la_cj, delimiter=',') 
+    np.savetxt('Data\\output'+id+'_'+id2+'_factor_la_ev.txt', output_factor_la_ev, delimiter=',') 
+
+       
+def output_part2(output,sim,id,id2):
+    #Saving each matrix as an array inside a json 
+    output_factor_lm_tht = {}
+    output_factor_lm_tht[0]=output[0].lm_tht.reshape(-1,1)
+    for i in np.arange(1,sim):#sim
+        output_factor_lm_tht[i]= output[i].lm_tht.reshape(-1,1)
+        #if i%100==0:
+        #    print(i,output_factor_lm_tht.shape)
+    json_out = json.dumbs(output_factor_lm_tht)
+    np.savetxt('Data\\output'+id+'_'+id2+'_factor_lm_tht.txt', json_out, delimiter=',') 
     
-
-
-
-
     
-def output_part3(output_p,output_f,sim,id):
-    #Saving in the format J*K x sim. By adding many columns I'm having memory problems
-    output_factor_lm_phi= np.concatenate((output_f[0].lm_phi.reshape(-1,1),
-                                          output_f[1].lm_phi.reshape(-1,1)),axis = 1)
-    for i in np.arange(2,sim):#sim
-        output_factor_lm_phi = np.concatenate((output_factor_lm_phi,
-                                               output_f[i].lm_phi.reshape(-1,1)),axis = 1)
-        if i%100==0:
-            print(i,output_factor_lm_phi.shape)
-    np.savetxt('Data\\output'+id+'_factor_lm_phi.txt', output_factor_lm_tht, delimiter=',') 
+def output_part3(output,sim,id,id2):
+    #Saving each matrix as an array inside a json 
+    output_factor_lm_phi = {}
+    output_factor_lm_phi[0]=output[0].lm_phi.reshape(-1,1)
+    for i in np.arange(1,sim):#sim
+        output_factor_lm_phi[i]= output[i].lm_phi.reshape(-1,1)
+        #if i%100==0:
+        #    print(i,output_factor_lm_tht.shape)
+    json_out = json.dumbs(output_factor_lm_phi)
+    np.savetxt('Data\\output'+id+'_'+id2+'_factor_lm_phi.txt', json_out, delimiter=',') 
