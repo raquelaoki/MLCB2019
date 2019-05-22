@@ -45,8 +45,8 @@ data = pd.read_csv(filename, sep=',')
 
 
 '''Splitting Dataset'''
-#data = data.iloc[:, 0:10000]
-#data = data.sample(n=).reset_index(drop=True)
+data = data.iloc[:, 0:1000]
+data = data.sample(n=1000).reset_index(drop=True)
 data, test = train_test_split(data, test_size=0.3, random_state=42)
 #print(data.shape, test.shape)
 
@@ -93,12 +93,15 @@ start = parameters([1.65,1.65], #ln [0-c0,1-gamma0]
 
 '''Runnning in batches and saving the partial outputs in files'''
 start_time = time.time()
-sim = 150
-MCMC(start,sim,data,k,lr,y,id)
-#    start = output[-1]
-#    output_part1(output,sim,id,i)
-#    output_part2(output,sim,id,i)
-#    output_part3(output,sim,id,i)
+iterations = 150
+sim = 50
+
+for ite in np.arange(0,iterations//50):
+    output, a_P, a_F = MCMC(start,sim,data,k,lr,y)
+    start = output[-1]
+    o1 = output_part1(output,sim,id,ite)
+    #output_part2(output,sim,id,ite)
+    #output_part3(output,sim,id,ite)
 #    output = []
 #print('partial time: ',time.time() - start_time)
     
@@ -155,12 +158,17 @@ print("--- %s seconds ---" % (time.time() - start_time))
 #plt.show()
 #plt.savefig('Data\\plot'+id+'lr_k.png')
 
-all_objects = muppy.get_objects()
-sum1 = summary.summarize(all_objects)
+#all_objects = muppy.get_objects()
+#sum1 = summary.summarize(all_objects)
 # Prints out a summary of the large objects
-summary.print_(sum1)
+#summary.print_(sum1)
 # Get references to certain types of objects such as dataframe
-dataframes = [ao for ao in all_objects if isinstance(ao, pd.DataFrame)]
-for d in dataframes:
-  print d.columns.values
-  print len(d)
+#dataframes = [ao for ao in all_objects if isinstance(ao, pd.DataFrame)]
+#for d in dataframes:
+ # print(d.columns.values)
+ # print(len(d))
+
+#crash kernel
+#all_objects = muppy.get_objects()
+#sum1 = summary.summarize(all_objects)
+#summary.print_(sum1)                          

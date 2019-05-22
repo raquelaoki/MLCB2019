@@ -155,52 +155,47 @@ remove, lr, y = columns names to be removed, presente only in the logistic regre
        
 
 '''list of obj'''     
-def MCMC(startvalue, iterations, data,k, lr,y,id):
-    for ite in np.arange(0,iterations//50):
-        '''Splitting dataset'''
-        data_P = data[lr]
-        #print('\n P',data_P.head())
-        data_F = data.drop(lr,axis = 1)
-        data_F = data_F.drop(y,axis = 1)
-        y = data[y]
-        a_P = 0
-        a_F = 0
-        output = []
-        output.append(startvalue)
-        for i in np.arange(1,50):
-            '''Factor Analysis - Latent Features'''
-            #use chain_f or chain_p don't make difference here because
-            #the only parameters changed are the logistic regression and 
-            #they aren't used in the factor analysis part. 
-            param_new_f = proposal_f(output[i-1])
-            param_cur_f = output[i-1]
-            if i%100 == 0: 
-                a = a_F*100/i
-                b = a_P*100/i
-                print('iteration ',i,' acceptance ', "%0.2f" % a,'-', "%0.2f" % b)
-                gc.collect()
-            prob_f = np.exp(ration_f(param_new_f,param_cur_f, data_F,k))
-            if np.random.uniform(0,1,1)<prob_f:
-                output.append(param_new_f)
-                a_F+=1
-            else:
-                output.append(param_cur_f)
-            '''Logistic Regression - Prediction'''
-            #chain_f[i] has the most update latent parameters and haven't changed the 
-            #prediction parameters from [i-1] iteration
-            param_new_p = proposal_p(output[i-1])
-            param_cur_p = output[i-1]
-            prob_p = np.exp(ratio_p(param_new_p,param_cur_p,data_P,k,y))
-            if np.random.uniform(0,1,1)<prob_p:
-                output[i].p = param_new_p.p
-                a_P+=1
-            #else:
-            #    output[i].p = param_cur_p.p     
-        startvalue = output[-1]
-        output_part1(output,500,id,ite)
-        output_part2(output,500,id,ite)
-        output_part3(output,500,id,ite)
-    return #output, a_P, a_F
+def MCMC(startvalue, iterations, data,k, lr,y):
+    '''Splitting dataset'''
+    data_P = data[lr]
+    #print('\n P',data_P.head())
+    data_F = data.drop(lr,axis = 1)
+    data_F = data_F.drop(y,axis = 1)
+    y = data[y]
+    a_P = 0
+    a_F = 0
+    output = []
+    output.append(startvalue)
+    for i in np.arange(1,iterations):
+        '''Factor Analysis - Latent Features'''
+        #use chain_f or chain_p don't make difference here because
+        #the only parameters changed are the logistic regression and 
+        #they aren't used in the factor analysis part. 
+        param_new_f = proposal_f(output[i-1])
+        param_cur_f = output[i-1]
+        if i%100 == 0: 
+            a = a_F*100/i
+            b = a_P*100/i
+            print('iteration ',i,' acceptance ', "%0.2f" % a,'-', "%0.2f" % b)
+            gc.collect()
+        prob_f = np.exp(ration_f(param_new_f,param_cur_f, data_F,k))
+        if np.random.uniform(0,1,1)<prob_f:
+            output.append(param_new_f)
+            a_F+=1
+        else:
+            output.append(param_cur_f)
+        '''Logistic Regression - Prediction'''
+        #chain_f[i] has the most update latent parameters and haven't changed the 
+        #prediction parameters from [i-1] iteration
+        param_new_p = proposal_p(output[i-1])
+        param_cur_p = output[i-1]
+        prob_p = np.exp(ratio_p(param_new_p,param_cur_p,data_P,k,y))
+        if np.random.uniform(0,1,1)<prob_p:
+            output[i].p = param_new_p.p
+            a_P+=1
+        #else:
+        #    output[i].p = param_cur_p.p     
+    return output, a_P, a_F
         
 '''Organizing outputs - 1'''
 class parameters:
@@ -217,29 +212,43 @@ class parameters:
 
 
 def output_part1(output,sim,id,id2):
-    output_logistic = np.concatenate((output[0].p,output[1].p),axis = 0)
+    '''output_logistic = np.concatenate((output[0].p,output[1].p),axis = 0)
     output_factor_ln = np.concatenate((output[0].ln,output[1].ln),axis = 0)
     output_factor_la_sk = np.concatenate((output[0].la_sk,output[1].la_sk),axis = 0)
     output_factor_la_cj = np.concatenate((output[0].la_cj,output[1].la_cj),axis = 0)
     output_factor_la_ev = np.concatenate((output[0].la_ev,output[1].la_ev),axis = 0)
     for i in np.arange(2,sim):
         output_logistic = np.concatenate((output_logistic,output[i].p),axis = 0)
+        print(i,'-',output[i].p)
         output_factor_ln = np.concatenate((output_factor_ln,output[i].ln),axis = 0)
         output_factor_la_sk = np.concatenate((output_factor_la_sk,output[i].la_sk),axis = 0)
         output_factor_la_cj = np.concatenate((output_factor_la_cj,output[i].la_cj),axis = 0)
         output_factor_la_ev = np.concatenate((output_factor_la_ev,output[i].la_ev),axis = 0)
-
+        
     output_logistic = output_logistic.reshape(sim,len(output[0].p) )    
     output_factor_ln = output_factor_ln.reshape(sim,len(output[0].ln) )
     output_factor_la_sk = output_factor_la_sk.reshape(sim,len(output[0].la_sk))   
     output_factor_la_cj = output_factor_la_cj.reshape(sim,len(output[0].la_cj))   
     output_factor_la_ev = output_factor_la_ev.reshape(sim,len(output[0].la_ev))   
+    '''
+    output_logistic = []
+    output_factor_ln = []
+    output_factor_la_sk = []
+    output_factor_la_cj = []
+    output_factor_la_ev = []
+    for i in np.arange(0,sim):
+        output_logistic.append(output[i].p)
+        output_factor_ln.append(output[0].ln)
+        output_factor_la_sk.append(output[0].la_sk)
+        output_factor_la_cj.append(output[0].la_cj)
+        output_factor_la_ev.append(output[0].la_ev)
 
-    np.savetxt('Data\\output'+id+'_'+id2+'_logistic.txt', output_logistic, delimiter=',')  
-    np.savetxt('Data\\output'+id+'_'+id2+'_factor_ln.txt', output_factor_ln, delimiter=',')  
-    np.savetxt('Data\\output'+id+'_'+id2+'_factor_la_sk.txt', output_factor_la_sk, delimiter=',')  
-    np.savetxt('Data\\output'+id+'_'+id2+'_factor_la_cj.txt', output_factor_la_cj, delimiter=',') 
-    np.savetxt('Data\\output'+id+'_'+id2+'_factor_la_ev.txt', output_factor_la_ev, delimiter=',') 
+    return output_logistic
+    #np.savetxt('Data\\output'+id+'_'+id2+'_logistic.txt', output_logistic, delimiter=',')  
+    #np.savetxt('Data\\output'+id+'_'+id2+'_factor_ln.txt', output_factor_ln, delimiter=',')  
+    #np.savetxt('Data\\output'+id+'_'+id2+'_factor_la_sk.txt', output_factor_la_sk, delimiter=',')  
+    #np.savetxt('Data\\output'+id+'_'+id2+'_factor_la_cj.txt', output_factor_la_cj, delimiter=',') 
+    #np.savetxt('Data\\output'+id+'_'+id2+'_factor_la_ev.txt', output_factor_la_ev, delimiter=',') 
 
        
 def output_part2(output,sim,id,id2):
