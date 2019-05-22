@@ -99,7 +99,7 @@ sim = 50
 for ite in np.arange(0,iterations//50):
     output, a_P, a_F = MCMC(start,sim,data,k,lr,y)
     start = output[-1]
-    o1 = output_part1(output,sim,id,ite)
+    output_part1(output,sim,id,ite)
     #output_part2(output,sim,id,ite)
     #output_part3(output,sim,id,ite)
 #    output = []

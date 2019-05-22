@@ -243,12 +243,17 @@ def output_part1(output,sim,id,id2):
         output_factor_la_cj.append(output[0].la_cj)
         output_factor_la_ev.append(output[0].la_ev)
 
-    return output_logistic
-    #np.savetxt('Data\\output'+id+'_'+id2+'_logistic.txt', output_logistic, delimiter=',')  
-    #np.savetxt('Data\\output'+id+'_'+id2+'_factor_ln.txt', output_factor_ln, delimiter=',')  
-    #np.savetxt('Data\\output'+id+'_'+id2+'_factor_la_sk.txt', output_factor_la_sk, delimiter=',')  
-    #np.savetxt('Data\\output'+id+'_'+id2+'_factor_la_cj.txt', output_factor_la_cj, delimiter=',') 
-    #np.savetxt('Data\\output'+id+'_'+id2+'_factor_la_ev.txt', output_factor_la_ev, delimiter=',') 
+    output_logistic= np.vstack(output_logistic)
+    output_factor_ln= np.vstack(output_factor_ln)
+    output_factor_la_sk= np.vstack(output_factor_la_sk)
+    output_factor_la_cj= np.vstack(output_factor_la_cj)
+    output_factor_la_ev= np.vstack(output_factor_la_ev)
+
+    np.savetxt('Data\\output'+id+'_'+str(id2)+'_logistic.txt', output_logistic, delimiter=',')  
+    np.savetxt('Data\\output'+id+'_'+str(id2)+'_factor_ln.txt', output_factor_ln, delimiter=',')  
+    np.savetxt('Data\\output'+id+'_'+str(id2)+'_factor_la_sk.txt', output_factor_la_sk, delimiter=',')  
+    np.savetxt('Data\\output'+id+'_'+str(id2)+'_factor_la_cj.txt', output_factor_la_cj, delimiter=',') 
+    np.savetxt('Data\\output'+id+'_'+str(id2)+'_factor_la_ev.txt', output_factor_la_ev, delimiter=',') 
 
        
 def output_part2(output,sim,id,id2):
