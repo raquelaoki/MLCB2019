@@ -6,7 +6,7 @@ import time
 import sys 
 from sklearn.model_selection import train_test_split
 import gc
-sys.path.append('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\script_v003.p')
+sys.path.append('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019')
 from pympler import muppy, summary
 
 
@@ -18,9 +18,6 @@ Notes:
 
 - make code to do predictions
 - alocate in the beggining and save in each iteration 
-- instead of saving the class in an array and have 3 fc to save, 
-I can keep the parameters in the arrays from the fc directly and only
-keep the current and new parameters inside the class 
 '''
 
 
@@ -41,7 +38,7 @@ data = pd.read_csv(filename, sep=',')
 
 '''Splitting Dataset'''
 #data = data.iloc[:, 0:1000]
-#data = data.sample(n=1000).reset_index(drop=True)
+#.data = data.sample(n=1000).reset_index(drop=True)
 data, test = train_test_split(data, test_size=0.3, random_state=42)
 #print(data.shape, test.shape)
 
@@ -69,29 +66,27 @@ start = parameters(np.repeat(1.65,2),#ln [0-c0,1-gamma0]
 '''Runnning in batches and saving the partial outputs in files'''
 start_time = time.time()
 
-element = {}
-element['p']=start.p.tolist()
-element['ln']=start.ln.tolist()
-element['la_sk']=start.la_sk.tolist()
-element['la_cj']=start.la_cj.tolist()
-element['la_ev']=start.la_ev.tolist()
-element['lm_tht']=start.lm_tht.reshape(-1,1).tolist()
-element['lm_phi']=start.lm_phi.reshape(-1,1).tolist()
-je = json.dumps(element)
+chain_p = []
+chain_ln = []
+chain_la_sk = []
+chain_la_cj = []
+chain_la_ev = []
+chain_lm_tht = []
+chain_lm_phi = []
 
-chain = np.chararray(bach_size,unicode=True,itemsize = len(je)*2)
 for i in np.arange(0,bach_size):
-    chain[i] = je
+    chain_p.append(start.p.tolist())
+    chain_ln.append(start.ln.tolist())
+    chain_la_sk.append(start.la_sk.tolist())
+    chain_la_cj.append(start.la_cj.tolist())
+    chain_la_ev.append(start.la_ev.tolist())
+    chain_lm_tht.append(start.lm_tht.reshape(-1,1).tolist())
+    chain_lm_phi.append(start.lm_phi.reshape(-1,1).tolist())
 
-#with open(outputfilename, 'wb') as outfile:
-#    json.dump(row, outfile)
-
-#with open('Data\\output'+str(id)+'_'+str(0)+'.json', 'wb') as outfile:  
- #   json.dump(chain, outfile)
 
 for ite in np.arange(0,sim//bach_size):    
     print('iteration--',ite,' of ',sim//bach_size)          
-    current, a_P, a_F = MCMC(start,bach_size,data,k,lr,y,chain,id,ite)
+    current, a_P, a_F = MCMC(start,bach_size,data,k,lr,y,id,ite)
     start = current
 
     
