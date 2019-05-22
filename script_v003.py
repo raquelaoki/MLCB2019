@@ -15,26 +15,21 @@ from pympler import muppy, summary
 from script_v004_def import *
 '''
 Notes: 
-- change implementation for more than 500i and save the intermidiate values.
-- change matrix to jason, also to save (?) 
-- check if output functions is correct, use a small sample to check if it's saving correctly
-- if theta.csv still having problems, i can save only average value for logisct regression 
-and deal with this later. 
+
 - make code to do predictions
-- limite was 920, using gc it was 990. 
---- previous result: 500i, 70% memory, 983s
---- previous result: 500i, 72% memory, 960s
-
---- instead of matrix, save as string and convert matrix and list everytime i need it
-
+- alocate in the beggining and save in each iteration 
+- instead of saving the class in an array and have 3 fc to save, 
+I can keep the parameters in the arrays from the fc directly and only
+keep the current and new parameters inside the class 
 '''
 
 
 '''Important parameters I need to constantly change'''
 k = 100
-sim = 1001
+sim = 2000
+bach_size = 500
 start_time = time.time()
-id = '0002'
+id = '0003'
 
 
 '''Loading dataset'''
@@ -45,8 +40,8 @@ data = pd.read_csv(filename, sep=',')
 
 
 '''Splitting Dataset'''
-data = data.iloc[:, 0:1000]
-data = data.sample(n=1000).reset_index(drop=True)
+#data = data.iloc[:, 0:1000]
+#data = data.sample(n=1000).reset_index(drop=True)
 data, test = train_test_split(data, test_size=0.3, random_state=42)
 #print(data.shape, test.shape)
 
@@ -55,26 +50,6 @@ data, test = train_test_split(data, test_size=0.3, random_state=42)
 lr = data.columns[[2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]]
 y = data.columns[3]
 remove = data.columns[[0,1]]
-#print(lr,y,remove)
-
-
-'''
-Class to work with model parameters
-I thought about using the default values as chain starting values, 
-however, i encouter problems to change the size of arrays and matrices 
-according with my currently k
-'''
-#class parameters:
-#    __slots__ = ('ln', 'la_cj','la_sk','la_ev','lm_phi','lm_tht','p')   
-#    def __init__(self, latent_v,latent_cj,latent_sk,latent_ev,latent_phi ,latent_tht, prediction):
-#        self.ln = latent_v #array with parameters that are only one number [0-c0,1-gamma0]
-#        self.la_cj = latent_cj #aaray J
-##        self.la_sk = latent_sk #array K
- #       self.la_ev = latent_ev #array V
- #       self.lm_phi = latent_phi #matrix (jk)
-  #      self.lm_tht = latent_tht #matrix  (kv)      
-   #     self.p = prediction #array [intercept, gender, 15 cancer types, k genes]
-
 
 
 '''Non informative prioris: dirichlet has only 1, gamma distribution with 1 average, etc'''
@@ -83,7 +58,7 @@ aux = len(lr)+1
 data = data.drop(remove,axis = 1)
 v = (data.shape[1]-aux)
 j = data.shape[0]
-start = parameters([1.65,1.65], #ln [0-c0,1-gamma0]
+start = parameters(np.repeat(1.65,2),#ln [0-c0,1-gamma0]
                    np.repeat(2.72,j), #la_cj
                    np.repeat(2.72,k), #la_sk
                    np.repeat(1,v), #la_ev
@@ -93,28 +68,38 @@ start = parameters([1.65,1.65], #ln [0-c0,1-gamma0]
 
 '''Runnning in batches and saving the partial outputs in files'''
 start_time = time.time()
-iterations = 150
-sim = 50
 
-for ite in np.arange(0,iterations//50):
-    output, a_P, a_F = MCMC(start,sim,data,k,lr,y)
-    start = output[-1]
-    output_part1(output,sim,id,ite)
-    #output_part2(output,sim,id,ite)
-    #output_part3(output,sim,id,ite)
-#    output = []
-#print('partial time: ',time.time() - start_time)
+element = {}
+element['p']=start.p.tolist()
+element['ln']=start.ln.tolist()
+element['la_sk']=start.la_sk.tolist()
+element['la_cj']=start.la_cj.tolist()
+element['la_ev']=start.la_ev.tolist()
+element['lm_tht']=start.lm_tht.reshape(-1,1).tolist()
+element['lm_phi']=start.lm_phi.reshape(-1,1).tolist()
+je = json.dumps(element)
+
+chain = np.chararray(bach_size,unicode=True,itemsize = len(je)*2)
+for i in np.arange(0,bach_size):
+    chain[i] = je
+
+#with open(outputfilename, 'wb') as outfile:
+#    json.dump(row, outfile)
+
+#with open('Data\\output'+str(id)+'_'+str(0)+'.json', 'wb') as outfile:  
+ #   json.dump(chain, outfile)
+
+for ite in np.arange(0,sim//bach_size):    
+    print('iteration--',ite,' of ',sim//bach_size)          
+    current, a_P, a_F = MCMC(start,bach_size,data,k,lr,y,chain,id,ite)
+    start = current
+
     
 end_time = time.time() - start_time
 print("--- %s seconds ---" % (time.time() - start_time))
 
-
+#current, a_P, a_F = MCMC(start,bach_size,data,k,lr,y,chain,id,0)
 '''WORK IN PROGRESS'''
-
-'''1- saving output'''
-#output_part1(output_p,output_f,sim,id)
-#output_part2(output_p,output_f,sim,id)
-#output_part3(output_p,output_f,sim,id)
 
 
 #test = {}
@@ -172,3 +157,5 @@ print("--- %s seconds ---" % (time.time() - start_time))
 #all_objects = muppy.get_objects()
 #sum1 = summary.summarize(all_objects)
 #summary.print_(sum1)                          
+ 
+ 

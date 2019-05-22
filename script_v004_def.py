@@ -155,47 +155,61 @@ remove, lr, y = columns names to be removed, presente only in the logistic regre
        
 
 '''list of obj'''     
-def MCMC(startvalue, iterations, data,k, lr,y):
+def MCMC(startvalue, bach_size, data,k, lr,y, current_chain,id, ite):
     '''Splitting dataset'''
     data_P = data[lr]
-    #print('\n P',data_P.head())
     data_F = data.drop(lr,axis = 1)
     data_F = data_F.drop(y,axis = 1)
     y = data[y]
+    '''Tracking acceptance rate'''
     a_P = 0
     a_F = 0
-    output = []
-    output.append(startvalue)
-    for i in np.arange(1,iterations):
+    '''Starting chain and parametrs'''
+    param_cur = startvalue  
+    element = {}
+    element['p']=startvalue.p.tolist()
+    element['ln']=startvalue.ln.tolist()
+    element['la_sk']=startvalue.la_sk.tolist()
+    element['la_cj']=startvalue.la_cj.tolist()
+    element['la_ev']=startvalue.la_ev.tolist()
+    element['lm_tht']=startvalue.lm_tht.reshape(-1,1).tolist()
+    element['lm_phi']=startvalue.lm_phi.reshape(-1,1).tolist()
+
+    current_chain[0]=json.dumps(element)
+    
+    for i in np.arange(1,bach_size):
         '''Factor Analysis - Latent Features'''
-        #use chain_f or chain_p don't make difference here because
-        #the only parameters changed are the logistic regression and 
-        #they aren't used in the factor analysis part. 
-        param_new_f = proposal_f(output[i-1])
-        param_cur_f = output[i-1]
+        param_new_f = proposal_f(param_cur)
         if i%100 == 0: 
             a = a_F*100/i
             b = a_P*100/i
             print('iteration ',i,' acceptance ', "%0.2f" % a,'-', "%0.2f" % b)
-            gc.collect()
-        prob_f = np.exp(ration_f(param_new_f,param_cur_f, data_F,k))
+
+        prob_f = np.exp(ration_f(param_new_f,param_cur, data_F,k))
         if np.random.uniform(0,1,1)<prob_f:
-            output.append(param_new_f)
+            param_cur = param_new_f
             a_F+=1
-        else:
-            output.append(param_cur_f)
+
         '''Logistic Regression - Prediction'''
-        #chain_f[i] has the most update latent parameters and haven't changed the 
-        #prediction parameters from [i-1] iteration
-        param_new_p = proposal_p(output[i-1])
-        param_cur_p = output[i-1]
-        prob_p = np.exp(ratio_p(param_new_p,param_cur_p,data_P,k,y))
+        param_new_p = proposal_p(param_cur)
+        prob_p = np.exp(ratio_p(param_new_p,param_cur,data_P,k,y))
         if np.random.uniform(0,1,1)<prob_p:
-            output[i].p = param_new_p.p
+            param_cur = param_new_p
             a_P+=1
-        #else:
-        #    output[i].p = param_cur_p.p     
-    return output, a_P, a_F
+            
+        '''Updating position on dictionary'''
+        current_element = {}
+        current_element['p'] = param_cur.p.tolist()
+        current_element['ln']=param_cur.ln.tolist()
+        current_element['la_sk']=param_cur.la_sk.tolist()
+        current_element['la_cj']=param_cur.la_cj.tolist()
+        current_element['la_ev']=param_cur.la_ev.tolist()
+        current_element['lm_tht']=param_cur.lm_tht.reshape(-1,1).tolist()
+        current_element['lm_phi']=param_cur.lm_phi.reshape(-1,1).tolist()
+        current_chain[i] = json.dumps(current_element)
+    
+    np.savetxt('Data\\output_id'+str(id)+'_bach'+str(ite)+'.txt', current_chain, delimiter=',',fmt='%5s')
+    return param_cur, a_P, a_F
         
 '''Organizing outputs - 1'''
 class parameters:
@@ -211,70 +225,3 @@ class parameters:
 
 
 
-def output_part1(output,sim,id,id2):
-    '''output_logistic = np.concatenate((output[0].p,output[1].p),axis = 0)
-    output_factor_ln = np.concatenate((output[0].ln,output[1].ln),axis = 0)
-    output_factor_la_sk = np.concatenate((output[0].la_sk,output[1].la_sk),axis = 0)
-    output_factor_la_cj = np.concatenate((output[0].la_cj,output[1].la_cj),axis = 0)
-    output_factor_la_ev = np.concatenate((output[0].la_ev,output[1].la_ev),axis = 0)
-    for i in np.arange(2,sim):
-        output_logistic = np.concatenate((output_logistic,output[i].p),axis = 0)
-        print(i,'-',output[i].p)
-        output_factor_ln = np.concatenate((output_factor_ln,output[i].ln),axis = 0)
-        output_factor_la_sk = np.concatenate((output_factor_la_sk,output[i].la_sk),axis = 0)
-        output_factor_la_cj = np.concatenate((output_factor_la_cj,output[i].la_cj),axis = 0)
-        output_factor_la_ev = np.concatenate((output_factor_la_ev,output[i].la_ev),axis = 0)
-        
-    output_logistic = output_logistic.reshape(sim,len(output[0].p) )    
-    output_factor_ln = output_factor_ln.reshape(sim,len(output[0].ln) )
-    output_factor_la_sk = output_factor_la_sk.reshape(sim,len(output[0].la_sk))   
-    output_factor_la_cj = output_factor_la_cj.reshape(sim,len(output[0].la_cj))   
-    output_factor_la_ev = output_factor_la_ev.reshape(sim,len(output[0].la_ev))   
-    '''
-    output_logistic = []
-    output_factor_ln = []
-    output_factor_la_sk = []
-    output_factor_la_cj = []
-    output_factor_la_ev = []
-    for i in np.arange(0,sim):
-        output_logistic.append(output[i].p)
-        output_factor_ln.append(output[0].ln)
-        output_factor_la_sk.append(output[0].la_sk)
-        output_factor_la_cj.append(output[0].la_cj)
-        output_factor_la_ev.append(output[0].la_ev)
-
-    output_logistic= np.vstack(output_logistic)
-    output_factor_ln= np.vstack(output_factor_ln)
-    output_factor_la_sk= np.vstack(output_factor_la_sk)
-    output_factor_la_cj= np.vstack(output_factor_la_cj)
-    output_factor_la_ev= np.vstack(output_factor_la_ev)
-
-    np.savetxt('Data\\output'+id+'_'+str(id2)+'_logistic.txt', output_logistic, delimiter=',')  
-    np.savetxt('Data\\output'+id+'_'+str(id2)+'_factor_ln.txt', output_factor_ln, delimiter=',')  
-    np.savetxt('Data\\output'+id+'_'+str(id2)+'_factor_la_sk.txt', output_factor_la_sk, delimiter=',')  
-    np.savetxt('Data\\output'+id+'_'+str(id2)+'_factor_la_cj.txt', output_factor_la_cj, delimiter=',') 
-    np.savetxt('Data\\output'+id+'_'+str(id2)+'_factor_la_ev.txt', output_factor_la_ev, delimiter=',') 
-
-       
-def output_part2(output,sim,id,id2):
-    #Saving each matrix as an array inside a json 
-    output_factor_lm_tht = {}
-    output_factor_lm_tht[0]=output[0].lm_tht.reshape(-1,1)
-    for i in np.arange(1,sim):#sim
-        output_factor_lm_tht[i]= output[i].lm_tht.reshape(-1,1)
-        #if i%100==0:
-        #    print(i,output_factor_lm_tht.shape)
-    json_out = json.dumbs(output_factor_lm_tht)
-    np.savetxt('Data\\output'+id+'_'+id2+'_factor_lm_tht.txt', json_out, delimiter=',') 
-    
-    
-def output_part3(output,sim,id,id2):
-    #Saving each matrix as an array inside a json 
-    output_factor_lm_phi = {}
-    output_factor_lm_phi[0]=output[0].lm_phi.reshape(-1,1)
-    for i in np.arange(1,sim):#sim
-        output_factor_lm_phi[i]= output[i].lm_phi.reshape(-1,1)
-        #if i%100==0:
-        #    print(i,output_factor_lm_tht.shape)
-    json_out = json.dumbs(output_factor_lm_phi)
-    np.savetxt('Data\\output'+id+'_'+id2+'_factor_lm_phi.txt', json_out, delimiter=',') 
