@@ -7,6 +7,22 @@ from scipy.special import loggamma,gamma
 import gc
 import json
 
+'''Parameters'''
+class parameters:
+    __slots__ = ('ln', 'la_cj','la_sk','la_ev','lm_phi','lm_tht','p')   
+    def __init__(self, latent_v,latent_cj,latent_sk,latent_ev,latent_phi ,latent_tht, prediction):
+        self.ln = latent_v #array with parameters that are only one number [0-c0,1-gamma0]
+        self.la_cj = latent_cj #string of array J 
+        self.la_sk = latent_sk #string of array K
+        self.la_ev = latent_ev #string of  array V
+        self.lm_phi = latent_phi #string of matrix (kv) in array format
+        self.lm_tht = latent_tht #string of matrix  (jk) in array format      
+        self.p = prediction #string of array [intercept, gender, 15 cancer types, k genes]
+
+
+
+
+
 '''
 Proposal distribution
 '''
@@ -154,36 +170,48 @@ remove, lr, y = columns names to be removed, presente only in the logistic regre
 '''
        
 
-'''list of obj'''     
-def MCMC(startvalue, bach_size, data,k, lr,y, current_chain,id, ite):
+'''list of obj'''
+def MCMC(startvalue, #start value of the chain 
+         bach_size, #bach size for save files 
+         data, #full dataset
+         k, #size of latent features
+         lr, #column names for the logistc regression 
+         y,  #metastase 0/1 array
+         id, #id of the attempt 
+         ite, #ite in sim/bach 
+         step1, step2, #frequency i save values on array
+         c_p,c_ln,c_la_sk,c_la_cj, c_la_ev, #array with the chain of values step1
+         c_lm_tht,c_lm_phi): #array with the chain of values step2
     '''Splitting dataset'''
     data_P = data[lr]
     data_F = data.drop(lr,axis = 1)
     data_F = data_F.drop(y,axis = 1)
     y = data[y]
-    '''Tracking acceptance rate'''
+    '''Tracking acceptance rate and steps count'''
     a_P = 0
     a_F = 0
+    
+    count_s1 = 0
+    count_s2 = 0
+    
     '''Starting chain and parametrs'''
     param_cur = startvalue  
-    element = {}
-    element['p']=startvalue.p.tolist()
-    element['ln']=startvalue.ln.tolist()
-    element['la_sk']=startvalue.la_sk.tolist()
-    element['la_cj']=startvalue.la_cj.tolist()
-    element['la_ev']=startvalue.la_ev.tolist()
-    element['lm_tht']=startvalue.lm_tht.reshape(-1,1).tolist()
-    element['lm_phi']=startvalue.lm_phi.reshape(-1,1).tolist()
-
-    current_chain[0]=json.dumps(element)
+    c_p[count_s1]=param_cur.p.tolist()
+    c_ln[count_s1]=param_cur.ln.tolist()
+    c_la_sk[count_s1]=param_cur.la_sk.tolist()
+    c_la_cj[count_s1]=param_cur.la_cj.tolist()
+    c_la_ev[count_s1] =param_cur.la_ev.tolist()
+    c_lm_tht[:,count_s2]=param_cur.lm_tht.reshape(-1,1)
+    c_lm_phi[:,count_s2]=param_cur.lm_phi.reshape(-1,1)
+    
     
     for i in np.arange(1,bach_size):
         '''Factor Analysis - Latent Features'''
         param_new_f = proposal_f(param_cur)
-        if i%100 == 0: 
-            a = a_F*100/i
-            b = a_P*100/i
-            print('iteration ',i,' acceptance ', "%0.2f" % a,'-', "%0.2f" % b)
+#        if i%100 == 0: 
+#            a = a_F*100/i
+#            b = a_P*100/i
+#            print('iteration ',ite, 'bach i', i,' acceptance ', "%0.2f" % a,'-', "%0.2f" % b)
 
         prob_f = np.exp(ration_f(param_new_f,param_cur, data_F,k))
         if np.random.uniform(0,1,1)<prob_f:
@@ -197,31 +225,30 @@ def MCMC(startvalue, bach_size, data,k, lr,y, current_chain,id, ite):
             param_cur = param_new_p
             a_P+=1
             
-        '''Updating position on dictionary'''
-        current_element = {}
-        current_element['p'] = param_cur.p.tolist()
-        current_element['ln']=param_cur.ln.tolist()
-        current_element['la_sk']=param_cur.la_sk.tolist()
-        current_element['la_cj']=param_cur.la_cj.tolist()
-        current_element['la_ev']=param_cur.la_ev.tolist()
-        current_element['lm_tht']=param_cur.lm_tht.reshape(-1,1).tolist()
-        current_element['lm_phi']=param_cur.lm_phi.reshape(-1,1).tolist()
-        current_chain[i] = json.dumps(current_element)
-    
-    np.savetxt('Data\\output_id'+str(id)+'_bach'+str(ite)+'.txt', current_chain, delimiter=',',fmt='%5s')
+        '''Updating chain'''
+        if i%10==0:
+            count_s1+=1
+            count_s2+=1
+            c_p[count_s1]=param_cur.p.tolist()
+            c_ln[count_s1]=param_cur.ln.tolist()
+            c_la_sk[count_s1]=param_cur.la_sk.tolist()
+            c_la_cj[count_s1]=param_cur.la_cj.tolist()
+            c_la_ev[count_s1] =param_cur.la_ev.tolist()
+            if i%20==0:
+                c_lm_tht[:,count_s2]=param_cur.lm_tht.reshape(-1,1)
+                c_lm_phi[:,count_s2]=param_cur.lm_phi.reshape(-1,1)
+                if i%100 ==0: 
+                    a = a_F*100/i
+                    b = a_P*100/i
+                    print('iteration ',ite, 'bach i', i,' acceptance ', "%0.2f" % a,'-', "%0.2f" % b)
+                           
+ 
+    np.savetxt('Data\\output_p_id'+str(id)+'_bach'+str(ite)+'.txt', c_p, delimiter=',',fmt='%5s')
+    np.savetxt('Data\\output_ln_id'+str(id)+'_bach'+str(ite)+'.txt', c_ln, delimiter=',',fmt='%5s')
+    np.savetxt('Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', c_la_sk, delimiter=',',fmt='%5s')
+    np.savetxt('Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', c_la_cj, delimiter=',',fmt='%5s')
+    np.savetxt('Data\\output_laev_id'+str(id)+'_bach'+str(ite)+'.txt', c_la_ev, delimiter=',',fmt='%5s')
+    np.savetxt('Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', c_lm_tht, delimiter=',',fmt='%5s')
+    np.savetxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', c_lm_phi, delimiter=',',fmt='%5s')
     return param_cur, a_P, a_F
         
-'''Organizing outputs - 1'''
-class parameters:
-    __slots__ = ('ln', 'la_cj','la_sk','la_ev','lm_phi','lm_tht','p')   
-    def __init__(self, latent_v,latent_cj,latent_sk,latent_ev,latent_phi ,latent_tht, prediction):
-        self.ln = latent_v #array with parameters that are only one number [0-c0,1-gamma0]
-        self.la_cj = latent_cj #string of array J 
-        self.la_sk = latent_sk #string of array K
-        self.la_ev = latent_ev #string of  array V
-        self.lm_phi = latent_phi #string of matrix (jk) in array format
-        self.lm_tht = latent_tht #string of matrix  (kv) in array format      
-        self.p = prediction #string of array [intercept, gender, 15 cancer types, k genes]
-
-
-

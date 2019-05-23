@@ -18,13 +18,19 @@ Notes:
 
 - make code to do predictions
 - alocate in the beggining and save in each iteration 
+- save every 10 steps 
+- don't save matrix or save every 100 steps
+
+
 '''
 
 
 '''Important parameters I need to constantly change'''
 k = 100
-sim = 2000
-bach_size = 500
+sim = 400
+bach_size = 50
+step1 = 1
+step2 = 2
 start_time = time.time()
 id = '0003'
 
@@ -37,8 +43,8 @@ data = pd.read_csv(filename, sep=',')
 
 
 '''Splitting Dataset'''
-#data = data.iloc[:, 0:1000]
-#.data = data.sample(n=1000).reset_index(drop=True)
+data = data.iloc[:, 0:1000]
+data = data.sample(n=1000).reset_index(drop=True)
 data, test = train_test_split(data, test_size=0.3, random_state=42)
 #print(data.shape, test.shape)
 
@@ -66,27 +72,20 @@ start = parameters(np.repeat(1.65,2),#ln [0-c0,1-gamma0]
 '''Runnning in batches and saving the partial outputs in files'''
 start_time = time.time()
 
-chain_p = []
-chain_ln = []
-chain_la_sk = []
-chain_la_cj = []
-chain_la_ev = []
-chain_lm_tht = []
-chain_lm_phi = []
-
-for i in np.arange(0,bach_size):
-    chain_p.append(start.p.tolist())
-    chain_ln.append(start.ln.tolist())
-    chain_la_sk.append(start.la_sk.tolist())
-    chain_la_cj.append(start.la_cj.tolist())
-    chain_la_ev.append(start.la_ev.tolist())
-    chain_lm_tht.append(start.lm_tht.reshape(-1,1).tolist())
-    chain_lm_phi.append(start.lm_phi.reshape(-1,1).tolist())
+chain_p = np.tile(start.p.tolist(),(int(bach_size/step1),1))
+chain_ln = np.tile(start.ln.tolist(),(int(bach_size/step1),1))
+chain_la_sk = np.tile(start.la_sk.tolist(),(int(bach_size/step1),1))
+chain_la_cj = np.tile(start.la_cj.tolist(),(int(bach_size/step1),1))
+chain_la_ev = np.tile(start.la_ev.tolist(),(int(bach_size/step1),1))
+chain_lm_tht = np.tile(start.lm_tht.reshape(-1,1),(1,int(bach_size/step2)))
+chain_lm_phi = np.tile(start.lm_tht.reshape(-1,1),(1,int(bach_size/step2)))
 
 
 for ite in np.arange(0,sim//bach_size):    
     print('iteration--',ite,' of ',sim//bach_size)          
-    current, a_P, a_F = MCMC(start,bach_size,data,k,lr,y,id,ite)
+    current, a_P, a_F = MCMC(start,bach_size,data,k,lr,y,id,ite,step1,step2,
+                             chain_p,chain_ln,chain_la_sk,chain_la_cj,
+                             chain_la_ev,chain_lm_tht,chain_lm_phi)
     start = current
 
     
@@ -96,12 +95,6 @@ print("--- %s seconds ---" % (time.time() - start_time))
 #current, a_P, a_F = MCMC(start,bach_size,data,k,lr,y,chain,id,0)
 '''WORK IN PROGRESS'''
 
-
-#test = {}
-#test[1]=[1,2,3.4,7]
-#a = json.dumps(test)
-##test[2] = [3,4,5]
-#a = json.dumps(test)
 
 
 '''2 - Accuracy  Traning set '''
