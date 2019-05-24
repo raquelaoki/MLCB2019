@@ -201,8 +201,8 @@ def MCMC(startvalue, #start value of the chain
     c_la_sk[count_s1]=param_cur.la_sk.tolist()
     c_la_cj[count_s1]=param_cur.la_cj.tolist()
     c_la_ev[count_s1] =param_cur.la_ev.tolist()
-    c_lm_tht[:,count_s2]=param_cur.lm_tht.reshape(-1,1)
-    c_lm_phi[:,count_s2]=param_cur.lm_phi.reshape(-1,1)
+    c_lm_tht[:,count_s2]=param_cur.lm_tht.reshape(1,-1)
+    c_lm_phi[:,count_s2]=param_cur.lm_phi.reshape(1,-1)
     
     
     for i in np.arange(1,bach_size):
@@ -228,15 +228,15 @@ def MCMC(startvalue, #start value of the chain
         '''Updating chain'''
         if i%10==0:
             count_s1+=1
-            count_s2+=1
             c_p[count_s1]=param_cur.p.tolist()
             c_ln[count_s1]=param_cur.ln.tolist()
             c_la_sk[count_s1]=param_cur.la_sk.tolist()
             c_la_cj[count_s1]=param_cur.la_cj.tolist()
             c_la_ev[count_s1] =param_cur.la_ev.tolist()
             if i%20==0:
-                c_lm_tht[:,count_s2]=param_cur.lm_tht.reshape(-1,1)
-                c_lm_phi[:,count_s2]=param_cur.lm_phi.reshape(-1,1)
+                count_s2+=1
+                c_lm_tht[:,count_s2]=param_cur.lm_tht.reshape(1,-1)
+                c_lm_phi[:,count_s2]=param_cur.lm_phi.reshape(1,-1)
                 if i%100 ==0: 
                     a = a_F*100/i
                     b = a_P*100/i

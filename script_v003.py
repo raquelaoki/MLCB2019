@@ -5,32 +5,25 @@ import time
 #import matplotlib.pyplot as plt
 import sys 
 from sklearn.model_selection import train_test_split
-import gc
 sys.path.append('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019')
-from pympler import muppy, summary
-
-
-#import scrip_v003_def as pgm
-#from script_v003_def import *
 from script_v004_def import *
 '''
 Notes: 
 
 - make code to do predictions
-- alocate in the beggining and save in each iteration 
-- save every 10 steps 
-- don't save matrix or save every 100 steps
-
-
+- plots
+- save a summary
+- smaller steps of bach size
+- for tht and phi i can save just the sum 
 '''
 
 
 '''Important parameters I need to constantly change'''
 k = 100
-sim = 400
-bach_size = 50
-step1 = 1
-step2 = 2
+sim = 4000
+bach_size = 500
+step1 = 10
+step2 = 20
 start_time = time.time()
 id = '0003'
 
@@ -43,8 +36,8 @@ data = pd.read_csv(filename, sep=',')
 
 
 '''Splitting Dataset'''
-data = data.iloc[:, 0:1000]
-data = data.sample(n=1000).reset_index(drop=True)
+#data = data.iloc[:, 0:1000]
+#data = data.sample(n=1000).reset_index(drop=True)
 data, test = train_test_split(data, test_size=0.3, random_state=42)
 #print(data.shape, test.shape)
 
@@ -78,7 +71,7 @@ chain_la_sk = np.tile(start.la_sk.tolist(),(int(bach_size/step1),1))
 chain_la_cj = np.tile(start.la_cj.tolist(),(int(bach_size/step1),1))
 chain_la_ev = np.tile(start.la_ev.tolist(),(int(bach_size/step1),1))
 chain_lm_tht = np.tile(start.lm_tht.reshape(-1,1),(1,int(bach_size/step2)))
-chain_lm_phi = np.tile(start.lm_tht.reshape(-1,1),(1,int(bach_size/step2)))
+chain_lm_phi = np.tile(start.lm_phi.reshape(-1,1),(1,int(bach_size/step2)))
 
 
 for ite in np.arange(0,sim//bach_size):    
@@ -97,53 +90,5 @@ print("--- %s seconds ---" % (time.time() - start_time))
 
 
 
-'''2 - Accuracy  Traning set '''
-#Depends on save output2 from previous problem
-#df = data[lr]
-#df = pd.concat([df, pd.DataFrame()], axis=1)
-#print(df.shape)
-
-'''Plots'''
-#output_factor_la_sk.shape
-#plt.plot(np.arange(0,sim),output_factor_la_sk[:,0], 'r-', alpha=1)
-#plt.xlabel('sk_0')
-#plt.show()
-#print(output_factor_la_sk[:,12])
 
 
-#plt.plot(np.arange(0,len(output_logistic[:,0])),output_logistic[:,0], 'r-', alpha=1)
-#plt.xlabel('Logistic Regression - intercept')
-#plt.show()
-#plt.savefig('Data\\plot'+id+'lr_intercept.png')
-
-#plt.plot(np.arange(0,len(output_logistic[:,1])),output_logistic[:,1], 'r-', alpha=1)
-##plt.xlabel('Logistic Regression - gender')
-#plt.show()
-#plt.savefig('Data\\plot'+id+'lr_gender.png')
-
-#plt.plot(np.arange(0,len(output_logistic[:,10])),output_logistic[:,10], 'r-', alpha=1)
-#plt.xlabel('Logistic Regression - cancer type (one of them)')
-#plt.show()
-#plt.savefig('Data\\plot'+id+'lr_cancertype.png')
-
-#plt.plot(np.arange(0,len(output_logistic[:,30])),output_logistic[:,30], 'r-', alpha=1)
-#plt.xlabel('Logistic Regression - k (one of them)')
-#plt.show()
-#plt.savefig('Data\\plot'+id+'lr_k.png')
-
-#all_objects = muppy.get_objects()
-#sum1 = summary.summarize(all_objects)
-# Prints out a summary of the large objects
-#summary.print_(sum1)
-# Get references to certain types of objects such as dataframe
-#dataframes = [ao for ao in all_objects if isinstance(ao, pd.DataFrame)]
-#for d in dataframes:
- # print(d.columns.values)
- # print(len(d))
-
-#crash kernel
-#all_objects = muppy.get_objects()
-#sum1 = summary.summarize(all_objects)
-#summary.print_(sum1)                          
- 
- 
