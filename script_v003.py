@@ -13,6 +13,7 @@ Notes:
 - plots
 - theta and phi i can save just the sum 
 - add the fit part inside the mcmc or as a function that I call every 100i
+- laev 0 or 1, this make sense? 
 '''
 
 
@@ -89,6 +90,13 @@ print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
 
 accuracy(sim//bach_size,id,data)
 
+#lask, lacj, laev, ln, p
+
+conv_plots(sim,bach_size,'lask',id)
+conv_plots(sim,bach_size,'lacj',id)
+conv_plots(sim,bach_size,'laev',id)
+conv_plots(sim,bach_size,'ln',id)
+conv_plots(sim,bach_size,'p',id)
 
 
 

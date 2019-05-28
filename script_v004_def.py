@@ -6,6 +6,7 @@ from scipy.stats import dirichlet, beta, nbinom, norm
 from scipy.special import loggamma,gamma
 import gc
 import json
+import random 
 
 '''Parameters'''
 class parameters:
@@ -291,26 +292,34 @@ def accuracy(iteration,id,data):
                         pd.DataFrame(theta).reset_index(drop=True)],axis=1,ignore_index=True)
     
     fit = 1/(1+np.exp(data_P.mul(p).sum(axis=1)))
-    print('Fit Values: 'fit.min(),'(min) ',fit.mean(),'(mean) ',fit.max(),'(max)')
+    print('Fit Values: ',fit.min(),'(min) ',fit.mean(),'(mean) ',fit.max(),'(max)')
     
 '''
 print some plots to check the convergence of the parameters
-
+Options parameter: lask, lacj, laev, ln, p
+Options not implemented yet: lmphi and lmtht
 '''    
-def conv_plots(sim,bach_size,parameter):
+def conv_plots(sim,bach_size,parameter,id):
     files = []
     for ite in range(sim//bach_size):
-        files.append('Data\\output_lask_id'+id+'_bach'+str(ite)+'.txt')
+        files.append('Data\\output_'+parameter+'_id'+id+'_bach'+str(ite)+'.txt')
     
     f=pd.read_csv(files[0],sep=',', header=None)
     for i in range(1,len(files)):
         f = pd.concat([f,pd.read_csv(files[i],sep=',', header=None)],axis =0,sort=False)
     
+    
     '''Plots'''
-    plt.subplot(3,1,1)
-    plt.plot(np.arange(0,f.shape[0]),f.iloc[:,6], 'r-', alpha=1)
-    plt.subplot(3,1,2)
-    plt.plot(np.arange(0,f.shape[0]),f.iloc[:,19], 'r-', alpha=1)
-    plt.subplot(3,1,3)
-    plt.plot(np.arange(0,f.shape[0]),f.iloc[:,96], 'r-', alpha=1)
+    if parameter!='ln':
+        k = random.sample(range(f.shape[1]),3)
+    else:
+        k = [0,1]
+
+    fig, pltarray = plt.subplots(len(k), sharex=True)
+    pltarray[0].set_title(parameter)   
+    for i in range(len(k)):
+        pltarray[i].plot(np.arange(0,f.shape[0]),f.iloc[:,k[i]], 'r-', alpha=1)
+        pltarray[i].set_ylabel('Position '+str(k[i]))
+    
+    fig.subplots_adjust(hspace=0.3)
     plt.show()
