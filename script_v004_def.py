@@ -250,9 +250,16 @@ def MCMC(startvalue, #start value of the chain
     np.savetxt('Data\\output_laev_id'+str(id)+'_bach'+str(ite)+'.txt', c_la_ev, delimiter=',',fmt='%5s')
     np.savetxt('Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', c_lm_tht, delimiter=',',fmt='%5s')
     np.savetxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', c_lm_phi, delimiter=',',fmt='%5s')
+    accuracy(ite,id,data)
     return param_cur, a_P, a_F
-        
-def accuracy(iteration,id):
+
+'''
+function to check the quality of the LR predictions
+iteration: refers to iterations between number of total simulations and batchs
+id: id of the simulation
+the output is a print
+'''        
+def accuracy(iteration,id,data):
     files_p = []
     files_tht = []
     for ite in range(iteration):
@@ -262,11 +269,13 @@ def accuracy(iteration,id):
     #Loading files
     p_sim=pd.read_csv(files_p[0],sep=',', header=None)
     tht_sim=pd.read_csv(files_tht[0],sep=',', header=None)
-    for i in range(1,len(files_p)):
-        p_sim = pd.concat([p_sim,pd.read_csv(files_p[i],sep=',', header=None)],axis =0)
-        tht_sim = pd.concat([tht_sim,pd.read_csv(files_tht[i],sep=',', header=None)],axis=1)
-    
+    if len(files_p)>=1:
+        for i in range(1,len(files_p)):
+            p_sim = pd.concat([p_sim,pd.read_csv(files_p[i],sep=',', header=None)],axis =0)
+            tht_sim = pd.concat([tht_sim,pd.read_csv(files_tht[i],sep=',', header=None)],axis=1)
+        
     #phi: every column is a simulation, every row is a position in the matrix
+    #removing the first 20% as burn-in phase
     tht_array = []
     for i in range(20,tht_sim.shape[1]):
         tht_array.append(np.array(tht_sim.iloc[0:,i]).reshape(j,k))
@@ -278,7 +287,30 @@ def accuracy(iteration,id):
            'abr_LGG', 'abr_LIHC', 'abr_LUSC', 'abr_MESO', 'abr_PAAD', 'abr_PRAD',
            'abr_SARC', 'abr_SKCM', 'abr_TGCT', 'abr_UCS']
     data['intercept']=np.repeat(1,data.shape[0])
-    data_P = pd.concat([data[col].reset_index(drop=True),pd.DataFrame(theta).reset_index(drop=True)],axis=1,ignore_index=True)
-    
+    data_P = pd.concat([data[col].reset_index(drop=True),
+                        pd.DataFrame(theta).reset_index(drop=True)],axis=1,ignore_index=True)
     
     fit = 1/(1+np.exp(data_P.mul(p).sum(axis=1)))
+    print('Fit Values: 'fit.min(),'(min) ',fit.mean(),'(mean) ',fit.max(),'(max)')
+    
+'''
+print some plots to check the convergence of the parameters
+
+'''    
+def conv_plots(sim,bach_size,parameter):
+    files = []
+    for ite in range(sim//bach_size):
+        files.append('Data\\output_lask_id'+id+'_bach'+str(ite)+'.txt')
+    
+    f=pd.read_csv(files[0],sep=',', header=None)
+    for i in range(1,len(files)):
+        f = pd.concat([f,pd.read_csv(files[i],sep=',', header=None)],axis =0,sort=False)
+    
+    '''Plots'''
+    plt.subplot(3,1,1)
+    plt.plot(np.arange(0,f.shape[0]),f.iloc[:,6], 'r-', alpha=1)
+    plt.subplot(3,1,2)
+    plt.plot(np.arange(0,f.shape[0]),f.iloc[:,19], 'r-', alpha=1)
+    plt.subplot(3,1,3)
+    plt.plot(np.arange(0,f.shape[0]),f.iloc[:,96], 'r-', alpha=1)
+    plt.show()

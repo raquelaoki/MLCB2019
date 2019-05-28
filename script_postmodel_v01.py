@@ -34,6 +34,7 @@ remove = data.columns[[0,1]]
 
 
 '''2 - Accuracy  Traning set'''
+#function inside script_v004
 #Loading files names
 files_p = []
 files_tht = []
@@ -86,10 +87,11 @@ for i in range(1,len(files)):
 
 
 '''Plots'''
+plt.subplot(3,1,1)
 plt.plot(np.arange(0,f.shape[0]),f.iloc[:,6], 'r-', alpha=1)
-plt.show()
+plt.subplot(3,1,2)
 plt.plot(np.arange(0,f.shape[0]),f.iloc[:,19], 'r-', alpha=1)
-plt.show()
+plt.subplot(3,1,3)
 plt.plot(np.arange(0,f.shape[0]),f.iloc[:,96], 'r-', alpha=1)
 plt.show()
 

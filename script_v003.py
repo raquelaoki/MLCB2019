@@ -10,11 +10,9 @@ from script_v004_def import *
 '''
 Notes: 
 
-- make code to do predictions
 - plots
-- save a summary
-- smaller steps of bach size
-- for tht and phi i can save just the sum 
+- theta and phi i can save just the sum 
+- add the fit part inside the mcmc or as a function that I call every 100i
 '''
 
 
@@ -24,7 +22,7 @@ sim = 4000
 bach_size = 1000
 step1 = 10
 step2 = 20
-id = '0005'
+id = '0006'
 
 
 '''Loading dataset'''
@@ -89,6 +87,7 @@ print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
 #current, a_P, a_F = MCMC(start,bach_size,data,k,lr,y,chain,id,0)
 '''WORK IN PROGRESS'''
 
+accuracy(sim//bach_size,id,data)
 
 
 
