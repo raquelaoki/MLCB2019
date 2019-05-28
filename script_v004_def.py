@@ -154,7 +154,7 @@ def ratio_p(p_new,p_cur, data_P,k,y):
     J = (-np.log(1+np.exp(xw_new))+
           np.dot(y,xw_new)).sum()/((-np.log(1+np.exp(xw_cur))+
                                                         np.dot(y,xw_cur))).sum()
-    #print('ratio - P',"%0.2f" % H0,"%0.2f" % H1,"%0.2f" % J, (H0+H1+J) )
+    print('ratio - P',"%0.2f" % H0,"%0.2f" % H1,"%0.2f" % J, (H0+H1+J) )
     return (H0+H1+J)
 
 
@@ -263,18 +263,20 @@ the output is a print
 def accuracy(iteration,id,data):
     files_p = []
     files_tht = []
-    for ite in range(iteration):
-        files_p.append('Data\\output_p_id'+id+'_bach'+str(ite)+'.txt')
-        files_tht.append('Data\\output_lmtht_id'+id+'_bach'+str(ite)+'.txt')
-        
-    #Loading files
+    
+    files_p.append('Data\\output_p_id'+id+'_bach'+str(ite)+'.txt')
+    files_tht.append('Data\\output_lmtht_id'+id+'_bach'+str(ite)+'.txt')
     p_sim=pd.read_csv(files_p[0],sep=',', header=None)
-    tht_sim=pd.read_csv(files_tht[0],sep=',', header=None)
-    if len(files_p)>=1:
+    tht_sim=pd.read_csv(files_tht[0],sep=',', header=None)      
+    if iteration >=1 :
+        for ite in range(iteration):
+            files_p.append('Data\\output_p_id'+id+'_bach'+str(ite)+'.txt')
+            files_tht.append('Data\\output_lmtht_id'+id+'_bach'+str(ite)+'.txt')
+        
+        #Loading files
         for i in range(1,len(files_p)):
             p_sim = pd.concat([p_sim,pd.read_csv(files_p[i],sep=',', header=None)],axis =0)
-            tht_sim = pd.concat([tht_sim,pd.read_csv(files_tht[i],sep=',', header=None)],axis=1)
-        
+            tht_sim = pd.concat([tht_sim,pd.read_csv(files_tht[i],sep=',', header=None)],axis=1) 
     #phi: every column is a simulation, every row is a position in the matrix
     #removing the first 20% as burn-in phase
     tht_array = []

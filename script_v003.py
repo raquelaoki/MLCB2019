@@ -19,8 +19,8 @@ Notes:
 
 '''Important parameters I need to constantly change'''
 k = 100
-sim = 4000
-bach_size = 1000
+sim = 400
+bach_size = 100
 step1 = 10
 step2 = 20
 id = '0006'
