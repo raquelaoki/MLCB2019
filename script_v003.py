@@ -21,11 +21,10 @@ Notes:
 '''Important parameters I need to constantly change'''
 k = 100
 sim = 4000
-bach_size = 500
+bach_size = 1000
 step1 = 10
 step2 = 20
-start_time = time.time()
-id = '0003'
+id = '0005'
 
 
 '''Loading dataset'''
@@ -84,9 +83,12 @@ for ite in np.arange(0,sim//bach_size):
     
 end_time = time.time() - start_time
 print("--- %s seconds ---" % (time.time() - start_time))
+print("--- %s min ---" % int((time.time() - start_time)/60))
+print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
 
 #current, a_P, a_F = MCMC(start,bach_size,data,k,lr,y,chain,id,0)
 '''WORK IN PROGRESS'''
+
 
 
 

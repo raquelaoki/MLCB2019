@@ -50,7 +50,7 @@ def proposal_f(current):
 def proposal_p(current):
     new = parameters(current.ln,current.la_cj ,current.la_sk, #current.la_pj, 
                      current.la_ev, current.lm_phi, current.lm_tht, 
-                     np.random.normal(current.p,0.05))
+                     np.random.normal(current.p,0.03))
     return new
 
 
@@ -170,7 +170,7 @@ remove, lr, y = columns names to be removed, presente only in the logistic regre
 '''
        
 
-'''list of obj'''
+'''MCMC algorithm'''
 def MCMC(startvalue, #start value of the chain 
          bach_size, #bach size for save files 
          data, #full dataset
@@ -252,3 +252,33 @@ def MCMC(startvalue, #start value of the chain
     np.savetxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', c_lm_phi, delimiter=',',fmt='%5s')
     return param_cur, a_P, a_F
         
+def accuracy(iteration,id):
+    files_p = []
+    files_tht = []
+    for ite in range(iteration):
+        files_p.append('Data\\output_p_id'+id+'_bach'+str(ite)+'.txt')
+        files_tht.append('Data\\output_lmtht_id'+id+'_bach'+str(ite)+'.txt')
+        
+    #Loading files
+    p_sim=pd.read_csv(files_p[0],sep=',', header=None)
+    tht_sim=pd.read_csv(files_tht[0],sep=',', header=None)
+    for i in range(1,len(files_p)):
+        p_sim = pd.concat([p_sim,pd.read_csv(files_p[i],sep=',', header=None)],axis =0)
+        tht_sim = pd.concat([tht_sim,pd.read_csv(files_tht[i],sep=',', header=None)],axis=1)
+    
+    #phi: every column is a simulation, every row is a position in the matrix
+    tht_array = []
+    for i in range(20,tht_sim.shape[1]):
+        tht_array.append(np.array(tht_sim.iloc[0:,i]).reshape(j,k))
+    theta = np.mean( tht_array , axis=0 )
+    p = p_sim.reset_index(drop=True).drop(range(20),axis=0).mean(axis=0)
+    #p = p_sim.iloc[0,:] 
+       
+    col = ['intercept','gender', 'abr_ACC', 'abr_BLCA', 'abr_CHOL', 'abr_ESCA', 'abr_HNSC',
+           'abr_LGG', 'abr_LIHC', 'abr_LUSC', 'abr_MESO', 'abr_PAAD', 'abr_PRAD',
+           'abr_SARC', 'abr_SKCM', 'abr_TGCT', 'abr_UCS']
+    data['intercept']=np.repeat(1,data.shape[0])
+    data_P = pd.concat([data[col].reset_index(drop=True),pd.DataFrame(theta).reset_index(drop=True)],axis=1,ignore_index=True)
+    
+    
+    fit = 1/(1+np.exp(data_P.mul(p).sum(axis=1)))
