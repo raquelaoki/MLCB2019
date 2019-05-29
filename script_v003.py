@@ -9,22 +9,22 @@ sys.path.append('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019')
 from script_v004_def import *
 '''
 Notes: 
-
-- plots
+- acceptance rate is almost 100, proposal to close or problem on the distributions
 - theta and phi i can save just the sum 
-- add the fit part inside the mcmc or as a function that I call every 100i
 - laev 0 or 1, this make sense? 
 '''
 
 
 '''Important parameters I need to constantly change'''
 k = 100
-sim = 400
-bach_size = 100
+sim = 4000
+bach_size = 500
 step1 = 10
 step2 = 20
 id = '0006'
 
+if bach_size//step2 <= 20:
+    print('ERROR ON MCMC, this division must be bigger than 20')
 
 '''Loading dataset'''
 filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\data_final_log.csv"
@@ -73,7 +73,8 @@ chain_lm_phi = np.tile(start.lm_phi.reshape(-1,1),(1,int(bach_size/step2)))
 
 
 for ite in np.arange(0,sim//bach_size):    
-    print('iteration--',ite,' of ',sim//bach_size)          
+    print('iteration--',ite,' of ',sim//bach_size)   
+    #.print('it should be 981',data.shape)       
     current, a_P, a_F = MCMC(start,bach_size,data,k,lr,y,id,ite,step1,step2,
                              chain_p,chain_ln,chain_la_sk,chain_la_cj,
                              chain_la_ev,chain_lm_tht,chain_lm_phi)

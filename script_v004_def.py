@@ -51,7 +51,7 @@ def proposal_f(current):
 def proposal_p(current):
     new = parameters(current.ln,current.la_cj ,current.la_sk, #current.la_pj, 
                      current.la_ev, current.lm_phi, current.lm_tht, 
-                     np.random.normal(current.p,0.03))
+                     np.random.normal(current.p,0.1))
     return new
 
 
@@ -120,7 +120,6 @@ def ration_f(p_new,p_cur, data_F,k):
     '''Likelihood'''
     #I: n_vj~Poisson(phi_vk theta_kj)
     I0 = np.transpose(np.log(np.matmul(p_new.lm_phi,p_new.lm_tht))-np.log(np.matmul(p_cur.lm_phi,p_cur.lm_tht)))
-    #print(I0.shape,I0[0:5],data_F.head())
     I1 = np.multiply(data_F.to_numpy(),I0).sum() #as_matrix()
     I2 = (np.matmul(p_cur.lm_phi,p_cur.lm_tht)-np.matmul(p_new.lm_phi,p_new.lm_tht)).sum()
     #print('ratio - F',"%0.2f" % A0,"%0.2f" % A1,"%0.2f" % A2,"%0.2f" % B,"%0.2f" % C0,
@@ -132,16 +131,16 @@ def ration_f(p_new,p_cur, data_F,k):
 
 
 def ratio_p(p_new,p_cur, data_P,k,y):
-    sigma0 = 5
-    sigma = 5
+    sigma0 = 10
+    sigma = 3
     mu0 = -len(p_new.p)
     mu = 1
     #H: beta~normal(mu,sigma2)
     H0 = (1/(sigma0*sigma0))*((p_cur.p[0]-mu0)*(p_cur.p[0]-mu0)-(p_new.p[0]-mu0)*(p_new.p[0]-mu0))*0.5
     H1 = (np.multiply((p_cur.p-mu),(p_cur.p-mu))-np.multiply((p_new.p-mu),(p_new.p-mu))).sum()
     H1 = H1 - (p_cur.p[0]-mu)*(p_cur.p[0]-mu)+(p_new.p[0]-mu)*(p_new.p[0]-mu)
-    H1 = (H1*(len(p_new.p)-1)/sigma)*0.5
-    
+    #H1 = (H1*(len(p_new.p)-1)/sigma)*0.5
+    H1 = H1/(sigma*sigma*2)
     #J: y~Log(xbeta)
     data_P = data_P.to_numpy()#as_matrix()
     #print('dataP inside ratio',data_P[0:5])
@@ -154,7 +153,7 @@ def ratio_p(p_new,p_cur, data_P,k,y):
     J = (-np.log(1+np.exp(xw_new))+
           np.dot(y,xw_new)).sum()/((-np.log(1+np.exp(xw_cur))+
                                                         np.dot(y,xw_cur))).sum()
-    print('ratio - P',"%0.2f" % H0,"%0.2f" % H1,"%0.2f" % J, (H0+H1+J) )
+    #print('ratio - P',"%0.2f" % H0,"%0.2f" % H1,"%0.2f" % J, (H0+H1+J) )
     return (H0+H1+J)
 
 
@@ -187,7 +186,9 @@ def MCMC(startvalue, #start value of the chain
     data_P = data[lr]
     data_F = data.drop(lr,axis = 1)
     data_F = data_F.drop(y,axis = 1)
+    #print('it should be 981',data_F.shape)
     y = data[y]
+    #print('y len', len(y))
     '''Tracking acceptance rate and steps count'''
     a_P = 0
     a_F = 0
@@ -251,7 +252,7 @@ def MCMC(startvalue, #start value of the chain
     np.savetxt('Data\\output_laev_id'+str(id)+'_bach'+str(ite)+'.txt', c_la_ev, delimiter=',',fmt='%5s')
     np.savetxt('Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', c_lm_tht, delimiter=',',fmt='%5s')
     np.savetxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', c_lm_phi, delimiter=',',fmt='%5s')
-    accuracy(ite,id,data)
+    accuracy(ite,id,data,data.shape[0],k)
     return param_cur, a_P, a_F
 
 '''
@@ -260,12 +261,12 @@ iteration: refers to iterations between number of total simulations and batchs
 id: id of the simulation
 the output is a print
 '''        
-def accuracy(iteration,id,data):
+def accuracy(iteration,id,data,j,k):
     files_p = []
     files_tht = []
-    
-    files_p.append('Data\\output_p_id'+id+'_bach'+str(ite)+'.txt')
-    files_tht.append('Data\\output_lmtht_id'+id+'_bach'+str(ite)+'.txt')
+    data2 = data.copy()
+    files_p.append('Data\\output_p_id'+id+'_bach'+str(0)+'.txt')
+    files_tht.append('Data\\output_lmtht_id'+id+'_bach'+str(0)+'.txt')
     p_sim=pd.read_csv(files_p[0],sep=',', header=None)
     tht_sim=pd.read_csv(files_tht[0],sep=',', header=None)      
     if iteration >=1 :
@@ -283,15 +284,17 @@ def accuracy(iteration,id,data):
     for i in range(20,tht_sim.shape[1]):
         tht_array.append(np.array(tht_sim.iloc[0:,i]).reshape(j,k))
     theta = np.mean( tht_array , axis=0 )
-    p = p_sim.reset_index(drop=True).drop(range(20),axis=0).mean(axis=0)
+    p = p_sim.reset_index(drop=True).drop(range(int(p_sim.shape[0]*0.2)),axis=0).mean(axis=0)
     #p = p_sim.iloc[0,:] 
        
     col = ['intercept','gender', 'abr_ACC', 'abr_BLCA', 'abr_CHOL', 'abr_ESCA', 'abr_HNSC',
            'abr_LGG', 'abr_LIHC', 'abr_LUSC', 'abr_MESO', 'abr_PAAD', 'abr_PRAD',
            'abr_SARC', 'abr_SKCM', 'abr_TGCT', 'abr_UCS']
-    data['intercept']=np.repeat(1,data.shape[0])
-    data_P = pd.concat([data[col].reset_index(drop=True),
-                        pd.DataFrame(theta).reset_index(drop=True)],axis=1,ignore_index=True)
+    data2['intercept']=np.repeat(1,data2.shape[0])
+    d1 = data2[col].reset_index(drop=True)
+    #print(j,k,len(tht_array),theta.shape,tht_sim.shape)
+    d2 = pd.DataFrame(theta)
+    data_P = pd.concat([d1,d2],axis=1,ignore_index=True)
     
     fit = 1/(1+np.exp(data_P.mul(p).sum(axis=1)))
     print('Fit Values: ',fit.min(),'(min) ',fit.mean(),'(mean) ',fit.max(),'(max)')
