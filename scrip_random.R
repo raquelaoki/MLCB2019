@@ -16,4 +16,7 @@ table(y,y_pred)
 table(y,y_pred)*100/length(y)
 
 
-hist(yp)
+
+summary(fit$coef[-1])
+summary(fit)
+sd(fit$coef, na.rm =TRUE)
