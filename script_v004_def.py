@@ -7,6 +7,8 @@ from scipy.special import loggamma,gamma
 import gc
 import json
 import random 
+import matplotlib.pyplot as plt
+
 
 '''Parameters'''
 class parameters:
@@ -51,7 +53,7 @@ def proposal_f(current):
 def proposal_p(current):
     new = parameters(current.ln,current.la_cj ,current.la_sk, #current.la_pj, 
                      current.la_ev, current.lm_phi, current.lm_tht, 
-                     np.random.normal(current.p,0.1))
+                     np.random.normal(current.p,0.4))
     return new
 
 
@@ -150,10 +152,10 @@ def ratio_p(p_new,p_cur, data_P,k,y):
     #print('\n lm_tht',np.transpose(p_cur.lm_tht))
     xw_new = np.dot(data_P,p_new.p)
     xw_cur = np.dot(data_P,p_cur.p)
-    J = (-np.log(1+np.exp(xw_new))+
-          np.dot(y,xw_new)).sum()/((-np.log(1+np.exp(xw_cur))+
-                                                        np.dot(y,xw_cur))).sum()
-    #print('ratio - P',"%0.2f" % H0,"%0.2f" % H1,"%0.2f" % J, (H0+H1+J) )
+    j1 = (-np.log(1+np.exp(xw_new))+ np.dot(y,xw_new)).sum()
+    j2 = (-np.log(1+np.exp(xw_cur))+ np.dot(y,xw_cur)).sum()
+    J = j1/j2
+    print('ratio - P',"%0.2f" % j1,"%0.2f" % j2,"%0.2f" % J, (H0+H1+J) )
     return (H0+H1+J)
 
 
@@ -299,6 +301,24 @@ def accuracy(iteration,id,data,j,k):
     fit = 1/(1+np.exp(data_P.mul(p).sum(axis=1)))
     print('Fit Values: ',fit.min(),'(min) ',fit.mean(),'(mean) ',fit.max(),'(max)')
     
+'''Checking Seeds quality''''
+def accuracy_seed(data,j,k,start):
+    p0 = start.p
+    col = ['y','intercept','gender', 'abr_ACC', 'abr_BLCA', 'abr_CHOL', 'abr_ESCA', 'abr_HNSC',
+       'abr_LGG', 'abr_LIHC', 'abr_LUSC', 'abr_MESO', 'abr_PAAD', 'abr_PRAD',
+       'abr_SARC', 'abr_SKCM', 'abr_TGCT', 'abr_UCS']
+    data2 = data.copy()
+    data2['intercept']=np.repeat(1,data2.shape[0])
+    data_P = pd.concat([data2[col].reset_index(drop=True),pd.DataFrame(np.transpose(start.lm_tht)).reset_index(drop=True)],axis=1,ignore_index=True)
+    
+    #data_P.to_csv('Data\\seeds.csv', sep=',', index = False)
+    
+    fit0 = 1/(1+np.exp(data_P.mul(p0).sum(axis=1)))
+    fit0.describe()
+    
+
+
+
 '''
 print some plots to check the convergence of the parameters
 Options parameter: lask, lacj, laev, ln, p
