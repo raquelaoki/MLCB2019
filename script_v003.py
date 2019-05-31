@@ -12,18 +12,19 @@ import matplotlib.pyplot as plt
 '''
 Notes: 
 - acceptance rate is almost 100, proposal to close or problem on the distributions
-- theta and phi i can save just the sum 
-- laev 0 or 1, this make sense? 
+- theta and phi plot 
+
+
 '''
 
 
 '''Important parameters I need to constantly change'''
 k = 100
-sim = 4000
+sim = 1000
 bach_size = 500
 step1 = 10
 step2 = 20
-id = '0007'
+id = '0009'
 
 if bach_size//step2 <= 20:
     print('ERROR ON MCMC, this division must be bigger than 20')
@@ -57,10 +58,10 @@ j = data.shape[0]
 start = parameters(np.repeat(1.65,2),#ln [0-c0,1-gamma0]
                    np.repeat(2.72,j), #la_cj
                    np.repeat(2.72,k), #la_sk
-                   np.repeat(1,v), #la_ev
+                   np.repeat(1.0004,v), #la_ev
                    np.repeat(1/(data.shape[1]-aux),(data.shape[1]-aux)*k).reshape((data.shape[1]-aux),k),#lm_phi v x k 
                    np.repeat(7.42,(data.shape[0])*k).reshape(k,(data.shape[0])), #lm_theta k x j
-                   np.concatenate((4, np.repeat(0,k+aux-1))))  #p, k+aux-1  because intercept is already counted
+                   np.concatenate(([4], np.repeat(0,k+aux-1))))  #p, k+aux-1  because intercept is already counted
 
 '''Runnning in batches and saving the partial outputs in files'''
 start_time = time.time()
@@ -92,6 +93,11 @@ print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
 '''WORK IN PROGRESS'''
 
 accuracy(sim//bach_size,id,data,j,k)
+#accuracy(sim//bach_size,id,test,j,k)
+#similarity between patients 
+accuracy_final(sim//bach_size,id,data,j,k)
+
+
 
 #lask, lacj, laev, ln, p
 

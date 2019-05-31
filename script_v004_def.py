@@ -8,6 +8,7 @@ import gc
 import json
 import random 
 import matplotlib.pyplot as plt
+from sklearn import metrics
 
 
 '''Parameters'''
@@ -33,14 +34,15 @@ def proposal_f(current):
     new = parameters(np.random.normal(current.ln,0.05), 
                      np.random.normal(current.la_cj,0.01),
                      np.random.normal(current.la_sk,0.005),
-                     np.random.normal(current.la_ev,0.005),
+                     np.random.normal(current.la_ev,0.00001),
                      np.random.normal(current.lm_phi,0.0000005), #remmeber that lm_phi sum up 1 in the line (genes)
-                     np.random.normal(current.lm_tht,0.005), #remember the average value is 7.42
+                     np.random.normal(current.lm_tht,0.8), #remember the average value is 7.42
                      current.p)
     #phi and tht can't be negative 
     new.lm_phi[new.lm_phi<0] = 0.0000001 #this number needs to be smaller 
     col_sums = new.lm_phi.sum(axis=0)
     new.lm_phi = new.lm_phi / col_sums[np.newaxis,:]
+    new.la_ev[new.la_ev<0.0000001] =0.0000001  
     new.lm_tht[new.lm_tht<0]=0
     new.lm_tht = new.lm_tht+0.000001
     
@@ -53,12 +55,13 @@ def proposal_f(current):
 def proposal_p(current):
     new = parameters(current.ln,current.la_cj ,current.la_sk, #current.la_pj, 
                      current.la_ev, current.lm_phi, current.lm_tht, 
-                     np.random.normal(current.p,0.4))
+                     np.random.normal(current.p,0.8))
     return new
 
 
 
 '''Ratio functions'''
+#np.exp(max)
 def ration_f(p_new,p_cur, data_F,k):
     '''Priori Ration'''
     #log(1680)=7.42
@@ -68,8 +71,14 @@ def ration_f(p_new,p_cur, data_F,k):
     #A: phi_jk~Dir(eta_j)
     #print(loggamma(np.exp(np.sum(np.log(p_cur.la_ev)))),
     #       loggamma(np.exp(np.sum(np.log(p_new.la_ev)))))
-    A0 = k*(loggamma(np.exp(np.sum(np.log(p_cur.la_ev))))-
-           loggamma(np.exp(np.sum(np.log(p_new.la_ev)))))
+    #A0 = k*(loggamma(np.exp(np.sum(np.log(p_cur.la_ev))))-
+    #      loggamma(np.exp(np.sum(np.log(p_new.la_ev)))))
+    #a00 = int(np.floor(np.exp(np.sum(np.log(p_cur.la_ev)))))+1
+    #a01 = int(np.floor(np.exp(np.sum(np.log(p_new.la_ev)))))+1
+    #aux = list(range(min([a00,a01]),max([a00,a01])))
+    A0 = k*(loggamma(np.prod(p_cur.la_ev))-loggamma(np.prod(p_new.la_ev)))
+    
+    #print('A0',A0)
     A1 = k*(np.sum(np.log(gamma(p_new.la_ev)))-np.sum(np.log(gamma(p_cur.la_ev))))
     A2 = np.matmul((p_new.la_ev-1),np.log(p_new.lm_phi)).sum()-np.matmul((p_cur.la_ev-1),np.log(p_cur.lm_phi)).sum()
     #print('A', p_cur.la_ev[0:5],np.log(p_cur.la_ev)[0:5],np.sum(np.log(p_cur.la_ev)))
@@ -204,7 +213,7 @@ def MCMC(startvalue, #start value of the chain
     c_ln[count_s1]=param_cur.ln.tolist()
     c_la_sk[count_s1]=param_cur.la_sk.tolist()
     c_la_cj[count_s1]=param_cur.la_cj.tolist()
-    c_la_ev[count_s1] =param_cur.la_ev.tolist()
+    c_la_ev[count_s1]=param_cur.la_ev.tolist()
     c_lm_tht[:,count_s2]=param_cur.lm_tht.reshape(1,-1)
     c_lm_phi[:,count_s2]=param_cur.lm_phi.reshape(1,-1)
     
@@ -236,7 +245,8 @@ def MCMC(startvalue, #start value of the chain
             c_ln[count_s1]=param_cur.ln.tolist()
             c_la_sk[count_s1]=param_cur.la_sk.tolist()
             c_la_cj[count_s1]=param_cur.la_cj.tolist()
-            c_la_ev[count_s1] =param_cur.la_ev.tolist()
+            c_la_ev[count_s1]=param_cur.la_ev.tolist()
+
             if i%20==0:
                 count_s2+=1
                 c_lm_tht[:,count_s2]=param_cur.lm_tht.reshape(1,-1)
@@ -245,6 +255,7 @@ def MCMC(startvalue, #start value of the chain
                     a = a_F*100/i
                     b = a_P*100/i
                     print('iteration ',ite, 'bach i', i,' acceptance ', "%0.2f" % a,'-', "%0.2f" % b)
+    
                            
  
     np.savetxt('Data\\output_p_id'+str(id)+'_bach'+str(ite)+'.txt', c_p, delimiter=',',fmt='%5s')
@@ -300,21 +311,53 @@ def accuracy(iteration,id,data,j,k):
     
     fit = 1/(1+np.exp(data_P.mul(p).sum(axis=1)))
     print('Fit Values: ',fit.min(),'(min) ',fit.mean(),'(mean) ',fit.max(),'(max)')
+    fit[fit>0.5] = 1
+    fit[fit<=0.5] = 0  
+    tn, fp, fn, tp = metrics.confusion_matrix(data['y'], fit, labels=None, sample_weight=None)
+    print('Tn',tn,'Tp',tp,'Fn',fn,'Fp',fp,)
     
-'''Checking Seeds quality''''
-def accuracy_seed(data,j,k,start):
-    p0 = start.p
-    col = ['y','intercept','gender', 'abr_ACC', 'abr_BLCA', 'abr_CHOL', 'abr_ESCA', 'abr_HNSC',
-       'abr_LGG', 'abr_LIHC', 'abr_LUSC', 'abr_MESO', 'abr_PAAD', 'abr_PRAD',
-       'abr_SARC', 'abr_SKCM', 'abr_TGCT', 'abr_UCS']
+    
+'''Checking Seeds quality'''
+def accuracy_final(iteration,id,data,j,k):
+    files_p = []
+    files_tht = []
     data2 = data.copy()
+    files_p.append('Data\\output_p_id'+id+'_bach'+str(0)+'.txt')
+    files_tht.append('Data\\output_lmtht_id'+id+'_bach'+str(0)+'.txt')
+    p_sim=pd.read_csv(files_p[0],sep=',', header=None)
+    tht_sim=pd.read_csv(files_tht[0],sep=',', header=None)      
+    if iteration >=1 :
+        for ite in range(iteration):
+            files_p.append('Data\\output_p_id'+id+'_bach'+str(ite)+'.txt')
+            files_tht.append('Data\\output_lmtht_id'+id+'_bach'+str(ite)+'.txt')
+        
+        #Loading files
+        for i in range(1,len(files_p)):
+            p_sim = pd.concat([p_sim,pd.read_csv(files_p[i],sep=',', header=None)],axis =0)
+            tht_sim = pd.concat([tht_sim,pd.read_csv(files_tht[i],sep=',', header=None)],axis=1) 
+    #phi: every column is a simulation, every row is a position in the matrix
+    #removing the first 20% as burn-in phase
+    tht_array = []
+    for i in range(20,tht_sim.shape[1]):
+        tht_array.append(np.array(tht_sim.iloc[0:,i]).reshape(j,k))
+    theta = np.mean( tht_array , axis=0 )
+    p = p_sim.reset_index(drop=True).drop(range(int(p_sim.shape[0]*0.2)),axis=0).mean(axis=0)
+    #p = p_sim.iloc[0,:] 
+       
+    col = ['intercept','gender', 'abr_ACC', 'abr_BLCA', 'abr_CHOL', 'abr_ESCA', 'abr_HNSC',
+           'abr_LGG', 'abr_LIHC', 'abr_LUSC', 'abr_MESO', 'abr_PAAD', 'abr_PRAD',
+           'abr_SARC', 'abr_SKCM', 'abr_TGCT', 'abr_UCS']
     data2['intercept']=np.repeat(1,data2.shape[0])
-    data_P = pd.concat([data2[col].reset_index(drop=True),pd.DataFrame(np.transpose(start.lm_tht)).reset_index(drop=True)],axis=1,ignore_index=True)
+    d1 = data2[col].reset_index(drop=True)
+    #print(j,k,len(tht_array),theta.shape,tht_sim.shape)
+    d2 = pd.DataFrame(theta)
+    data_P = pd.concat([d1,d2],axis=1,ignore_index=True)
     
-    #data_P.to_csv('Data\\seeds.csv', sep=',', index = False)
-    
-    fit0 = 1/(1+np.exp(data_P.mul(p0).sum(axis=1)))
-    fit0.describe()
+    fit = 1/(1+np.exp(data_P.mul(p).sum(axis=1)))
+    fit[fit>0.5] = 1
+    fit[fit<=0.5] = 0  
+    tn, fp, fn, tp = metrics.confusion_matrix(data['y'], fit, labels=None, sample_weight=None)
+    print('Tn',tn,'Tp',tp,'Fn',fn,'Fp',fp,)
     
 
 
