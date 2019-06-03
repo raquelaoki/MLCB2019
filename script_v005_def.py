@@ -140,12 +140,12 @@ def ration_f(p_new,p_cur, data_F,k):
 
 
 
-
+#Every feature has a normal dist and p_new.p keeps the average value. 
 def ratio_p(p_new,p_cur, data_P,k,y):
     sigma0 = 10
     sigma = 3
-    mu0 = -len(p_new.p)
-    mu = 1
+    #mu0 = -len(p_new.p)
+    #mu = 1
     #H: beta~normal(mu,sigma2)
     H0 = (1/(sigma0*sigma0))*((p_cur.p[0]-mu0)*(p_cur.p[0]-mu0)-(p_new.p[0]-mu0)*(p_new.p[0]-mu0))*0.5
     H1 = (np.multiply((p_cur.p-mu),(p_cur.p-mu))-np.multiply((p_new.p-mu),(p_new.p-mu))).sum()

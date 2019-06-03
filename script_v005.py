@@ -11,9 +11,8 @@ import matplotlib.pyplot as plt
 
 '''
 Notes: 
-- acceptance rate is almost 100, proposal to close or problem on the distributions
-- theta and phi plot 
-
+- Change my dirichelt, check on overleaf the theory
+- https://hackernoon.com/implementation-of-gaussian-naive-bayes-in-python-from-scratch-c4ea64e3944d
 
 '''
 
