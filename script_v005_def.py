@@ -31,10 +31,10 @@ class parameters:
 Proposal distribution
 '''
 def proposal_f(current):
-    new = parameters(np.random.normal(current.ln,0.05), 
-                     np.random.normal(current.la_cj,0.01),
-                     np.random.normal(current.la_sk,0.005),
-                     np.random.normal(current.la_ev,0.00001),
+    new = parameters(np.random.normal(current.ln,0.05), #2
+                     np.random.normal(current.la_cj,0.01),#j
+                     np.random.normal(current.la_sk,0.005),#kx2
+                     np.random.normal(current.la_ev,0.00001),#v
                      np.random.normal(current.lm_phi,0.0000005), #remmeber that lm_phi sum up 1 in the line (genes)
                      np.random.normal(current.lm_tht,0.8), #remember the average value is 7.42
                      current.p)
@@ -62,12 +62,14 @@ def proposal_p(current):
 
 '''Ratio functions'''
 #np.exp(max)
-def ration_f(p_new,p_cur, data_F,k):
+def ration(p_new,p_cur, data_F,k,y):
     '''Priori Ration'''
     #log(1680)=7.42
     #J is samples and V is genes
     j = data_F.shape[0]
-    v = data_F.shape[1]
+    v = data_F.shape[1]-1
+    y01 = data_F['y']
+    data_F = data_F.drop(y,axis = 1)
     #A: phi_jk~Dir(eta_j)
     #print(loggamma(np.exp(np.sum(np.log(p_cur.la_ev)))),
     #       loggamma(np.exp(np.sum(np.log(p_new.la_ev)))))
@@ -88,21 +90,13 @@ def ration_f(p_new,p_cur, data_F,k):
     B = (a0-1)*(np.log(p_new.la_ev)-np.log(p_cur.la_ev)).sum()+(p_cur.la_ev-p_new.la_ev).sum()/b0
     
     #C: theta_kl~Gamma(sk,cj)
-    C0 = j*(loggamma(p_cur.la_sk).sum()-loggamma(p_new.la_sk).sum())+(
+    C00 = j*(loggamma(p_cur.la_sk).sum()-loggamma(p_new.la_sk).sum())+(
     p_cur.la_sk.sum()*np.log(p_cur.la_cj).sum()-p_new.la_sk.sum()*np.log(p_new.la_cj).sum())
-    '''
-    print('c1',np.matmul(p_new.la_sk-1,np.log(p_new.lm_tht).sum(axis=1)),
-          np.matmul(p_cur.la_sk-1,np.log(p_cur.lm_tht).sum(axis=1)))
-    if math.isnan(np.matmul(p_new.la_sk-1,np.log(p_new.lm_tht).sum(axis=1))):
-        print('print something')
-        for i in np.arange(0,len(np.log(p_new.lm_tht).sum(axis=1))):
-            if math.isnan(np.log(p_new.lm_tht).sum(axis=1)[i]):
-                print('almost there')
-                for j in np.arange(0,len(np.log(p_new.lm_tht))):
-                    print(j,np.log(p_new.lm_tht[i,j]))
-                    if math.isnan(np.log(p_new.lm_tht[i,j])):
-                        print('\n','value',p_new.lm_tht[i,j],'\n')
-    '''            
+         
+    C01 = j*(loggamma(p_cur.la_sk).sum()-loggamma(p_new.la_sk).sum())+(
+    p_cur.la_sk.sum()*np.log(p_cur.la_cj).sum()-p_new.la_sk.sum()*np.log(p_new.la_cj).sum())
+
+
     C1 = np.matmul(p_new.la_sk-1,np.log(p_new.lm_tht).sum(axis=1))-np.matmul(
         p_cur.la_sk-1,np.log(p_cur.lm_tht).sum(axis=1))
     C2 = np.divide(p_cur.lm_tht.sum(axis=0),p_cur.la_cj).sum()-np.divide(p_new.lm_tht.sum(axis=0),p_new.la_cj).sum()
@@ -196,7 +190,7 @@ def MCMC(startvalue, #start value of the chain
     '''Splitting dataset'''
     data_P = data[lr]
     data_F = data.drop(lr,axis = 1)
-    data_F = data_F.drop(y,axis = 1)
+    #data_F = data_F.drop(y,axis = 1)
     #print('it should be 981',data_F.shape)
     y = data[y]
     #print('y len', len(y))
@@ -226,7 +220,7 @@ def MCMC(startvalue, #start value of the chain
 #            b = a_P*100/i
 #            print('iteration ',ite, 'bach i', i,' acceptance ', "%0.2f" % a,'-', "%0.2f" % b)
 
-        prob_f = np.exp(ration_f(param_new_f,param_cur, data_F,k))
+        prob_f = np.exp(ration(param_new_f,param_cur, data_F,k,y))
         if np.random.uniform(0,1,1)<prob_f:
             param_cur = param_new_f
             a_F+=1

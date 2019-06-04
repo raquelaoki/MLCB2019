@@ -56,7 +56,7 @@ v = (data.shape[1]-aux)
 j = data.shape[0]
 start = parameters(np.repeat(1.65,2),#ln [0-c0,1-gamma0]
                    np.repeat(2.72,j), #la_cj
-                   np.repeat(2.72,k), #la_sk
+                   np.repeat(2.72,k).reshape(2,k), #la_sk
                    np.repeat(1.0004,v), #la_ev
                    np.repeat(1/(data.shape[1]-aux),(data.shape[1]-aux)*k).reshape((data.shape[1]-aux),k),#lm_phi v x k 
                    np.repeat(7.42,(data.shape[0])*k).reshape(k,(data.shape[0])), #lm_theta k x j
@@ -67,7 +67,7 @@ start_time = time.time()
 
 chain_p = np.tile(start.p.tolist(),(int(bach_size/step1),1))
 chain_ln = np.tile(start.ln.tolist(),(int(bach_size/step1),1))
-chain_la_sk = np.tile(start.la_sk.tolist(),(int(bach_size/step1),1))
+chain_la_sk = np.tile(start.la_sk.reshape(-1,1),(1,int(bach_size/step1)))
 chain_la_cj = np.tile(start.la_cj.tolist(),(int(bach_size/step1),1))
 chain_la_ev = np.tile(start.la_ev.tolist(),(int(bach_size/step1),1))
 chain_lm_tht = np.tile(start.lm_tht.reshape(-1,1),(1,int(bach_size/step2)))
