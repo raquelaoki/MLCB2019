@@ -90,8 +90,10 @@ def ration(p_new,p_cur, data_F,k,y):
     B = (a0-1)*(np.log(p_new.la_ev)-np.log(p_cur.la_ev)).sum()+(p_cur.la_ev-p_new.la_ev).sum()/b0
     
     #C: theta_kl~Gamma(sk,cj)
-    C00 = j*(loggamma(p_cur.la_sk).sum()-loggamma(p_new.la_sk).sum())+(
-    p_cur.la_sk.sum()*np.log(p_cur.la_cj).sum()-p_new.la_sk.sum()*np.log(p_new.la_cj).sum())
+    lask = 
+    C00 = (j-y01.sum())*(loggamma(p_cur.la_sk[0]).sum()-loggamma(p_new.la_sk[0]).sum())+
+          (y01.sum())*(loggamma(p_cur.la_sk[1]).sum()-loggamma(p_new.la_sk[1]).sum())+
+             (p_cur.la_sk.sum()*np.log(p_cur.la_cj).sum()-p_new.la_sk.sum()*np.log(p_new.la_cj).sum())
          
     C01 = j*(loggamma(p_cur.la_sk).sum()-loggamma(p_new.la_sk).sum())+(
     p_cur.la_sk.sum()*np.log(p_cur.la_cj).sum()-p_new.la_sk.sum()*np.log(p_new.la_cj).sum())
