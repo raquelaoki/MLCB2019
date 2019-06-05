@@ -3,10 +3,11 @@ import pandas as pd
 import numpy as np 
 import time
 #import matplotlib.pyplot as plt
-import sys 
 from sklearn.model_selection import train_test_split
+
+import sys 
 sys.path.append('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019')
-from script_v004_def import *
+from script_v005_def import *
 import matplotlib.pyplot as plt
 
 '''
@@ -56,16 +57,16 @@ v = (data.shape[1]-aux)
 j = data.shape[0]
 start = parameters(np.repeat(1.65,2),#ln [0-c0,1-gamma0]
                    np.repeat(2.72,j), #la_cj
-                   np.repeat(2.72,k).reshape(2,k), #la_sk
+                   np.repeat(2.72,k*2).reshape(2,k), #la_sk
                    np.repeat(1.0004,v), #la_ev
                    np.repeat(1/(data.shape[1]-aux),(data.shape[1]-aux)*k).reshape((data.shape[1]-aux),k),#lm_phi v x k 
-                   np.repeat(7.42,(data.shape[0])*k).reshape(k,(data.shape[0])), #lm_theta k x j
-                   np.concatenate(([4], np.repeat(0,k+aux-1))))  #p, k+aux-1  because intercept is already counted
+                   np.repeat(7.42,(data.shape[0])*k).reshape(k,(data.shape[0]))) #lm_theta k x j
+                   #np.concatenate(([4], np.repeat(0,k+aux-1))))  #p, k+aux-1  because intercept is already counted
 
 '''Runnning in batches and saving the partial outputs in files'''
 start_time = time.time()
 
-chain_p = np.tile(start.p.tolist(),(int(bach_size/step1),1))
+#chain_p = np.tile(start.p.tolist(),(int(bach_size/step1),1))
 chain_ln = np.tile(start.ln.tolist(),(int(bach_size/step1),1))
 chain_la_sk = np.tile(start.la_sk.reshape(-1,1),(1,int(bach_size/step1)))
 chain_la_cj = np.tile(start.la_cj.tolist(),(int(bach_size/step1),1))
@@ -78,7 +79,7 @@ for ite in np.arange(0,sim//bach_size):
     print('iteration--',ite,' of ',sim//bach_size)   
     #.print('it should be 981',data.shape)       
     current, a_P, a_F = MCMC(start,bach_size,data,k,lr,y,id,ite,step1,step2,
-                             chain_p,chain_ln,chain_la_sk,chain_la_cj,
+                             chain_ln,chain_la_sk,chain_la_cj,
                              chain_la_ev,chain_lm_tht,chain_lm_phi)
     start = current
 
