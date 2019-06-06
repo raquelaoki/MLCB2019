@@ -52,50 +52,52 @@ def proposal_f(current):
 #np.exp(max)
 def ration(p_new,p_cur, data_F,k,y):
     '''Priori Ration'''
-    #log(1680)=7.42
     #J is samples and V is genes
     j = data_F.shape[0]
     v = data_F.shape[1]-1
     y01 = data_F['y']
     data_F = data_F.drop(y,axis = 1)
-    #A: phi_jk~Dir(eta_j)
-    #print(loggamma(np.exp(np.sum(np.log(p_cur.la_ev)))),
-    #       loggamma(np.exp(np.sum(np.log(p_new.la_ev)))))
-    #A0 = k*(loggamma(np.exp(np.sum(np.log(p_cur.la_ev))))-
-    #      loggamma(np.exp(np.sum(np.log(p_new.la_ev)))))
-    #a00 = int(np.floor(np.exp(np.sum(np.log(p_cur.la_ev)))))+1
-    #a01 = int(np.floor(np.exp(np.sum(np.log(p_new.la_ev)))))+1
-    #aux = list(range(min([a00,a01]),max([a00,a01])))
     A0 = k*(loggamma(np.prod(p_cur.la_ev))-loggamma(np.prod(p_new.la_ev)))
     
-    #print('A0',A0)
     A1 = k*(np.sum(np.log(gamma(p_new.la_ev)))-np.sum(np.log(gamma(p_cur.la_ev))))
     A2 = np.matmul((p_new.la_ev-1),np.log(p_new.lm_phi)).sum()-np.matmul((p_cur.la_ev-1),np.log(p_cur.lm_phi)).sum()
-    #print('A', p_cur.la_ev[0:5],np.log(p_cur.la_ev)[0:5],np.sum(np.log(p_cur.la_ev)))
     #B: eta_j~Gamma(a0,b0)
     a0 = 1#/(2*v)
     b0 = 1#/(2*v)
     B = (a0-1)*(np.log(p_new.la_ev)-np.log(p_cur.la_ev)).sum()+(p_cur.la_ev-p_new.la_ev).sum()/b0
     
+    '''
+    OLD DISTRIBUTION. IT WORKS 
     #C: theta_kl~Gamma(sk,cj)
-    #lask = 
     C00 = (j-y01.sum())*(loggamma(p_cur.la_sk[0]).sum()-loggamma(p_new.la_sk[0]).sum())+ (
             y01.sum())*(loggamma(p_cur.la_sk[1]).sum()-loggamma(p_new.la_sk[1]).sum())+ (
-                    p_cur.la_sk[0].sum()*np.np.dot(log(p_cur.la_cj),1-y01).sum()+
-                    p_cur.la_sk[1].sum()*np.dot(np.log(p_cur.la_cj),y01).sum()-
-                    p_new.la_sk[0].sum()*np.dot(np.log(p_new.la_cj),1-y01).sum()-
-                    p_new.la_sk[1].sum()*np.dot(np.log(p_new.la_cj),y01).sum())
+                    p_cur.la_sk[0].sum()*np.dot(np.log(p_cur.la_cj),1-y01).sum()+p_cur.la_sk[1].sum()*np.dot(
+                            np.log(p_cur.la_cj),y01).sum()-
+                    p_new.la_sk[0].sum()*np.dot(np.log(p_new.la_cj),1-y01).sum()-p_new.la_sk[1].sum()*np.dot(
+                            np.log(p_new.la_cj),y01).sum())
          
     C01 = j*(loggamma(p_cur.la_sk).sum()-loggamma(p_new.la_sk).sum())+(
     p_cur.la_sk.sum()*np.log(np.dot(p_cur.la_cj,1-y01)).sum()-p_new.la_sk.sum()*np.log(np.dot(p_new.la_cj,y01)).sum())
-
-
-    C1 = np.matmul(p_new.la_sk[0]-1,np.dot(np.log(p_new.lm_tht),1-y01).sum(axis=1)
-    )+np.matmul(p_new.la_sk[1]-1,np.dot(np.log(p_new.lm_tht),y01).sum(axis=1)
-    )-np.matmul(p_cur.la_sk[0]-1,np.dot(np.log(p_cur.lm_tht),1-y01).sum(axis=1)
-    )-np.matmul(p_cur.la_sk[0],np.dot(np.log(p_cur.lm_tht),y01).sum(axis=1))
+    C0 = C00+C01
+    y01 = y01.as_matrix().reshape(1,len(y01))
+    C1 = np.matmul(p_new.la_sk[0]-1,(np.log(p_new.lm_tht)*(1-y01)).sum(axis=1))+ np.matmul(
+            p_new.la_sk[1]-1,(np.log(p_new.lm_tht)*y01).sum(axis=1))-np.matmul(
+            p_cur.la_sk[0]-1,(np.log(p_cur.lm_tht)*(1-y01)).sum(axis=1))-np.matmul(
+            p_cur.la_sk[0]-1,(np.log(p_cur.lm_tht)*y01).sum(axis=1))
     C2 = np.divide(p_cur.lm_tht.sum(axis=0),p_cur.la_cj).sum()-np.divide(p_new.lm_tht.sum(axis=0),p_new.la_cj).sum()
+    '''
+    #C: theta_kl~Normal(sk,cj)
+    y01 = y01.as_matrix().reshape(len(y01),1)
+    C0a = p_cur.lm_tht - np.repeat(p_cur.la_sk[0],j).reshape(k,j)#np.add(1,np.multiply(-1,y01))   
+    C0b = p_new.lm_tht - np.repeat(p_new.la_sk[0],j).reshape(k,j)
+    C0 = (np.multiply(C0a,C0a)/np.multiply(p_cur.la_cj,p_cur.la_cj)-np.multiply(C0b,C0b)/np.multiply(
+            p_new.la_cj,p_new.la_cj)*np.add(1,np.multiply(-1,y01)))).sum()
+     
+    C1a = p_cur.lm_tht - np.repeat(p_cur.la_sk[1],j).reshape(k,j)#np.add(1,np.multiply(-1,y01))   
+    C1b = p_new.lm_tht - np.repeat(p_new.la_sk[1],j).reshape(k,j)
+    C1 = (np.multiply(C1a,C1a)/np.multiply(p_cur.la_cj,p_cur.la_cj)-np.multiply(C1b,C1b)/np.multiply(p_new.la_cj,p_new.la_cj)*y01).sum()
     
+    C2 = k*((np.log(p_cur.la_cj^2)-np.log(p_new.la_cj^2)).sum())/2
     #D: sk~Gamma(gamma0,c0), gamma0 = c0 = (v*averageExpression)^0.5
     average4 = np.sqrt(np.sqrt(v*7.42))
     gamma0 = average4
@@ -117,11 +119,19 @@ def ration(p_new,p_cur, data_F,k,y):
     a3 = average8
     b3 = average8
     G = (a3-1)*(np.log(p_new.ln[0])-np.log(p_cur.ln[0]))+(p_cur.ln[0]-p_new.ln[0])/b3
-    '''Likelihood'''
+    '''Likelihood OLD
     #I: n_vj~Poisson(phi_vk theta_kj)
     I0 = np.transpose(np.log(np.matmul(p_new.lm_phi,p_new.lm_tht))-np.log(np.matmul(p_cur.lm_phi,p_cur.lm_tht)))
     I1 = np.multiply(data_F.to_numpy(),I0).sum() #as_matrix()
     I2 = (np.matmul(p_cur.lm_phi,p_cur.lm_tht)-np.matmul(p_new.lm_phi,p_new.lm_tht)).sum()
+    '''
+    
+    '''Likelihood '''
+    #I: n_vj~Normal(phi_vk theta_kj, sigma), sigma is constant
+    sigma = 4
+    I1 = (((data_F.to_numpy()-np.matmul(p_cur.lm_phi,p_cur.lm_tht))^2-(
+            data_F.to_numpy()-np.matmul(p_new.lm_phi,p_new.lm_tht))^2).sum())/(2*sigma^2))
+    I2 = 0 # (np.log(sigma')-np.log(sigma)).sum()*(j/2)  variance is constant    
     #print('ratio - F',"%0.2f" % A0,"%0.2f" % A1,"%0.2f" % A2,"%0.2f" % B,"%0.2f" % C0,
     #      "%0.2f" % C1,"%0.2f" % C2,"%0.2f" % D,"%0.2f" % E, "%0.2f" % F,"%0.2f" % G,
     #     "%0.2f" % I1,"%0.2f" % I2,'end',(A0+A1+A2+B+C0+C1+C2+D+E+F+G+I1+I2))
@@ -154,14 +164,9 @@ def MCMC(startvalue, #start value of the chain
          c_ln,c_la_sk,c_la_cj, c_la_ev, #array with the chain of values step1
          c_lm_tht,c_lm_phi): #array with the chain of values step2
     '''Splitting dataset'''
-    #data_P = data[lr]
     data_F = data.drop(lr,axis = 1)
-    #data_F = data_F.drop(y,axis = 1)
-    #print('it should be 981',data_F.shape)
-    y = data[y]
-    #print('y len', len(y))
+
     '''Tracking acceptance rate and steps count'''
-    #a_P = 0
     a_F = 0
     
     count_s1 = 0
@@ -176,6 +181,7 @@ def MCMC(startvalue, #start value of the chain
     c_lm_tht[:,count_s2]=param_cur.lm_tht.reshape(1,-1)
     c_lm_phi[:,count_s2]=param_cur.lm_phi.reshape(1,-1)
     
+    #print('inside the MCMC',c_la_sk.shape)
     
     for i in np.arange(1,bach_size):
         '''Factor Analysis - Latent Features'''
@@ -195,7 +201,7 @@ def MCMC(startvalue, #start value of the chain
             count_s1+=1
             #c_p[count_s1]=param_cur.p.tolist()
             c_ln[count_s1]=param_cur.ln.tolist()
-            c_la_sk[count_s1]=param_cur.la_sk.reshape(1,-1)
+            c_la_sk[:,count_s1]=param_cur.la_sk.reshape(1,-1)
             c_la_cj[count_s1]=param_cur.la_cj.tolist()
             c_la_ev[count_s1]=param_cur.la_ev.tolist()
 
@@ -216,7 +222,7 @@ def MCMC(startvalue, #start value of the chain
     np.savetxt('Data\\output_laev_id'+str(id)+'_bach'+str(ite)+'.txt', c_la_ev, delimiter=',',fmt='%5s')
     np.savetxt('Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', c_lm_tht, delimiter=',',fmt='%5s')
     np.savetxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', c_lm_phi, delimiter=',',fmt='%5s')
-    #accuracy(ite,id,data,data.shape[0],k)
+    #accuracy(ite,id,data,data.shape[0],k,y01)
     return param_cur, a_F
 
 '''
@@ -225,22 +231,18 @@ iteration: refers to iterations between number of total simulations and batchs
 id: id of the simulation
 the output is a print
 '''        
-def accuracy(iteration,id,data,j,k):
+def accuracy(iteration,id,data,j,k,y01):
     files_p = []
     files_tht = []
     data2 = data.copy()
-    files_p.append('Data\\output_p_id'+id+'_bach'+str(0)+'.txt')
     files_tht.append('Data\\output_lmtht_id'+id+'_bach'+str(0)+'.txt')
-    p_sim=pd.read_csv(files_p[0],sep=',', header=None)
     tht_sim=pd.read_csv(files_tht[0],sep=',', header=None)      
     if iteration >=1 :
         for ite in range(iteration):
-            files_p.append('Data\\output_p_id'+id+'_bach'+str(ite)+'.txt')
             files_tht.append('Data\\output_lmtht_id'+id+'_bach'+str(ite)+'.txt')
         
         #Loading files
         for i in range(1,len(files_p)):
-            p_sim = pd.concat([p_sim,pd.read_csv(files_p[i],sep=',', header=None)],axis =0)
             tht_sim = pd.concat([tht_sim,pd.read_csv(files_tht[i],sep=',', header=None)],axis=1) 
     #phi: every column is a simulation, every row is a position in the matrix
     #removing the first 20% as burn-in phase
@@ -248,17 +250,9 @@ def accuracy(iteration,id,data,j,k):
     for i in range(20,tht_sim.shape[1]):
         tht_array.append(np.array(tht_sim.iloc[0:,i]).reshape(j,k))
     theta = np.mean( tht_array , axis=0 )
-    p = p_sim.reset_index(drop=True).drop(range(int(p_sim.shape[0]*0.2)),axis=0).mean(axis=0)
-    #p = p_sim.iloc[0,:] 
        
-    col = ['intercept','gender', 'abr_ACC', 'abr_BLCA', 'abr_CHOL', 'abr_ESCA', 'abr_HNSC',
-           'abr_LGG', 'abr_LIHC', 'abr_LUSC', 'abr_MESO', 'abr_PAAD', 'abr_PRAD',
-           'abr_SARC', 'abr_SKCM', 'abr_TGCT', 'abr_UCS']
-    data2['intercept']=np.repeat(1,data2.shape[0])
-    d1 = data2[col].reset_index(drop=True)
-    #print(j,k,len(tht_array),theta.shape,tht_sim.shape)
-    d2 = pd.DataFrame(theta)
-    data_P = pd.concat([d1,d2],axis=1,ignore_index=True)
+    data_NB = pd.DataFrame(theta)
+
     
     fit = 1/(1+np.exp(data_P.mul(p).sum(axis=1)))
     print('Fit Values: ',fit.min(),'(min) ',fit.mean(),'(mean) ',fit.max(),'(max)')

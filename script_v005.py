@@ -20,7 +20,7 @@ Notes:
 
 '''Important parameters I need to constantly change'''
 k = 100
-sim = 1000
+sim = 4000
 bach_size = 500
 step1 = 10
 step2 = 20
@@ -78,9 +78,9 @@ chain_lm_phi = np.tile(start.lm_phi.reshape(-1,1),(1,int(bach_size/step2)))
 for ite in np.arange(0,sim//bach_size):    
     print('iteration--',ite,' of ',sim//bach_size)   
     #.print('it should be 981',data.shape)       
-    current, a_P, a_F = MCMC(start,bach_size,data,k,lr,y,id,ite,step1,step2,
-                             chain_ln,chain_la_sk,chain_la_cj,
-                             chain_la_ev,chain_lm_tht,chain_lm_phi)
+    current, a_F = MCMC(start,bach_size,data,k,lr,y,id,ite,step1,step2,
+                             chain_ln,chain_la_sk,chain_la_cj,chain_la_ev,
+                             chain_lm_tht,chain_lm_phi)
     start = current
 
     
@@ -92,10 +92,10 @@ print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
 #current, a_P, a_F = MCMC(start,bach_size,data,k,lr,y,chain,id,0)
 '''WORK IN PROGRESS'''
 
-accuracy(sim//bach_size,id,data,j,k)
+#accuracy(sim//bach_size,id,data,j,k)
 #accuracy(sim//bach_size,id,test,j,k)
 #similarity between patients 
-accuracy_final(sim//bach_size,id,data,j,k)
+#accuracy_final(sim//bach_size,id,data,j,k)
 
 
 
