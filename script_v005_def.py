@@ -90,16 +90,17 @@ def ration(p_new,p_cur, data_F,k,y):
     y01 = y01.as_matrix().reshape(len(y01),1)
     C0a = p_cur.lm_tht - np.repeat(p_cur.la_sk[0],j).reshape(k,j)#np.add(1,np.multiply(-1,y01))   
     C0b = p_new.lm_tht - np.repeat(p_new.la_sk[0],j).reshape(k,j)
-    C0 = (np.multiply(C0a,C0a)/np.multiply(p_cur.la_cj,p_cur.la_cj)-np.multiply(C0b,C0b)/np.multiply(
-            p_new.la_cj,p_new.la_cj)*np.add(1,np.multiply(-1,y01)))).sum()
+    C0 = (np.power(C0a,2)/np.power(p_cur.la_cj,2)-np.power(C0b,2)/np.power(
+            p_new.la_cj,2).dot(np.add(1,np.multiply(-1,y01)))).sum()
      
     C1a = p_cur.lm_tht - np.repeat(p_cur.la_sk[1],j).reshape(k,j)#np.add(1,np.multiply(-1,y01))   
     C1b = p_new.lm_tht - np.repeat(p_new.la_sk[1],j).reshape(k,j)
-    C1 = (np.multiply(C1a,C1a)/np.multiply(p_cur.la_cj,p_cur.la_cj)-np.multiply(C1b,C1b)/np.multiply(p_new.la_cj,p_new.la_cj)*y01).sum()
+    C1 = (np.power(C1a,2)/np.power(p_cur.la_cj,2)-np.power(C1b,2)/np.power(p_new.la_cj,2).dot(y01)).sum()
     
-    C2 = k*((np.log(p_cur.la_cj^2)-np.log(p_new.la_cj^2)).sum())/2
+    C2 = k*((np.log(np.power(p_cur.la_cj,2))-np.log(np.power(p_new.la_cj,2))).sum())/2
     #D: sk~Gamma(gamma0,c0), gamma0 = c0 = (v*averageExpression)^0.5
-    average4 = np.sqrt(np.sqrt(v*7.42))
+    #7.42 = log(1680)
+    average4 = np.sqrt(v*7.42)
     gamma0 = average4
     c0 = average4
     D = (gamma0-1)*(np.log(p_new.la_sk)-np.log(p_cur.la_sk)).sum()+(p_cur.la_sk-p_new.la_sk).sum()/c0
@@ -129,8 +130,10 @@ def ration(p_new,p_cur, data_F,k,y):
     '''Likelihood '''
     #I: n_vj~Normal(phi_vk theta_kj, sigma), sigma is constant
     sigma = 4
-    I1 = (((data_F.to_numpy()-np.matmul(p_cur.lm_phi,p_cur.lm_tht))^2-(
-            data_F.to_numpy()-np.matmul(p_new.lm_phi,p_new.lm_tht))^2).sum())/(2*sigma^2))
+    #aux = p_cur.lm_phi.dot(p_cur.lm_tht)
+    #print('test',data_F.to_numpy().shape,aux.shape)
+    I1 = (np.power((np.transpose(data_F.to_numpy())-p_cur.lm_phi.dot(p_cur.lm_tht)),2)-(
+            np.power(np.transpose(data_F.to_numpy())-p_new.lm_phi.dot(p_new.lm_tht),2))).sum()/(2*sigma^2)
     I2 = 0 # (np.log(sigma')-np.log(sigma)).sum()*(j/2)  variance is constant    
     #print('ratio - F',"%0.2f" % A0,"%0.2f" % A1,"%0.2f" % A2,"%0.2f" % B,"%0.2f" % C0,
     #      "%0.2f" % C1,"%0.2f" % C2,"%0.2f" % D,"%0.2f" % E, "%0.2f" % F,"%0.2f" % G,
