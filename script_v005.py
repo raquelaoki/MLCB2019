@@ -11,7 +11,8 @@ from script_v005_def import *
 import matplotlib.pyplot as plt
 
 '''
-Notes: 
+Notes:
+- check the values, I think i'm having inf or na 
 - Change my dirichelt, check on overleaf the theory
 - https://hackernoon.com/implementation-of-gaussian-naive-bayes-in-python-from-scratch-c4ea64e3944d
 
@@ -24,7 +25,7 @@ sim = 4000
 bach_size = 500
 step1 = 10
 step2 = 20
-id = '0009'
+id = '01'
 
 if bach_size//step2 <= 20:
     print('ERROR ON MCMC, this division must be bigger than 20')
