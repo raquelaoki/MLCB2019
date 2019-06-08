@@ -33,10 +33,10 @@ Proposal distribution
 def proposal_f(current):
     new = parameters(np.random.normal(current.ln,0.5), #2
                      np.random.normal(current.la_cj,0.05),#j
-                     np.random.normal(current.la_sk,0.25),#kx2
+                     np.random.normal(current.la_sk,0.05),#kx2
                      np.random.normal(current.la_ev,0.00001),#v
                      np.random.normal(current.lm_phi,0.0000005), #remmeber that lm_phi sum up 1 in the line (genes)
-                     np.random.normal(current.lm_tht,0.25)) #remember the average value is 7.42)
+                     np.random.normal(current.lm_tht,0.1)) #remember the average value is 7.42)
     #phi and tht can't be negative 
     new.lm_phi[new.lm_phi<0] = 0.0000001 #this number needs to be smaller 
     col_sums = new.lm_phi.sum(axis=0)
@@ -45,6 +45,7 @@ def proposal_f(current):
     new.lm_tht[new.lm_tht<0]=0
     new.lm_tht = new.lm_tht+0.000001
     new.la_sk[new.la_sk<0.0000001] = 0.0000001    
+    new.ln[new.ln<0.0000001] = 0.0000001
     return new
 
 
