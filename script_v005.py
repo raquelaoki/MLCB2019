@@ -21,7 +21,7 @@ Notes:
 
 '''Important parameters I need to constantly change'''
 k = 100
-sim = 4000
+sim = 2000
 bach_size = 500
 step1 = 10
 step2 = 20

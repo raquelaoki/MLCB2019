@@ -44,7 +44,7 @@ def proposal_f(current):
     new.la_ev[new.la_ev<0.0000001] =0.0000001  
     new.lm_tht[new.lm_tht<0]=0
     new.lm_tht = new.lm_tht+0.000001
-    
+    new.la_sk[new.la_sk<0.0000001] = 0.0000001    
     return new
 
 
@@ -90,7 +90,7 @@ def ration(p_new,p_cur, data_F,k,y):
     y01 = y01.as_matrix().reshape(len(y01),1)
     C0a = p_cur.lm_tht - np.repeat(p_cur.la_sk[0],j).reshape(k,j)#np.add(1,np.multiply(-1,y01))   
     C0b = p_new.lm_tht - np.repeat(p_new.la_sk[0],j).reshape(k,j)
-    C0 = (np.power(C0a,2)/np.power(p_cur.la_cj,2)-np.power(C0b,2)/np.power(
+    C0 = (-1)*(np.power(C0a,2)/np.power(p_cur.la_cj,2)-np.power(C0b,2)/np.power(
             p_new.la_cj,2).dot(np.add(1,np.multiply(-1,y01)))).sum()
      
     C1a = p_cur.lm_tht - np.repeat(p_cur.la_sk[1],j).reshape(k,j)#np.add(1,np.multiply(-1,y01))   
@@ -138,6 +138,7 @@ def ration(p_new,p_cur, data_F,k,y):
     #print('ratio - F',"%0.2f" % A0,"%0.2f" % A1,"%0.2f" % A2,"%0.2f" % B,"%0.2f" % C0,
     #      "%0.2f" % C1,"%0.2f" % C2,"%0.2f" % D,"%0.2f" % E, "%0.2f" % F,"%0.2f" % G,
     #     "%0.2f" % I1,"%0.2f" % I2,'end',(A0+A1+A2+B+C0+C1+C2+D+E+F+G+I1+I2))
+    #print('tracking some problems', "%0.2f" % F,'(F)',"%0.2f" % D,'(D)',"%0.2f" % C0,'(C0)',"%0.2f" % C1,'(C1)')
     return (A0+A1+A2+B+C0+C1+C2+D+E+F+G+I1+I2)
 
 
