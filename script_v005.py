@@ -12,6 +12,9 @@ import matplotlib.pyplot as plt
 
 '''
 Notes:
+- check the first term, is too larfe the number, positive or negatie 
+- check if B is always 0 or if just too small (then round 2 digits I don't see any difference)
+- change to gibs?     
 - check the values, I think i'm having inf or na 
 - Change my dirichelt, check on overleaf the theory
 - https://hackernoon.com/implementation-of-gaussian-naive-bayes-in-python-from-scratch-c4ea64e3944d

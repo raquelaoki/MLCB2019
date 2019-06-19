@@ -32,9 +32,9 @@ Proposal distribution
 '''
 def proposal_f(current):
     new = parameters(np.random.normal(current.ln,0.5), #2
-                     np.random.normal(current.la_cj,0.05),#j
-                     np.random.normal(current.la_sk,0.05),#kx2
-                     np.random.normal(current.la_ev,0.00001),#v
+                     np.random.normal(current.la_cj,0.005),#j
+                     np.random.normal(current.la_sk,0.0001),#kx2
+                     np.random.normal(current.la_ev,0.00000001),#v
                      np.random.normal(current.lm_phi,0.0000005), #remmeber that lm_phi sum up 1 in the line (genes)
                      np.random.normal(current.lm_tht,0.1)) #remember the average value is 7.42)
     #phi and tht can't be negative 
@@ -136,9 +136,8 @@ def ration(p_new,p_cur, data_F,k,y):
     I1 = (np.power((np.transpose(data_F.to_numpy())-p_cur.lm_phi.dot(p_cur.lm_tht)),2)-(
             np.power(np.transpose(data_F.to_numpy())-p_new.lm_phi.dot(p_new.lm_tht),2))).sum()/(2*sigma^2)
     I2 = 0 # (np.log(sigma')-np.log(sigma)).sum()*(j/2)  variance is constant    
-    #print('ratio - F',"%0.2f" % A0,"%0.2f" % A1,"%0.2f" % A2,"%0.2f" % B,"%0.2f" % C0,
-    #      "%0.2f" % C1,"%0.2f" % C2,"%0.2f" % D,"%0.2f" % E, "%0.2f" % F,"%0.2f" % G,
-    #     "%0.2f" % I1,"%0.2f" % I2,'end',(A0+A1+A2+B+C0+C1+C2+D+E+F+G+I1+I2))
+    print('ratio - F',"%0.2f" % A0,"%0.6f" % A1,"%0.2f" % A2,"%0.8f" % B,"%0.2f" % (C0+C1),"%0.2f" % C2,"%0.2f" % D,"%0.2f" % E, "%0.2f" % F,"%0.2f" % G,
+         "%0.2f" % I1,"%0.2f" % I2,'end',"%0.2f" % (A0+A1+A2+B+C0+C1+C2+D+E+F+G+I1+I2))
     #print('tracking some problems', "%0.2f" % F,'(F)',"%0.2f" % D,'(D)',"%0.2f" % C0,'(C0)',"%0.2f" % C1,'(C1)')
     return (A0+A1+A2+B+C0+C1+C2+D+E+F+G+I1+I2)
 
