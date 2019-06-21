@@ -1,15 +1,16 @@
-#THE METROPOLIS HASTINGS IS NOT WORKING, I WILL TRY THE GIBBS SAMPLE
 import numpy as np 
 import math
 import pandas as pd 
-from scipy.stats import dirichlet, beta, nbinom, norm
-from scipy.special import loggamma,gamma
+from scipy.stats import dirichlet, beta, nbinom, norm, gamma
+#from scipy.special import loggamma,gamma
 import gc
 import json
 import random 
 import matplotlib.pyplot as plt
 from sklearn import metrics
 
+
+#IMPLEMENTING GIBBS SAMPLER 
 
 '''Parameters'''
 class parameters:
@@ -25,132 +26,24 @@ class parameters:
 
 
 
-
-
-'''
-Proposal distribution
-'''
-def proposal_f(current):
-    new = parameters(np.random.normal(current.ln,0.5), #2
-                     np.random.normal(current.la_cj,0.0005),#j
-                     np.random.normal(current.la_sk,0.0005),#kx2
-                     np.random.normal(current.la_ev,0.00000001),#v
-                     np.random.normal(current.lm_phi,0.0000005), #remmeber that lm_phi sum up 1 in the line (genes)
-                     np.random.normal(current.lm_tht,0.01)) #remember the average value is 7.42)
-    #phi and tht can't be negative 
-    new.lm_phi[new.lm_phi<0] = 0.0000001 #this number needs to be smaller 
-    col_sums = new.lm_phi.sum(axis=0)
-    new.lm_phi = new.lm_phi / col_sums[np.newaxis,:]
-    new.la_ev[new.la_ev<0.0000001] =0.0000001  
-    new.lm_tht[new.lm_tht<0]=0
-    new.lm_tht = new.lm_tht+0.000001
-    new.la_sk[new.la_sk<0.0000001] = 0.0000001    
-    new.ln[new.ln<0.0000001] = 0.0000001
-    return new
-
-
 '''Ratio functions'''
 #np.exp(max)
-def ration(p_new,p_cur, data_F,k,y):
+def gibs(p_cur, data_F,k,y):
     '''Priori Ration'''
     #J is samples and V is genes
     j = data_F.shape[0]
     v = data_F.shape[1]-1
     y01 = data_F['y']
     data_F = data_F.drop(y,axis = 1)
-    A0 = k*(loggamma(np.prod(p_cur.la_ev))-loggamma(np.prod(p_new.la_ev)))
+    p_new = p_cur.copy()
+    p_new.la_ev = np.random.gamma(np.sqrt(p_cur.la_ev),np.sqrt(p_cur.la_ev),1)
+    p_new.lm_phi = np.random.dirichlet(p_new.la_ev,k)
+    p_new.la_cj = np.random.gamma(np.sqrt(np.sqrt(v*7.42)))
+
+
+#https://appsilon.com/how-to-sample-from-multidimensional-distributions-using-gibbs-sampling/
     
-    A1 = k*(np.sum(np.log(gamma(p_new.la_ev)))-np.sum(np.log(gamma(p_cur.la_ev))))
-    A2 = np.matmul((p_new.la_ev-1),np.log(p_new.lm_phi)).sum()-np.matmul((p_cur.la_ev-1),np.log(p_cur.lm_phi)).sum()
-    #B: eta_j~Gamma(a0,b0)
-    a0 = 1#/(2*v)
-    b0 = 1#/(2*v)
-    B = (a0-1)*(np.log(p_new.la_ev)-np.log(p_cur.la_ev)).sum()+(p_cur.la_ev-p_new.la_ev).sum()/b0
-    
-    '''
-    OLD DISTRIBUTION. IT WORKS 
-    #C: theta_kl~Gamma(sk,cj)
-    C00 = (j-y01.sum())*(loggamma(p_cur.la_sk[0]).sum()-loggamma(p_new.la_sk[0]).sum())+ (
-            y01.sum())*(loggamma(p_cur.la_sk[1]).sum()-loggamma(p_new.la_sk[1]).sum())+ (
-                    p_cur.la_sk[0].sum()*np.dot(np.log(p_cur.la_cj),1-y01).sum()+p_cur.la_sk[1].sum()*np.dot(
-                            np.log(p_cur.la_cj),y01).sum()-
-                    p_new.la_sk[0].sum()*np.dot(np.log(p_new.la_cj),1-y01).sum()-p_new.la_sk[1].sum()*np.dot(
-                            np.log(p_new.la_cj),y01).sum())
-         
-    C01 = j*(loggamma(p_cur.la_sk).sum()-loggamma(p_new.la_sk).sum())+(
-    p_cur.la_sk.sum()*np.log(np.dot(p_cur.la_cj,1-y01)).sum()-p_new.la_sk.sum()*np.log(np.dot(p_new.la_cj,y01)).sum())
-    C0 = C00+C01
-    y01 = y01.as_matrix().reshape(1,len(y01))
-    C1 = np.matmul(p_new.la_sk[0]-1,(np.log(p_new.lm_tht)*(1-y01)).sum(axis=1))+ np.matmul(
-            p_new.la_sk[1]-1,(np.log(p_new.lm_tht)*y01).sum(axis=1))-np.matmul(
-            p_cur.la_sk[0]-1,(np.log(p_cur.lm_tht)*(1-y01)).sum(axis=1))-np.matmul(
-            p_cur.la_sk[0]-1,(np.log(p_cur.lm_tht)*y01).sum(axis=1))
-    C2 = np.divide(p_cur.lm_tht.sum(axis=0),p_cur.la_cj).sum()-np.divide(p_new.lm_tht.sum(axis=0),p_new.la_cj).sum()
-    '''
-    #C: theta_kl~Normal(sk,cj)
-    y01 = y01.as_matrix().reshape(len(y01),1)
-    C0a = p_cur.lm_tht - np.repeat(p_cur.la_sk[0],j).reshape(k,j)#np.add(1,np.multiply(-1,y01))   
-    C0b = p_new.lm_tht - np.repeat(p_new.la_sk[0],j).reshape(k,j)
-    #C0 = (np.power(C0a,2)/np.power(p_cur.la_cj,2)-np.power(C0b,2)/np.power(
-    #        p_new.la_cj,2).dot(np.add(1,np.multiply(-1,y01)))).sum()
-    C0_cur = ((np.power(C0a,2)/np.power(p_cur.la_cj,2)).dot(np.add(1,np.multiply(-1,y01)))).sum()
-    C0_new = ((np.power(C0b,2)/np.power(p_new.la_cj,2)).dot(np.add(1,np.multiply(-1,y01)))).sum()
-    
-    
-    C1a = p_cur.lm_tht - np.repeat(p_cur.la_sk[1],j).reshape(k,j)#np.add(1,np.multiply(-1,y01))   
-    C1b = p_new.lm_tht - np.repeat(p_new.la_sk[1],j).reshape(k,j)
-    #C1 = (np.power(C1a,2)/np.power(p_cur.la_cj,2)-np.power(C1b,2)/np.power(p_new.la_cj,2).dot(y01)).sum()
-    C1_cur = ((np.power(C1a,2)/np.power(p_cur.la_cj,2)).dot(y01)).sum()
-    C1_new = ((np.power(C1b,2)/np.power(p_new.la_cj,2)).dot(y01)).sum()
-    
-    #print('partial', "%0.2f" % (C0_cur-C0_new), "%0.2f" % (C1_cur-C1_new))
-    
-    C0 = C0_cur-C0_new
-    C1 = C1_cur-C1_new
-    
-    C2 = k*((np.log(np.power(p_cur.la_cj,2))-np.log(np.power(p_new.la_cj,2))).sum())/2
-    #D: sk~Gamma(gamma0,c0), gamma0 = c0 = (v*averageExpression)^0.5
-    #7.42 = log(1680)
-    average4 = np.sqrt(v*7.42)
-    gamma0 = average4
-    c0 = average4
-    D = (gamma0-1)*(np.log(p_new.la_sk)-np.log(p_cur.la_sk)).sum()+(p_cur.la_sk-p_new.la_sk).sum()/c0
-    
-    #E: Cj~Gamma(a1,b1)
-    a1 = average4
-    b1 = average4
-    E = (a1-1)*(np.log(p_new.la_cj)-np.log(p_cur.la_cj)).sum()+(p_cur.la_cj-p_new.la_cj).sum()/b1
-    
-    #F: gamma0~Gamma(a2,b2)
-    average8 = np.sqrt(average4)
-    a2 = average8
-    b2 = average8
-    F = (a2-1)*(np.log(p_new.ln[1])-np.log(p_cur.ln[1]))+(p_cur.ln[1]-p_new.ln[1])/b2
-    
-    #G: c0~Gamma(a3,b3)
-    a3 = average8
-    b3 = average8
-    G = (a3-1)*(np.log(p_new.ln[0])-np.log(p_cur.ln[0]))+(p_cur.ln[0]-p_new.ln[0])/b3
-    '''Likelihood OLD
-    #I: n_vj~Poisson(phi_vk theta_kj)
-    I0 = np.transpose(np.log(np.matmul(p_new.lm_phi,p_new.lm_tht))-np.log(np.matmul(p_cur.lm_phi,p_cur.lm_tht)))
-    I1 = np.multiply(data_F.to_numpy(),I0).sum() #as_matrix()
-    I2 = (np.matmul(p_cur.lm_phi,p_cur.lm_tht)-np.matmul(p_new.lm_phi,p_new.lm_tht)).sum()
-    '''
-    
-    '''Likelihood '''
-    #I: n_vj~Normal(phi_vk theta_kj, sigma), sigma is constant
-    sigma = 4
-    #aux = p_cur.lm_phi.dot(p_cur.lm_tht)
-    #print('test',data_F.to_numpy().shape,aux.shape)
-    I1 = (np.power((np.transpose(data_F.to_numpy())-p_cur.lm_phi.dot(p_cur.lm_tht)),2)-(
-            np.power(np.transpose(data_F.to_numpy())-p_new.lm_phi.dot(p_new.lm_tht),2))).sum()/(2*sigma^2)
-    I2 = 0 # (np.log(sigma')-np.log(sigma)).sum()*(j/2)  variance is constant    
-    #print('ratio - F',"%0.2f" % A0,"%0.6f" % A1,"%0.2f" % A2,"%0.8f" % B,"%0.2f" % C0, "%0.2f" % C1,
-    #      "%0.2f" % C2,"%0.2f" % D,"%0.2f" % E, "%0.2f" % F,"%0.2f" % G,
-    #     "%0.2f" % I1,"%0.2f" % I2,'end',"%0.2f" % (A0+A1+A2+B+C0+C1+C2+D+E+F+G+I1+I2))
-    #print('tracking some problems', "%0.2f" % F,'(F)',"%0.2f" % D,'(D)',"%0.2f" % C0,'(C0)',"%0.2f" % C1,'(C1)')
-    return (A0+A1+A2+B+C0+C1+C2+D+E+F+G+I1+I2)
+    return p_new
 
 
 

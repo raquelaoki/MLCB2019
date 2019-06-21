@@ -9,6 +9,7 @@ import sys
 sys.path.append('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019')
 from script_v005_def import *
 import matplotlib.pyplot as plt
+from scipy.stats import norm
 
 '''
 Notes:
@@ -59,6 +60,7 @@ aux = len(lr)+1
 data = data.drop(remove,axis = 1)
 v = (data.shape[1]-aux)
 j = data.shape[0]
+y = data['y']
 start = parameters(np.repeat(1.65,2),#ln [0-c0,1-gamma0]
                    np.repeat(2.72,j), #la_cj
                    np.repeat(2.72,k*2).reshape(2,k), #la_sk
