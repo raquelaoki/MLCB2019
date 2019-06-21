@@ -109,7 +109,6 @@ conv_plots(sim,bach_size,'lask',id)
 conv_plots(sim,bach_size,'lacj',id)
 conv_plots(sim,bach_size,'laev',id)
 conv_plots(sim,bach_size,'ln',id)
-conv_plots(sim,bach_size,'p',id)
 
 
 '''
