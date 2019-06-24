@@ -56,8 +56,9 @@ def ration(p_new,p_cur, data_F,k,y):
     #J is samples and V is genes
     j = data_F.shape[0]
     v = data_F.shape[1]-1
-    y01 = data_F['y']
+    y01 = data_F[y]
     data_F = data_F.drop(y,axis = 1)
+    #A: phi~Dir(ev)
     A0 = k*(loggamma(np.prod(p_cur.la_ev))-loggamma(np.prod(p_new.la_ev)))
     
     A1 = k*(np.sum(np.log(gamma(p_new.la_ev)))-np.sum(np.log(gamma(p_cur.la_ev))))
@@ -146,9 +147,9 @@ def ration(p_new,p_cur, data_F,k,y):
     I1 = (np.power((np.transpose(data_F.to_numpy())-p_cur.lm_phi.dot(p_cur.lm_tht)),2)-(
             np.power(np.transpose(data_F.to_numpy())-p_new.lm_phi.dot(p_new.lm_tht),2))).sum()/(2*sigma^2)
     I2 = 0 # (np.log(sigma')-np.log(sigma)).sum()*(j/2)  variance is constant    
-    #print('ratio - F',"%0.2f" % A0,"%0.6f" % A1,"%0.2f" % A2,"%0.8f" % B,"%0.2f" % C0, "%0.2f" % C1,
-    #      "%0.2f" % C2,"%0.2f" % D,"%0.2f" % E, "%0.2f" % F,"%0.2f" % G,
-    #     "%0.2f" % I1,"%0.2f" % I2,'end',"%0.2f" % (A0+A1+A2+B+C0+C1+C2+D+E+F+G+I1+I2))
+    print('ratio - F',"%0.2f" % A0,"%0.6f" % A1,"%0.2f" % A2,"%0.8f" % B,"%0.2f" % C0, "%0.2f" % C1,
+          "%0.2f" % C2,"%0.2f" % D,"%0.2f" % E, "%0.2f" % F,"%0.2f" % G,
+         "%0.2f" % I1,"%0.2f" % I2,'end',"%0.2f" % (A0+A1+A2+B+C0+C1+C2+D+E+F+G+I1+I2))
     #print('tracking some problems', "%0.2f" % F,'(F)',"%0.2f" % D,'(D)',"%0.2f" % C0,'(C0)',"%0.2f" % C1,'(C1)')
     return (A0+A1+A2+B+C0+C1+C2+D+E+F+G+I1+I2)
 
@@ -172,7 +173,7 @@ def MCMC(startvalue, #start value of the chain
          data, #full dataset
          k, #size of latent features
          lr, #column names for the logistc regression 
-         y01,  #metastase 0/1 array
+         y,  #metastase 0/1 array
          id, #id of the attempt 
          ite, #ite in sim/bach 
          step1, step2, #frequency i save values on array
