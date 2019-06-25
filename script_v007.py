@@ -60,18 +60,18 @@ np.fill_diagonal(theta_cov,121)
 
 
 train = data.drop(lr, axis = 1)
-train = train.iloc[:,1:10000]
-
 train = train.drop(remove,axis = 1)
 y01 = data[y]
 train = train.drop(y, axis = 1)
+train = train.iloc[:,1:1000]
+
 train  = train .values.astype(int)
 y01 = y01.as_matrix().reshape(len(y01),1)
 v = train.shape[1]
 j = train.shape[0]
 ab = np.power(v*7.42,4)
 
-
+print('starting model')
 with pm.Model() as model:
         # Priori Distributions 
         gamma0 = pm.Gamma('gamma0',alpha = ab,beta = ab) #one number 
@@ -90,6 +90,7 @@ with pm.Model() as model:
         njv = pm.Normal('nvj', mu=pm.math.matrix_dot(theta,phi), observed=train)
         trace = pm.sample(1000, tune=500)
         #trace = pm.sample(1000,tune = 500, init = 'advi', nuts_kwargs={"target_accept":0.9,"max_treedepth": 15})
+
 
 
 
