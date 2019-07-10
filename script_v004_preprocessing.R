@@ -18,8 +18,8 @@ setwd("~/GitHub/project_spring2019")
 
 #------------------------- Processing DATASET 
 # Cancer types 
-diseaseAbbrvs <- c("ACC", "BLCA", "CHOL", "ESCA",  "HNSC","LGG", "LIHC", "LUSC", "MESO", "PAAD",  "PRAD",  "SARC", "SKCM",  "TGCT", "UCS")
-diseaseAbbrvs_lower <- c("acc", "chol", "blca", "esca", "hnsc", "lgg", "lihc", "lusc", "meso", "paad", "prad", "sarc", "skcm",  "tgct", "ucs")
+diseaseAbbrvs <- c("ACC", "BLCA",'BRCA', "CHOL", "ESCA",  "HNSC","LGG", "LIHC", "LUSC", "MESO", "PAAD",  "PRAD",  "SARC", "SKCM",  "TGCT", "UCS")
+diseaseAbbrvs_lower <- c("acc", "chol",'brca' ,"blca", "esca", "hnsc", "lgg", "lihc", "lusc", "meso", "paad", "prad", "sarc", "skcm",  "tgct", "ucs")
 #there are more cancer types available, I filtered these because I think they are more balanced between metastase/not metastase 
 
 
