@@ -199,20 +199,19 @@ clinical = read.csv('file:///C:/Users/raoki/Documents/GitHub/project_spring2019/
 names(clinical)[1] = 'Tumor_Sample_Barcode'
 
 
-
-
-
 diseaseAbbrvsForMuts <- c("ACC", "BLCA", "BRCA", "CHOL", "ESCA", "HNSC", "LGG", "LIHC", "LUSC", "PAAD", "PRAD", "SARC", "SKCM", "TGCT", "UCS")
 mutFilesDir <- paste(theRootDir, "\\mutation_data", sep="")
+exception = c("TCGA-P5-A5F6","TCGA-EJ-A7NG","TCGA-NA-A4QY")
 
 for(i in 1:length(diseaseAbbrvsForMuts))
 {
   mutationDataUrl <- paste(mutFilesDir,"\\gdac.broadinstitute.org_", diseaseAbbrvsForMuts[i],".Mutation_Packager_Calls.Level_3.2016012800.0.0", sep="")
   setwd(mutationDataUrl)
   manifest = read.table('MANIFEST.txt')
-  for(j in 1:dim(manifest)){
+  for(j in 1:dim(manifest)[1]){
     barcode = substr(manifest$V2[j],0,12)
     cinfo = subset(clinical, Tumor_Sample_Barcode==barcode)
+    if(sum(barcode==exception)==0){
     if(dim(cinfo)[1]==1){
       mutation = read.maf(maf = as.character(manifest$V2[j]), clinicalData = cinfo)
     }else{
@@ -227,6 +226,7 @@ for(i in 1:length(diseaseAbbrvsForMuts))
       genes0 = subset(genes0, select = c('Hugo_Symbol','total'))
       names(genes0)[2] = barcode
       genes = merge(genes,genes0,by = 'Hugo_Symbol',all=T)
+    }
     }
   }
   
@@ -244,5 +244,10 @@ for(i in 1:length(diseaseAbbrvsForMuts))
   
 }
 
+#Remove NA for 0 
+genes[is.na(genes)] <- 0
+genes = genes[genes$Hugo_Symbol!='.']
 
+
+write.table(genes, file = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\tcga_mu.txt",row.names = F, sep=',')
 
