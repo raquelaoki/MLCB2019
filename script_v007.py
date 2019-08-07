@@ -125,39 +125,57 @@ def gibbs(current,n_comp,j,v,k,y01):
     new.la_sk = np.random.gamma(a2+uk,b2)
     
     return(new)
-    
-up = gibbs(current,n_comp,j,v,k,y01)
+
     
 
 start_time = time.time()
 
 
-#TOMORROW: IMPLEMENT SAVE THE ELEMENTS IN A CHIAN 
+'''Creating the chains'''
+chain_ln = np.tile(current.ln.tolist(),(int(bach_size/step1),1))
+chain_la_sk = np.tile(current.la_sk.reshape(-1,1),(1,int(bach_size/step1)))
+chain_la_cj = np.tile(current.la_cj.tolist(),(int(bach_size/step1),1))
+chain_la_ev = np.tile(current.la_ev.tolist(),(int(bach_size/step1),1))
+chain_lm_tht = np.tile(current.lm_tht.reshape(-1,1),(1,int(bach_size/step2)))
+chain_lm_phi = np.tile(current.lm_phi.reshape(-1,1),(1,int(bach_size/step2)))
 
-'''
-theta_cov = np.zeros(shape=(k,k))
-np.fill_diagonal(theta_cov,121)
+'''Starting chain and parametrs'''
+count_s1 = 0
+count_s2 = 0
+chain_ln[count_s1]=current.ln.tolist()
+chain_la_sk[:,count_s1]=current.la_sk.reshape(1,-1)
+chain_la_cj[count_s1]=current.la_cj.tolist()
+chain_la_ev[count_s1]=current.la_ev.tolist()
+chain_lm_tht[:,count_s2]=current.lm_tht.reshape(1,-1)
+chain_lm_phi[:,count_s2]=current.lm_phi.reshape(1,-1)
+    
+for ite in np.arange(0,sim//bach_size):    
+    print('iteration--',ite,' of ',sim//bach_size)   
+    #.print('it should be 981',data.shape)       
+    for i in np.arange(1,bach_size):
+        new  = gibbs(current,n_comp,j,v,k,y01)
+        '''Updating chain'''
+        if i%10==0:
+            count_s1+=1
+            chain_ln[count_s1]=new.ln.tolist()
+            chain_la_sk[:,count_s1]=new.la_sk.reshape(1,-1)
+            chain_la_cj[count_s1]=new.la_cj.tolist()
+            chain_la_ev[count_s1]=new.la_ev.tolist()
+            if i%20==0:
+                count_s2+=1
+                chain_lm_tht[:,count_s2]=new.lm_tht.reshape(1,-1)
+                chain_lm_phi[:,count_s2]=new.lm_phi.reshape(1,-1)
+                if i%100 == 0: 
+                    print('iteration ',ite, 'bach ', i) 
+        current = new 
 
-train = data.drop(lr, axis = 1)
-train = train.drop(remove,axis = 1)
-y01 = data[y]
-train = train.drop(y, axis = 1)
-train = train.iloc[:,1:1000]
-
-train  = train .values.astype(int)
-y01 = y01.as_matrix().reshape(len(y01),1)
-v = train.shape[1]
-j = train.shape[0]
-ab = np.power(v*7.42,4)
-'''
-
-
-
-#pm.traceplot(trace1, var_names=['gamma0', 'c0']);
-
-
-
-
+    np.savetxt('Data\\output_ln_id'+str(id)+'_bach'+str(ite)+'.txt', chain_ln, delimiter=',',fmt='%5s')
+    np.savetxt('Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_sk, delimiter=',',fmt='%5s')
+    np.savetxt('Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_cj, delimiter=',',fmt='%5s')
+    np.savetxt('Data\\output_laev_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_ev, delimiter=',',fmt='%5s')
+    np.savetxt('Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_tht, delimiter=',',fmt='%5s')
+    np.savetxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_phi, delimiter=',',fmt='%5s')
+#    accuracy(ite,id,data,data.shape[0],k,y01)
 
 
 print("--- %s seconds ---" % (time.time() - start_time))
