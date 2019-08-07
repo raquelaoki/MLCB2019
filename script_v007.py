@@ -14,17 +14,17 @@ Notes:
 Check p2_meeting_v007 for theory
 
 UPDATE THE DATA, I STILL USING THE OLD ONE, I NEED THE MUDATION DATA
-
+PROBLEM IN UPDATING THE CHAIN
 
 '''
 
 
 '''Hyperparameters'''
 k = 100
-sim = 200
-bach_size = 40
-step1 = 10
-step2 = 20
+sim = 1000
+bach_size = 200
+step1 = 5
+step2 = 10
 id = '01'
 
 if bach_size//step2 <= 20:

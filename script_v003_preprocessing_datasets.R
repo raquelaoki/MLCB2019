@@ -253,8 +253,26 @@ write.table(genes, file = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring20
 
 #MERGE CLINICAL INFORMATION AND MUTATION
 bd = read.csv('C://Users//raoki//Documents//GitHub//project_spring2019//Data//tcga_mu.txt', header=T, sep=',')
+cl = read.csv('C://Users//raoki//Documents//GitHub//project_spring2019//Data//tcga_cli.txt', header = T, sep=';')
+
+#Transposing mutation dataset and fixing patient
+bd1 = t(bd)
+names(bd1) = bd1[1,]
+bd1 = bd1[-1,]
+head(bd1[,c(1:10)])
 
 
+#Creating a variable indicator with the prediction value in the 0/1 format
+cl$y = as.character(cl$new_tumor_event_dx_indicator)
+cl$y[cl$y=="NO"] = 0 
+cl$y[cl$y=="YES"] = 1 
+
+cl$gender = as.character(cl$gender)
+cl$gender[cl$gender=='MALE'] = 0 
+cl$gender[cl$gender=='FEMALE'] = 1
+
+#selecting important clinical features and creating dummy/binary variables for future use
+cl_s = subset(cl, select = c('patients','gender','abr','y'))
 
 
 
