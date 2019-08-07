@@ -108,7 +108,7 @@ def gibbs(current,n_comp,j,v,k,y01):
     uvk = np.zeros(v)
     for vi in np.arange(v):
         for ki in np.arange(k):
-            p = current.la_ev[vi]/(current.la_ev[vi]+np.arange(lvk[vi,ki]))
+            p = current.la_ev[vi]/(current.la_ev[vi]+np.arange(lvk[vi,ki])+1)
             uvk[vi] = uvk[vi]+ np.random.binomial(n=1,p=p).sum()   
             
     new.la_ev = np.random.gamma(shape = (g1+uvk),scale = c1)
@@ -116,12 +116,14 @@ def gibbs(current,n_comp,j,v,k,y01):
     #8) P(s_km^t|theta^t,c_j^t)
     a2 = 1
     b2 = 1
-    uk = np.zeros(k)
+    uk = np.zeros((2,k))
     for ki in np.arange(k):
-        skj = current.la_sk[y01,ki]
+        #skj = current.la_sk[y01,ki]
         for ji in np.arange(j):
-            p = skj[ji]/(skj[ji]+np.arange(ljk[ji,ki]))
-            uk[ki] = uk[ki]+np.random.binomial(1,p=p).sum()
+            p = current.la_sk[y01[ji],ki]/(current.la_sk[y01[ji],ki]+np.arange(ljk[ji,ki])+1)
+            uk[y01[ji],ki] = uk[y01[ji],ki]+np.random.binomial(1,p=p).sum()
+    
+    
     new.la_sk = np.random.gamma(a2+uk,b2)
     
     return(new)
