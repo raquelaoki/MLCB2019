@@ -25,12 +25,11 @@ for i in np.arange(1,datar.shape[1]):
     datar.iloc[:,i] = round(datar.iloc[:,i])
     
 
-
 #Merging two datasets. First columns have the clinical information.
 data = pd.merge(datac_s,datar,on='patients')
 
 #Saving file in csv format
-data.to_csv('C:\\Users\\raque\\Google Drive\\SFU\\Project 2 - Spring 2019\\Data\\data_final.csv',sep=',')
+data.to_csv('C:\\Users\\raque\\Google Drive\\SFU\\Project 2 - Spring 2019\\Data\\data_mutation_final.csv',sep=',')
 
 
 

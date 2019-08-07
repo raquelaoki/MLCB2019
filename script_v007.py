@@ -13,14 +13,16 @@ import copy
 Notes:
 Check p2_meeting_v007 for theory
 
+UPDATE THE DATA, I STILL USING THE OLD ONE, I NEED THE MUDATION DATA
+
 
 '''
 
 
 '''Hyperparameters'''
 k = 100
-sim = 2000
-bach_size = 500
+sim = 200
+bach_size = 40
 step1 = 10
 step2 = 20
 id = '01'
@@ -142,16 +144,17 @@ chain_lm_tht = np.tile(current.lm_tht.reshape(-1,1),(1,int(bach_size/step2)))
 chain_lm_phi = np.tile(current.lm_phi.reshape(-1,1),(1,int(bach_size/step2)))
 
 '''Starting chain and parametrs'''
-count_s1 = 0
-count_s2 = 0
-chain_ln[count_s1]=current.ln.tolist()
-chain_la_sk[:,count_s1]=current.la_sk.reshape(1,-1)
-chain_la_cj[count_s1]=current.la_cj.tolist()
-chain_la_ev[count_s1]=current.la_ev.tolist()
-chain_lm_tht[:,count_s2]=current.lm_tht.reshape(1,-1)
-chain_lm_phi[:,count_s2]=current.lm_phi.reshape(1,-1)
+
     
 for ite in np.arange(0,sim//bach_size):    
+    count_s1 = 0
+    count_s2 = 0
+    chain_ln[count_s1]=current.ln.tolist()
+    chain_la_sk[:,count_s1]=current.la_sk.reshape(1,-1)
+    chain_la_cj[count_s1]=current.la_cj.tolist()
+    chain_la_ev[count_s1]=current.la_ev.tolist()
+    chain_lm_tht[:,count_s2]=current.lm_tht.reshape(1,-1)
+    chain_lm_phi[:,count_s2]=current.lm_phi.reshape(1,-1)
     print('iteration--',ite,' of ',sim//bach_size)   
     #.print('it should be 981',data.shape)       
     for i in np.arange(1,bach_size):

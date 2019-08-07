@@ -185,7 +185,6 @@ write.table(bd,'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\d
 
 
 
-
 # #------------------------ PROCESING MAF FILES 
 # Reference
 #INSTALLING PACKAGES
@@ -250,4 +249,14 @@ genes = genes[genes$Hugo_Symbol!='.']
 
 
 write.table(genes, file = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\tcga_mu.txt",row.names = F, sep=',')
+
+
+#MERGE CLINICAL INFORMATION AND MUTATION
+bd = read.csv('C://Users//raoki//Documents//GitHub//project_spring2019//Data//tcga_mu.txt', header=T, sep=',')
+
+
+
+
+
+
 
