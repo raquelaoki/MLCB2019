@@ -57,10 +57,81 @@ for(i in 2:length(fname)){
 #clinical dataset 
 head(bd.c)
 
+#Compare with new clinical information 
+abr_newcl <- c("acc", "chol",'brca' ,"blca", "esca", "hnsc", "lihc", "lusc", "meso", "paad", "prad", "sarc", "skcm",  "tgct")
+
+
+columns = c('Patient.ID','Cancer.Type','Sex','Neoplasm.American.Joint.Committee.on.Cancer.Clinical.Distant.Metastasis.M.Stage','American.Joint.Committee.on.Cancer.Metastasis.Stage.Code',
+            'Neoplasm.American.Joint.Committee.on.Cancer.Clinical.Distant.Metastasis.M.Stage','Metastatic.disease.confirmed')
+i = 1
+clinical = read.table(paste('Data\\clinical\\',abr_newcl[i],'_tcga_clinical_data.tsv',sep=''),sep='\t' ,header = T)
+col = intersect(columns, names(clinical))
+if(length(col)==4){
+  clinical = subset(clinical, select = col)
+}else{
+  cat(paste('ERROR ON ',abr_newcl[i], ' - ',i,sep=''))
+}
+names(clinical)[4] = 'Metastasis_M'
+clinical$Cancer.Study  = paste(abr_newcl[i],'_tcga',sep='')
+
+for(i in 2:length(abr_newcl)){
+  clinical1 = read.table(paste('Data\\clinical\\',abr_newcl[i],'_tcga_clinical_data.tsv',sep=''),sep='\t' ,header = T)
+  col = intersect(columns, names(clinical1))
+  if(i==6 | i == 14){
+    col = col[1:4]
+  }
+  if(length(col)==4){
+    clinical1 = subset(clinical1, select = col)
+  }else{
+    cat(paste('ERROR ON ',abr_newcl[i], ' - ',i,sep=''))
+  }
+  names(clinical1)[4] = 'Metastasis_M'
+  clinical1$Cancer.Study  = paste(abr_newcl[i],'_tcga',sep='')
+  clinical = rbind(clinical,clinical1)
+}
+
+table(clinical$Metastasis_M)
+clinical$Metastasis_M = as.character(clinical$Metastasis_M)
+clinical$Metastasis_M[clinical$Metastasis_M=='M1a'|clinical$Metastasis_M=='M1b'|clinical$Metastasis_M=='M1c'] = 'M1'
+clinical$Metastasis_M[clinical$Metastasis_M=='YES'] = 'M1'
+clinical$Metastasis_M[clinical$Metastasis_M=='NO'] = 'M0'
+clinical$Metastasis_M[clinical$Metastasis_M=='cM0 (i+)'] = 'M0'
+clinical$Metastasis_M[clinical$Metastasis_M==''] = 'MX'
+table(clinical$Metastasis_M)
+
+
+##Legend: 
+#M0 means that no distant cancer spread was found.
+#M1 means that the cancer has spread to distant organs or tissues (distant metastases were found).
+#MX for unknown status of metastatic disease. 
+#cM0: any case without clinical or pathologic evidence of metastases is to be classified as clinically M0
+
+#Merging old and new clinical information 
+clinical$Patient.ID = as.character(clinical$Patient.ID)
+bd.c1 = merge(bd.c,clinical, by.y = 'Patient.ID' ,by.x ='bcr_patient_barcode',all=T)
+dim(bd.c); dim(clinical); dim(bd.c1)
+bd.c1$new_tumor_event_dx_indicator = as.character(bd.c1$new_tumor_event_dx_indicator)
+
+table(bd.c1$new_tumor_event_dx_indicator,bd.c1$Metastasis_M)
+
+
+
 #clinical dataset with the filter for metastase
 bd.d = subset(bd.c, new_tumor_event_dx_indicator == "YES" | new_tumor_event_dx_indicator == "NO")
 table(as.character(bd.d$abr), as.character(bd.d$new_tumor_event_dx_indicator))
 tab = data.frame(table(as.character(bd.d$abr)))
+
+
+
+
+aux$Patient.ID = as.character(aux$Patient.ID)
+bd.d$bcr_patient_barcode = as.character(bd.d$bcr_patient_barcode)
+test = merge(bd.d, aux, by.y = 'Patient.ID',by.x ='bcr_patient_barcode',all.y = T)
+test$new_tumor_event_dx_indicator[is.na(test$new_tumor_event_dx_indicator)]='[Unknown]'
+
+table(test$new_tumor_event_dx_indicator,test$American.Joint.Committee.on.Cancer.Metastasis.Stage.Code)
+head(subset(test,is.na(gender)))
+dim(subset(test,is.na(Sex)))
 
 
 #------------ RNA
@@ -257,8 +328,15 @@ cl = read.csv('C://Users//raoki//Documents//GitHub//project_spring2019//Data//tc
 
 #Transposing mutation dataset and fixing patient
 bd1 = t(bd)
-names(bd1) = bd1[1,]
+bd1 = data.frame(rownames(bd1),bd1)
+rownames(bd1) = NULL
+for( i in 1:dim(bd1)[2]){
+  names(bd1)[i] = as.character(bd1[1,i])
+}
 bd1 = bd1[-1,]
+bd1$Hugo_Symbol = as.character(bd1$Hugo_Symbol)
+bd1$Hugo_Symbol = gsub(pattern = '.', replacement = '-',bd1$Hugo_Symbol, fixed = T)
+
 head(bd1[,c(1:10)])
 
 
@@ -274,7 +352,9 @@ cl$gender[cl$gender=='FEMALE'] = 1
 #selecting important clinical features and creating dummy/binary variables for future use
 cl_s = subset(cl, select = c('patients','gender','abr','y'))
 
-
+# MERGE
+bd2 = merge(bd1, cl_s, by.x ='Hugo_Symbol',by.y = 'patients' , all=T)
+# CHECK DIFFERENT SIZE OF DATASET (PROBLABLY NEED TO RUN CL AGAIN WITH BLRC)
 
 
 

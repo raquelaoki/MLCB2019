@@ -87,3 +87,12 @@ thegzFiles <-  paste(mutFilesDir, dir(mutFilesDir), sep="\\")
 sapply(thegzFiles, untar, exdir=mutFilesDir)
 
 
+
+#Test 
+library(TCGAbiolinks)
+
+
+
+
+
+
