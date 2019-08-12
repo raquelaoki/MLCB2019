@@ -114,24 +114,31 @@ bd.c1$new_tumor_event_dx_indicator = as.character(bd.c1$new_tumor_event_dx_indic
 
 table(bd.c1$new_tumor_event_dx_indicator,bd.c1$Metastasis_M)
 
-
-
 #clinical dataset with the filter for metastase
 bd.d = subset(bd.c, new_tumor_event_dx_indicator == "YES" | new_tumor_event_dx_indicator == "NO")
 table(as.character(bd.d$abr), as.character(bd.d$new_tumor_event_dx_indicator))
 tab = data.frame(table(as.character(bd.d$abr)))
 
-
-
-
-aux$Patient.ID = as.character(aux$Patient.ID)
+clinical$Patient.ID = as.character(clinical$Patient.ID)
 bd.d$bcr_patient_barcode = as.character(bd.d$bcr_patient_barcode)
-test = merge(bd.d, aux, by.y = 'Patient.ID',by.x ='bcr_patient_barcode',all.y = T)
+test = merge(bd.d, clinical, by.y = 'Patient.ID',by.x ='bcr_patient_barcode',all.y = T)
 test$new_tumor_event_dx_indicator[is.na(test$new_tumor_event_dx_indicator)]='[Unknown]'
 
-table(test$new_tumor_event_dx_indicator,test$American.Joint.Committee.on.Cancer.Metastasis.Stage.Code)
+test$new_tumor_event_dx_indicator = as.character(test$new_tumor_event_dx_indicator)
+table(test$new_tumor_event_dx_indicator,test$Metastasis_M)*100/dim(test)[1]
 head(subset(test,is.na(gender)))
 dim(subset(test,is.na(Sex)))
+
+
+#Agree %
+26+1.87+6.3
+
+
+
+
+#Conclusion: use the new_tumor_event_dx_indicator
+
+
 
 
 #------------ RNA
