@@ -162,3 +162,18 @@ table(bd$y,bd$abr)
 prop.table(table(bd$y))
 
 write.table(bd,paste(theRootDir,'tcga_train.txt',sep=''), row.names = F, sep = ';')
+
+#------------------------ GENES SELECTION 
+bd = read.table(paste(theRootDir,'tcga_train.txt',sep=''), header=T, sep = ';')
+head(bd[,c(1:10)])
+dim(bd)
+
+#1) Eliminating genes mutated less than 15 times among all patients
+el1 = colSums(bd[,-c(1,2,3)])
+el1 = names(el1[el1<=15])
+col1 = which(names(bd) %in% el1)
+bd = bd[,-col1]
+dim(bd)
+write.table(bd,paste(theRootDir,'tcga_train_filted.txt',sep=''), row.names = F, sep = ';')
+
+
