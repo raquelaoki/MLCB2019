@@ -57,6 +57,9 @@ for(i in 2:length(fname)){
 #clinical dataset 
 head(bd.c)
 
+
+#------ EXPLORATION ONLY, NOT IMPORTANT
+
 #Compare with new clinical information 
 abr_newcl <- c("acc", "chol",'brca' ,"blca", "esca", "hnsc", "lihc", "lusc", "meso", "paad", "prad", "sarc", "skcm",  "tgct")
 
@@ -129,16 +132,14 @@ table(test$new_tumor_event_dx_indicator,test$Metastasis_M)*100/dim(test)[1]
 head(subset(test,is.na(gender)))
 dim(subset(test,is.na(Sex)))
 
-
-#Agree %
-26+1.87+6.3
-
-
-
-
+#------ EXPLORATION ONLY, NOT IMPORTANT
 #Conclusion: use the new_tumor_event_dx_indicator
 
+bd.c$new_tumor_event_dx_indicator  = as.character(bd.c$new_tumor_event_dx_indicator)
+bd.c1 = subset(bd.c, new_tumor_event_dx_indicator=='YES' | new_tumor_event_dx_indicator == 'NO')
+bd.c1 = subset(bd.c1 , select = c( bcr_patient_barcode, gender,  new_tumor_event_dx_indicator, abr))
 
+write.table(bd.c1,'C://Users//raoki//Documents//GitHub//project_spring2019//Data//tcga_cli1.txt', row.names = F, sep = ';')
 
 
 #------------ RNA
@@ -263,7 +264,7 @@ write.table(bd,'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\d
 
 
 
-# #------------------------ PROCESING MAF FILES 
+# #------------------------ PROCESING MAF FILES / MUTATION
 # Reference
 #INSTALLING PACKAGES
 if (!require("BiocManager"))
@@ -272,12 +273,12 @@ BiocManager::install("maftools")
 library(maftools)
 
 #LOADING CLINICAL INFORMATION 
-clinical = read.csv('file:///C:/Users/raoki/Documents/GitHub/project_spring2019/Data/tcga_cli.txt', sep = ';') #incomplete
+clinical = read.csv('file:///C:/Users/raoki/Documents/GitHub/project_spring2019/Data/tcga_cli1.txt', sep = ';') #incomplete
 names(clinical)[1] = 'Tumor_Sample_Barcode'
 
 
 diseaseAbbrvsForMuts <- c("ACC", "BLCA", "BRCA", "CHOL", "ESCA", "HNSC", "LGG", "LIHC", "LUSC", "PAAD", "PRAD", "SARC", "SKCM", "TGCT", "UCS")
-mutFilesDir <- paste(theRootDir, "\\mutation_data", sep="")
+mutFilesDir <- paste('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data', "\\mutation_data", sep="")
 exception = c("TCGA-P5-A5F6","TCGA-EJ-A7NG","TCGA-NA-A4QY")
 
 for(i in 1:length(diseaseAbbrvsForMuts))
@@ -289,21 +290,21 @@ for(i in 1:length(diseaseAbbrvsForMuts))
     barcode = substr(manifest$V2[j],0,12)
     cinfo = subset(clinical, Tumor_Sample_Barcode==barcode)
     if(sum(barcode==exception)==0){
-    if(dim(cinfo)[1]==1){
-      mutation = read.maf(maf = as.character(manifest$V2[j]), clinicalData = cinfo)
-    }else{
-      mutation = read.maf(maf = as.character(manifest$V2[j]))
-    }
-    if(j==1 & i==1){
-      genes = getGeneSummary(mutation)
-      genes = subset(genes, select = c('Hugo_Symbol','total'))
-      names(genes)[2] = barcode
-    }else{
-      genes0 = getGeneSummary(mutation)
-      genes0 = subset(genes0, select = c('Hugo_Symbol','total'))
-      names(genes0)[2] = barcode
-      genes = merge(genes,genes0,by = 'Hugo_Symbol',all=T)
-    }
+      if(dim(cinfo)[1]==1){
+        mutation = read.maf(maf = as.character(manifest$V2[j]), clinicalData = cinfo)
+      }else{
+        mutation = read.maf(maf = as.character(manifest$V2[j]))
+      }
+      if(j==1 & i==1){
+        genes = getGeneSummary(mutation)
+        genes = subset(genes, select = c('Hugo_Symbol','total'))
+        names(genes)[2] = barcode
+      }else{
+        genes0 = getGeneSummary(mutation)
+        genes0 = subset(genes0, select = c('Hugo_Symbol','total'))
+        names(genes0)[2] = barcode
+        genes = merge(genes,genes0,by = 'Hugo_Symbol',all=T)
+      }
     }
   }
   
@@ -331,7 +332,7 @@ write.table(genes, file = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring20
 
 #MERGE CLINICAL INFORMATION AND MUTATION
 bd = read.csv('C://Users//raoki//Documents//GitHub//project_spring2019//Data//tcga_mu.txt', header=T, sep=',')
-cl = read.csv('C://Users//raoki//Documents//GitHub//project_spring2019//Data//tcga_cli.txt', header = T, sep=';')
+cl = read.csv('C://Users//raoki//Documents//GitHub//project_spring2019//Data//tcga_cli1.txt', header = T, sep=';')
 
 #Transposing mutation dataset and fixing patient
 bd1 = t(bd)
@@ -357,11 +358,30 @@ cl$gender[cl$gender=='MALE'] = 0
 cl$gender[cl$gender=='FEMALE'] = 1
 
 #selecting important clinical features and creating dummy/binary variables for future use
-cl_s = subset(cl, select = c('patients','gender','abr','y'))
+cl_s = subset(cl, select = c('bcr_patient_barcode','gender','abr','y'))
 
 # MERGE
-bd2 = merge(bd1, cl_s, by.x ='Hugo_Symbol',by.y = 'patients' , all=T)
+bd2 = merge(bd1, cl_s, by.x ='Hugo_Symbol',by.y = 'bcr_patient_barcode' , all=T)
 # CHECK DIFFERENT SIZE OF DATASET (PROBLABLY NEED TO RUN CL AGAIN WITH BLRC)
 
+a = subset(bd2, is.na(gender))$Hugo_Symbol
+b = subset(bd2, is.na(A1BG))$Hugo_Symbol
+a = a[order(a)]
+b = b[order(b)]
+
+test1 = subset(bd2, !is.na(gender) & !is.na(A1BG))
+test2 = subset(bd2, !is.na(gender) & is.na(A1BG))
+test3 = subset(bd2, is.na(gender)  & !is.na(A1BG))
+
+hnsc = subset(test2, abr=='HNSC'))$Hugo_Symbol
 
 
+
+b1 = as.character(test2$HNSC.rnaseqv2) #mutation
+b2 = as.character(test3$HNSC.rnaseqv2) #clinical info
+b3a= c()
+b3 = read.table('file:///C:/Users/raoki/Documents/GitHub/project_spring2019/Data/rnaSeq/gdac.broadinstitute.org_HNSC/HNSC.rnaseqv2.txt', sep='\t',header = F)
+for(i in 2:dim(b3)[2]){
+  b3a = c(b3a, as.character(b3[1,i]))
+}
+  

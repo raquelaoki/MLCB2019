@@ -88,9 +88,6 @@ sapply(thegzFiles, untar, exdir=mutFilesDir)
 
 
 
-#Test 
-library(TCGAbiolinks)
-
 
 
 
