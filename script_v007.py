@@ -77,17 +77,30 @@ def gibbs(current,train0,j,v,k,y01):
     #1: P(l_vjk^t|theta^{t−1},phi^{t−1})
     lvk = np.zeros((v,k))
     ljk = np.zeros((j,k))
-    for vind,vi in zip(current.lm_phi,np.arange(v)):
-        for jind,ji in zip(current.lm_tht, np.arange(j)):
-            pt = np.multiply(vind,jind)
-            lvjk = np.random.multinomial(train0[ji,vi],np.multiply(pt,1/sum(pt)),1)
-            lvk[vi,] = lvk[vi,]+lvjk
-            ljk[ji,] = ljk[ji,]+lvjk
-    #2: P(lv.k^t|theta^{t−1},phi^{t−1}) 
-    #3: P(l.jk^k|theta^{t−1},phi^{t−1})
-    #4: P(phi^t|,eta^{t-1})
-    #5: P(theta^t|c_j^{t-1},s_k^{t-1})
+    #ljvk = np.zeros((j,v,k))
+    #start_time1 = time.time()
+    #vi = ji = 0 
+    #for vind in current.lm_phi:
+    #    for jind in current.lm_tht:
+     #       pt = np.multiply(vind,jind)
+     #       ljvk[ji,vi] = np.random.multinomial(train0[ji,vi],np.divide(pt,sum(pt)),1)
+     #       ++ji
+     #   ++vi
+     
+    #new
     for ki in np.arange(k):
+        ldotdotk = np.multiply(np.array(current.lm_tht[:,ki].reshape(j,1)),current.lm_phi[:,ki].reshape(1,v))
+        ldotdotk = np.multiply(ldotdotk,train0).sum()
+        lvk[:,ki] = np.random.multinomial(ldotdotk,current.lm_phi[:,ki])
+        ljk[:,ki] = np.random.poisson(current.lm_tht[:,ki])
+        #print("--- %s seconds ---" % (time.time() - start_time1))  #about 160s-s80s
+        #2: P(lv.k^t|theta^{t−1},phi^{t−1}) 
+        #3: P(l.jk^k|theta^{t−1},phi^{t−1})
+        #4: P(phi^t|,eta^{t-1})
+        #5: P(theta^t|c_j^{t-1},s_k^{t-1})
+        #ljk = ljvk.sum(axis = 1)
+        #lvk = ljvk.sum(axis = 0)
+
         #lvdk = np.random.multinomial(n = ,pvals = size=1)
         new.lm_phi[:,ki] = np.random.dirichlet(alpha = (lvk[:,ki]+current.la_ev),size = 1)
         new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]),scale=current.la_cj)
@@ -99,34 +112,38 @@ def gibbs(current,train0,j,v,k,y01):
     
     #MUST CHECK THE FOLLOWING DISTRIBUTIONS IN THE FUTURE
     #7: P(eta^t|phi^t)
+    #8) P(s_km^t|theta^t,c_j^t)
+
     g1 = 1
     c1 = 1
     uvk = np.zeros(v)
-    for vi in np.arange(v):
-        for ki in np.arange(k):
-            p = current.la_ev[vi]/(current.la_ev[vi]+np.arange(lvk[vi,ki])+1)
-            uvk[vi] = uvk[vi]+ np.random.binomial(n=1,p=p).sum()   
-            
-    new.la_ev = np.random.gamma(shape = (g1+uvk),scale = c1)
     
-    #8) P(s_km^t|theta^t,c_j^t)
     a2 = 1
     b2 = 1
     uk = np.zeros((2,k))
+    
+    #start_time3 = time.time()
     for ki in np.arange(k):
-        #skj = current.la_sk[y01,ki]
+        for vi in np.arange(v):
+            p = current.la_ev[vi]/(current.la_ev[vi]+np.arange(lvk[vi,ki])+1)
+            uvk[vi] = uvk[vi]+ np.random.binomial(n=1,p=p).sum()   
+            
+         #skj = current.la_sk[y01,ki]
         for ji in np.arange(j):
             p = current.la_sk[y01[ji],ki]/(current.la_sk[y01[ji],ki]+np.arange(ljk[ji,ki])+1)
             uk[y01[ji],ki] = uk[y01[ji],ki]+np.random.binomial(1,p=p).sum()
+              
+    #print("--- %s seconds ---" % (time.time() - start_time3))        
     
-    
+
+    new.la_ev = np.random.gamma(shape = (g1+uvk),scale = c1)
     new.la_sk = np.random.gamma(a2+uk,b2)
     
     return(new)
 
-    
-
-start_time = time.time()
+#start_time = time.time()    
+#new  = gibbs(current,train0,j,v,k,y01)
+#print("--- %s seconds ---" % (time.time() - start_time))   
 
 
 '''Creating the chains'''
@@ -139,6 +156,7 @@ chain_lm_phi = np.tile(current.lm_phi.reshape(-1,1),(1,int(bach_size/step2)))
 
 '''Starting chain and parametrs'''
 
+start_time = time.time()    
     
 for ite in np.arange(0,sim//bach_size):    
     count_s1 = 0
@@ -152,7 +170,8 @@ for ite in np.arange(0,sim//bach_size):
     print('iteration--',ite,' of ',sim//bach_size)   
     #.print('it should be 981',data.shape)       
     for i in np.arange(1,bach_size):
-        new  = gibbs(current,n_comp,j,v,k,y01)
+        new  = gibbs(current,train0,j,v,k,y01)
+
         '''Updating chain'''
         if i%10==0:
             count_s1+=1
@@ -177,7 +196,6 @@ for ite in np.arange(0,sim//bach_size):
 #    accuracy(ite,id,data,data.shape[0],k,y01)
 
 
-print("--- %s seconds ---" % (time.time() - start_time))
 print("--- %s min ---" % int((time.time() - start_time)/60))
 print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
 
