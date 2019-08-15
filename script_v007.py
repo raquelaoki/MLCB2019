@@ -11,47 +11,45 @@ import copy
 
 '''
 Notes:
-Check p2_meeting_v007 for theory
-
-UPDATE THE DATA, I STILL USING THE OLD ONE, I NEED THE MUDATION DATA
-PROBLEM IN UPDATING THE CHAIN
-
+- Implemeting Gibbs Sampling 
+- Updated the dataset     
 '''
 
 
 '''Hyperparameters'''
-k = 100
-sim = 1000
-bach_size = 200
-step1 = 5
+k = 100 #Latents Dimension 
+sim = 1000 #Simulations 
+bach_size = 200 #Batch size for memory purposes 
+step1 = 5 #Saving chain every step1 steps 
 step2 = 10
-id = '01'
+id = '01' #identification of simulation 
 
+#WRONG< UPDATE HERE 
 if bach_size//step2 <= 20:
     print('ERROR ON MCMC, this division must be bigger than 20')
 
 '''Loading dataset'''
-filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\data_final_log.csv"
-#filename = "C:\\Users\\raque\\Google Drive\\SFU\\Project 2 - Spring 2019\\Data\\data_final.csv"
-#filename = "C:\\Users\\raque\\Google Drive\\SFU\\Project 2 - Spring 2019\\Data\\data_final_sub.csv"
-data = pd.read_csv(filename, sep=',')
+filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_filtered.txt"
+data = pd.read_csv(filename, sep=';')
 
 
 '''Splitting Dataset'''
-data = data.iloc[:, 0:1000]
-data = data.sample(n=1000).reset_index(drop=True)
-data1, test = train_test_split(data, test_size=0.3, random_state=42)
+train, test = train_test_split(data, test_size=0.3, random_state=22)
 
 '''Organizing columns names'''
-lr = data1.columns[[2,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]]
-y = data1.columns[3]
-remove = data1.columns[[0,1]]
-aux = len(lr)+3
-#data_sim = copy.deepcopy(data)
-y01 = np.array(data1[y])
-data1 = data1.drop(data1.columns[[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18]], axis = 1)
-v = data1.shape[1]
-j = data1.shape[0]
+remove = train.columns[[0,1,2]]
+y = train.columns[2]
+y01 = np.array(train[y])
+train = train.drop(remove, axis = 1)
+y01_t = np.array(test[y])
+test = test.drop(remove, axis = 1)
+
+
+'''Defining variables'''
+v = train.shape[1] #genes
+j = train.shape[0] #patients 
+
+
 '''Parameters'''
 class parameters:
     __slots__ = ('ln', 'la_cj','la_sk','la_c1','la_ev','lm_phi','lm_tht')   
@@ -59,26 +57,22 @@ class parameters:
         self.ln = latent_v #array with parameters that are only one number [0-c0,1-gamma0]
         self.la_cj = latent_cj #string of array J 
         self.la_sk = latent_sk #matrix Kx2
-        #self.la_c1 = latent_c1 #string of array V
         self.la_ev = latent_ev #string of  array V
         self.lm_phi = latent_phi #string of matrix (kv) in array format
         self.lm_tht = latent_tht #string of matrix  (jk) in array format      
-        #self.p = prediction #string of array [intercept, gender, 15 cancer types, k genes]
 
+#need to update these values considering the new dataset 
 current = parameters(np.repeat(1.65,2),#ln [0-c0,1-gamma0]
                    np.repeat(2.72,j), #la_cj
                    np.repeat(2.72,k*2).reshape(2,k), #la_sk
                    np.repeat(1.0004,v), #la_ev
-                   np.repeat(1/(data1.shape[1]),(data1.shape[1])*k).reshape((data1.shape[1]),k),#lm_phi v x k 
-                   np.repeat(7.42,(data1.shape[0])*k).reshape((data1.shape[0]),k)) #lm_theta k x j
+                   np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k 
+                   np.repeat(7.42,j*k).reshape(j,k)) #lm_theta k x j
 
 '''Gibbs Sampling'''
-'''
-First version, some of the parameters are constant in this first phase 
-'''
-n_comp= np.matrix(data1)
+train0 = np.matrix(train)
 
-def gibbs(current,n_comp,j,v,k,y01):
+def gibbs(current,train0,j,v,k,y01):
     new = copy.deepcopy(current)
     #1: P(l_vjk^t|theta^{t−1},phi^{t−1})
     lvk = np.zeros((v,k))
@@ -86,7 +80,7 @@ def gibbs(current,n_comp,j,v,k,y01):
     for vind,vi in zip(current.lm_phi,np.arange(v)):
         for jind,ji in zip(current.lm_tht, np.arange(j)):
             pt = np.multiply(vind,jind)
-            lvjk = np.random.multinomial(n_comp[ji,vi],np.multiply(pt,1/sum(pt)),1)
+            lvjk = np.random.multinomial(train0[ji,vi],np.multiply(pt,1/sum(pt)),1)
             lvk[vi,] = lvk[vi,]+lvjk
             ljk[ji,] = ljk[ji,]+lvjk
     #2: P(lv.k^t|theta^{t−1},phi^{t−1}) 
