@@ -11,8 +11,9 @@ import copy
 
 '''
 Notes:
-- Implemeting Gibbs Sampling 
-- Updated the dataset     
+- add pj array on parameters class
+- add qk in parameteers class
+- add distributions 
 
 '''
 
@@ -75,62 +76,35 @@ train0 = np.matrix(train)
 
 def gibbs(current,train0,j,v,k,y01):
     new = copy.deepcopy(current) 
-    #1: P(l_vjk^t|theta^{t−1},phi^{t−1})
     lvk = np.zeros((v,k))
     ljk = np.zeros((j,k))
-    #qk= np.repeat(0.01,k)
     
     for ki in np.arange(k):
         ldotdotk = np.multiply(np.array(current.lm_tht[:,ki].reshape(j,1)),current.lm_phi[:,ki].reshape(1,v))
         ldotdotk = np.multiply(ldotdotk,train0).sum()
         lvk[:,ki] = np.random.multinomial(ldotdotk,current.lm_phi[:,ki])
         ljk[:,ki] = np.random.poisson(current.lm_tht[:,ki])
-        #print("--- %s seconds ---" % (time.time() - start_time1))  #about 160s-s80s
-        #2: P(lv.k^t|theta^{t−1},phi^{t−1}) 
-        #3: P(l.jk^k|theta^{t−1},phi^{t−1})
-        #4: P(phi^t|,eta^{t-1})
-        #5: P(theta^t|c_j^{t-1},s_k^{t-1})
-        #ljk = ljvk.sum(axis = 1)
-        #lvk = ljvk.sum(axis = 0)
-    
-        #lvdk = np.random.multinomial(n = ,pvals = size=1)
         new.lm_phi[:,ki] = np.random.dirichlet(alpha = (lvk[:,ki]+current.la_ev),size = 1)
         new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]),scale=current.la_cj-1)
-        
-        #Future use
-        #qk[ki] = np.random.beta(ldotdotk,current.la_ev.sum()*v)
-    #6: P(c_j^t|theta^t,skm^{t-1})
+            
     a1 = 2
-    b1 = 2.23
-    
-    new.la_cj = 1/np.random.gamma(shape = (current.la_sk.sum(axis = 1)[y01]+a1), scale = 1/(b1+new.lm_tht.sum(axis=1)))
-    
-    #MUST CHECK THE FOLLOWING DISTRIBUTIONS IN THE FUTURE
-    #7: P(eta^t|phi^t)
+    b1 = 2.23    
+    new.la_cj = 1/np.random.gamma(shape = (current.la_sk.sum(axis = 1)[y01]+a1), scale = 1/(b1+new.lm_tht.sum(axis=1)))    
     g1 = 50
     c1 = 50
-    #8) P(s_km^t|theta^t,c_j^t)    
     a2 = 1.5
     b2 = 1.5
-    uvk  = np.repeat(0,v)
-    
-    for ki in np.arange(k):
-        
+    uvk  = np.repeat(0,v)    
+    for ki in np.arange(k):       
         for vi in np.arange(v):
             p = current.la_ev[vi]/(current.la_ev[vi]+np.arange(max(lvk[vi,ki],1))+1)
-            uvk[vi] = uvk[vi]+ np.random.binomial(n=1,p=p).sum() 
-            
-            
-         #skj = current.la_sk[y01,ki]
+            uvk[vi] = uvk[vi]+ np.random.binomial(n=1,p=p).sum()             
         uk = np.array([0,0])
         for ji in np.arange(j):
             p = current.la_sk[y01[ji],ki]/(current.la_sk[y01[ji],ki]+np.arange(max(ljk[ji,ki],1))+1)
             uk[y01[ji]] = uk[y01[ji]] +np.random.binomial(1,p=p).sum()
-            #uk[y01[ji],ki] = uk[y01[ji],ki]+np.random.binomial(1,p=p).sum()
         new.la_sk[:,ki] = 1/np.random.gamma(a2+uk,1/(b2+v))     
     
-    #qk1 = np.log(1-qk)
-    #qk1 = qk1.sum()
     new.la_ev = np.random.gamma(shape = (g1+uvk),scale = 1/(c1+50))
     return(new)
 
