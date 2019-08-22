@@ -3,9 +3,10 @@ import pandas as pd
 import numpy as np 
 import time
 from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix
 import sys 
 import matplotlib.pyplot as plt
-from scipy.stats import norm, invgamma 
+from scipy.stats import norm, invgamma , gamma
 import pymc3 as pm
 import copy
 
@@ -31,7 +32,8 @@ if bach_size//step2 <= 20:
     print('ERROR ON MCMC, this division must be bigger than 20')
 
 '''Loading dataset'''
-filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_filtered.txt"
+#filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_filtered.txt"
+filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_binary.txt"
 data = pd.read_csv(filename, sep=';')
 
 
@@ -67,7 +69,7 @@ class parameters:
 
 #need to update these values considering the new dataset 
 current = parameters(np.repeat(1.65,2),#ln [0-c0,1-gamma0]
-                   np.repeat(0.9,j), #la_cj
+                   np.repeat(2.33,j), #la_cj FIXED 
                    np.repeat(0.9,k*2).reshape(2,k), #la_sk 2.23
                    np.repeat(1.0004,v), #la_ev FIXED
                    np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k 
@@ -80,22 +82,32 @@ train0 = np.matrix(train)
 
 def gibbs(current,train0,j,v,k,y01):
     new = copy.deepcopy(current) 
-    lvk = np.zeros((v,k))
-    ljk = np.zeros((j,k))
+    #lvk = np.zeros((v,k))
+    #ljk = np.zeros((j,k))
+    ljvk = np.zeros((j,v,k))
     
     for ki in np.arange(k):
-        ldotdotk = np.multiply(np.array(current.lm_tht[:,ki].reshape(j,1)),current.lm_phi[:,ki].reshape(1,v))
-        ldotdotk = np.multiply(ldotdotk,train0).sum()
-        lvk[:,ki] = np.random.multinomial(ldotdotk,current.lm_phi[:,ki])
-        ljk[:,ki] = np.random.poisson(current.lm_tht[:,ki])
+        for ji in np.arange(j):
+            for vi in np.arange(v):
+                ljvk[ji,vi,ki] = np.random.poisson(current.la_pj[ji]*current.lm_phi[vi,ki]*current.lm_tht[ji,ki])
+                
+        #ldotdotk = np.multiply(np.array(current.lm_tht[:,ki].reshape(j,1)),current.lm_phi[:,ki].reshape(1,v))
+        #ldotdotk = np.multiply(ldotdotk,train0).sum()
+        #lvk[:,ki] = np.random.multinomial(ldotdotk,current.lm_phi[:,ki])
+        #ljk[:,ki] = np.random.poisson(current.lm_tht[:,ki])
+    lvk = ljvk.sum(axis=0)
+    ljk = ljvk.sum(axis=1)
+    for ki in np.arange(k):    
         new.lm_phi[:,ki] = np.random.dirichlet(alpha = (lvk[:,ki]+current.la_ev),size = 1)
-        new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]),scale=(current.la_cj-np.log(1-current.la_pj)))
+        new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]).reshape(j),
+                  scale=(current.la_cj.reshape(j)-np.log(1-current.la_pj).reshape(j)))
         new.la_qk[ki] = np.random.beta(a = ldotdotk, b = v*current.la_ev.mean())
     
     new.la_pj = np.random.beta(a= (1+train0.sum(axis = 1)).reshape(j,1) ,b=(1+current.lm_tht.sum(axis =1)).reshape(j,1))
-    a1 = 2
-    b1 = 2.23    
-    new.la_cj = 1/np.random.gamma(shape = (current.la_sk.sum(axis = 1)[y01]+a1), scale = 1/(b1+new.lm_tht.sum(axis=1)))    
+    print(new.la_pj.shape)
+    #a1 = 2
+    #b1 = 2.23    
+    #new.la_cj = 1/np.random.gamma(shape = (current.la_sk.sum(axis = 1)[y01]+a1), scale = 1/(b1+new.lm_tht.sum(axis=1)))    
     #g1 = 1
     #c1 = 1
     a2 = 1.5
@@ -128,6 +140,16 @@ print('qk',current.la_qk.mean(),new.la_qk.mean())
 current= copy.deepcopy(new )
 
 
+def acc(theta,sk,y):
+    y0 = gamma.pdf(theta,current.la_sk[0,:],2.33)
+    y1 = gamma.pdf(theta,current.la_sk[1,:],2.33)
+    y2 = np.divide(y0,y1)
+    y2 = np.nan_to_num(y2, 0.0)
+    y2 = y2.prod(axis=1)
+    y2[y2<=1] = 0
+    y2[y2<=1] = 0
+    print(confusion_matrix(y,y2))
+    
 print("--- %s seconds ---" % (time.time() - start_time))   
 
 

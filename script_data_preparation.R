@@ -177,3 +177,13 @@ dim(bd)
 write.table(bd,paste(theRootDir,'tcga_train_filted.txt',sep=''), row.names = F, sep = ';')
 
 
+#2) Eliminating genes mutated less than 15 times among all patients
+bd[,-c(1,2,3)][bd[,-c(1,2,3)]>=1]=1
+el1 = colSums(bd[,-c(1,2,3)])
+summary(el1)
+el1 = names(el1[el1<=30])
+col1 = which(names(bd) %in% el1)
+bd = bd[,-col1]
+dim(bd)
+write.table(bd,paste(theRootDir,'tcga_train_binary.txt',sep=''), row.names = F, sep = ';')
+
