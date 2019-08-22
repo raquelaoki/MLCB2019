@@ -54,22 +54,26 @@ j = train.shape[0] #patients
 
 '''Parameters'''
 class parameters:
-    __slots__ = ('ln', 'la_cj','la_sk','la_c1','la_ev','lm_phi','lm_tht')   
-    def __init__(self, latent_v,latent_cj,latent_sk, latent_ev,latent_phi ,latent_tht):
+    __slots__ = ('ln', 'la_cj','la_sk','la_c1','la_ev','lm_phi','lm_tht', 'la_pj', 'la_qk')   
+    def __init__(self, latent_v,latent_cj,latent_sk, latent_ev,latent_phi ,latent_tht, latent_pj, latent_qk):
         self.ln = latent_v #array with parameters that are only one number [0-c0,1-gamma0]
         self.la_cj = latent_cj #string of array J 
         self.la_sk = latent_sk #matrix Kx2
         self.la_ev = latent_ev #string of  array V
         self.lm_phi = latent_phi #string of matrix (kv) in array format
-        self.lm_tht = latent_tht #string of matrix  (jk) in array format      
+        self.lm_tht = latent_tht #string of matrix  (jk) in array format 
+        self.la_pj = latent_pj
+        self.la_qk = latent_qk
 
 #need to update these values considering the new dataset 
 current = parameters(np.repeat(1.65,2),#ln [0-c0,1-gamma0]
-                   np.repeat(2.23,j), #la_cj
-                   np.repeat(2.23,k*2).reshape(2,k), #la_sk
-                   np.repeat(1.0004,v), #la_ev
+                   np.repeat(0.9,j), #la_cj
+                   np.repeat(0.9,k*2).reshape(2,k), #la_sk 2.23
+                   np.repeat(1.0004,v), #la_ev FIXED
                    np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k 
-                   np.repeat(5,j*k).reshape(j,k)) #lm_theta k x j
+                   np.repeat(5,j*k).reshape(j,k), #lm_theta k x j
+                   np.repeat(0.5, j), #la_pj
+                   np.repeat(0.1,k)) #la_qk 
 
 '''Gibbs Sampling'''
 train0 = np.matrix(train)
@@ -85,38 +89,42 @@ def gibbs(current,train0,j,v,k,y01):
         lvk[:,ki] = np.random.multinomial(ldotdotk,current.lm_phi[:,ki])
         ljk[:,ki] = np.random.poisson(current.lm_tht[:,ki])
         new.lm_phi[:,ki] = np.random.dirichlet(alpha = (lvk[:,ki]+current.la_ev),size = 1)
-        new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]),scale=current.la_cj-1)
-            
+        new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]),scale=(current.la_cj-np.log(1-current.la_pj)))
+        new.la_qk[ki] = np.random.beta(a = ldotdotk, b = v*current.la_ev.mean())
+    
+    new.la_pj = np.random.beta(a= (1+train0.sum(axis = 1)).reshape(j,1) ,b=(1+current.lm_tht.sum(axis =1)).reshape(j,1))
     a1 = 2
     b1 = 2.23    
     new.la_cj = 1/np.random.gamma(shape = (current.la_sk.sum(axis = 1)[y01]+a1), scale = 1/(b1+new.lm_tht.sum(axis=1)))    
-    g1 = 50
-    c1 = 50
+    #g1 = 1
+    #c1 = 1
     a2 = 1.5
     b2 = 1.5
-    uvk  = np.repeat(0,v)    
+    #uvk  = np.repeat(0,v)    
     for ki in np.arange(k):       
-        for vi in np.arange(v):
-            p = current.la_ev[vi]/(current.la_ev[vi]+np.arange(max(lvk[vi,ki],1))+1)
-            uvk[vi] = uvk[vi]+ np.random.binomial(n=1,p=p).sum()             
+        #for vi in np.arange(v):
+            #p = current.la_ev[vi]/(current.la_ev[vi]+np.arange(max(lvk[vi,ki],1))+1)
+            #uvk[vi] = uvk[vi]+ np.random.binomial(n=1,p=p).sum()             
         uk = np.array([0,0])
         for ji in np.arange(j):
             p = current.la_sk[y01[ji],ki]/(current.la_sk[y01[ji],ki]+np.arange(max(ljk[ji,ki],1))+1)
             uk[y01[ji]] = uk[y01[ji]] +np.random.binomial(1,p=p).sum()
-        new.la_sk[:,ki] = 1/np.random.gamma(a2+uk,1/(b2+v))     
+        new.la_sk[:,ki] = 1/np.random.gamma(a2+uk,1/(b2+new.la_qk[ki]))     
     
-    new.la_ev = np.random.gamma(shape = (g1+uvk),scale = 1/(c1+50))
+    #new.la_ev = np.random.gamma(shape = (g1+uvk),scale = c1-v*((np.log(1-new.la_qk)).sum()))
     return(new)
 
 start_time = time.time()    
 
 
 new  = gibbs(current,train0,j,v,k,y01)
-print(current.lm_tht.mean(),new.lm_tht.mean())
-print(current.lm_phi.mean(),new.lm_phi.mean())
-print(current.la_sk.mean(),new.la_sk.mean())
-print(current.la_cj.mean(),new.la_cj.mean())
-print(current.la_ev.mean(),new.la_ev.mean())
+print('tht',current.lm_tht.mean(),new.lm_tht.mean())
+print('phi',current.lm_phi[0:10,1],new.lm_phi[0:10,1])
+print('sk',current.la_sk.mean(),new.la_sk.mean())
+print('cj',current.la_cj.mean(),new.la_cj.mean())
+print('ev',current.la_ev.mean(),new.la_ev.mean())
+print('pj',current.la_pj.mean(),new.la_pj.mean())
+print('qk',current.la_qk.mean(),new.la_qk.mean())
 current= copy.deepcopy(new )
 
 
