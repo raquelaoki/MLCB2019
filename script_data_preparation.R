@@ -190,13 +190,58 @@ write.table(bd,paste(theRootDir,'tcga_train_binary.txt',sep=''), row.names = F, 
 
 #-------------------------- 
 bd = read.table(paste(theRootDir,'tcga_rna_old.txt',sep=''), header=T, sep = ';')
+bd = subset(bd, select = -c(patients2))
 head(bd[,1:10])
 dim(bd)
 
+cl = read.table(paste(theRootDir,'tcga_cli_old.txt',sep=''), header=T, sep = ';')
+cl = subset(cl, select = c(patients, new_tumor_event_dx_indicator))
+names(cl)[2] = 'y'
+cl$y = as.character(cl$y)
+cl$y[cl$y=='NO'] = 0 
+cl$y[cl$y=='YES'] = 1
+
+bd1 = merge(cl,bd,by.x = 'patients',by.y = 'patients', all = F)
+head(bd1[,1:10])
 
 #check old code
 #eliminate the ones with low variance 
-require(colVars)
-var = colVars(bd[,-1])
+require(resample)
+var = colVars(bd1[,-c(1,2)])
+var[is.na(var)]=0
+#var = subset(var, !is.na(col))
+datavar = data.frame(col = 1:dim(bd1)[2], var = c(100000,100000,var))
+dim(datavar)
+#datavar = subset(datavar, var>4.767836e+04 )
+datavar = datavar[datavar$var>26604.77,]
+dim(datavar)
+bd1 = bd1[,c(datavar$col)]
+head(bd1[,1:10])
+dim(bd1)
+
+order = c('patients','y',names(bd1))
+order = unique(order)
+bd1 = bd1[,order]
+
 #eliminate the ones wich vales between 0 and 1 are not signnificantly different 
+bdy0 = subset(bd1, y==0)
+bdy1 = subset(bd1, y==1) 
+pvalues = c()
+for(i in 3:dim(bd1)[2]){
+  pvalues[i-2] =  t.test(bdy0[,i],bdy1[,i])$p.value
+}
+
+#t.test:
+#H0: y = x
+#H1: y dif x 
+#to reject the null H0 the pvalue must be <0.5
+#i want to keep on my data the genes with y dif x, this 
+#i want to filter small p values. 
+ind = c(3:dim(bd1)[2])[pvalues<0.001]
+bd1 = bd1[,c(1,2,ind)]
+head(bd1[,1:10])
+dim(bd1)
+
+write.table(bd1,paste(theRootDir,'tcga_train_gexpression.txt',sep=''), row.names = F, sep = ';')
+
 
