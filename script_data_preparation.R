@@ -188,7 +188,7 @@ dim(bd)
 write.table(bd,paste(theRootDir,'tcga_train_binary.txt',sep=''), row.names = F, sep = ';')
 
 
-#-------------------------- 
+#-------------------------- GENE EXPRESSION GENE SELECTION 
 bd = read.table(paste(theRootDir,'tcga_rna_old.txt',sep=''), header=T, sep = ';')
 bd = subset(bd, select = -c(patients2))
 head(bd[,1:10])
@@ -237,7 +237,7 @@ for(i in 3:dim(bd1)[2]){
 #to reject the null H0 the pvalue must be <0.5
 #i want to keep on my data the genes with y dif x, this 
 #i want to filter small p values. 
-ind = c(3:dim(bd1)[2])[pvalues<0.001]
+ind = c(3:dim(bd1)[2])[pvalues<=0.0000001]
 bd1 = bd1[,c(1,2,ind)]
 head(bd1[,1:10])
 dim(bd1)
