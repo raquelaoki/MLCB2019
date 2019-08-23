@@ -4,20 +4,17 @@ import numpy as np
 import time
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
-import sys 
-import matplotlib.pyplot as plt
-from scipy.stats import norm, invgamma , gamma
-import pymc3 as pm
 import copy
 
 '''
 Notes:
-- use gene expression again 
-- fix  R 
-- decrease datasize following R instructions 
-- run the model again with the gene expression this time
+- DATALIMIT: V = 3500 WITH EVERYTHING ELSE CLOSED 
+- theta is going crazy 
+- compute canada: problem with files location 
 
 '''
+
+
 
 
 '''Hyperparameters'''
@@ -26,7 +23,7 @@ sim = 600 #Simulations
 bach_size = 200 #Batch size for memory purposes 
 step1 = 10 #Saving chain every step1 steps 
 step2 = 20
-id = '01' #identification of simulation 
+id = '02' #identification of simulation 
 
 #WRONG< UPDATE HERE 
 if bach_size//step2 <= 20:
@@ -43,8 +40,8 @@ data = pd.read_csv(filename, sep=';')
 train, test = train_test_split(data, test_size=0.3, random_state=22)
 
 '''Organizing columns names'''
-remove = train.columns[[0,1,2]]
-y = train.columns[2]
+remove = train.columns[[0,1]]
+y = train.columns[1]
 y01 = np.array(train[y])
 train = train.drop(remove, axis = 1)
 y01_t = np.array(test[y])
@@ -71,11 +68,11 @@ class parameters:
 
 #need to update these values considering the new dataset 
 current = parameters(np.repeat(1.65,2),#ln [0-c0,1-gamma0]
-                   np.repeat(2.33,j), #la_cj FIXED 
-                   np.repeat(0.9,k*2).reshape(2,k), #la_sk 2.23
+                   np.repeat(13.5,j), #la_cj FIXED 
+                   np.repeat(14.2,k*2).reshape(2,k), #la_sk 2.23
                    np.repeat(1.0004,v), #la_ev FIXED
                    np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k 
-                   np.repeat(5,j*k).reshape(j,k), #lm_theta k x j
+                   np.repeat(223,j*k).reshape(j,k), #lm_theta k x j
                    np.repeat(0.5, j), #la_pj
                    np.repeat(0.1,k)) #la_qk 
 
@@ -100,6 +97,8 @@ def gibbs(current,train0,j,v,k,y01):
         #ldotdotk = np.multiply(ldotdotk,train0).sum()
         #lvk[:,ki] = np.random.multinomial(ldotdotk,current.lm_phi[:,ki])
         #ljk[:,ki] = np.random.poisson(current.lm_tht[:,ki])
+    
+    #check sum of poisson. I might be able to apply poisson after the sum, so will be faster
     lvjk = np.random.poisson(lvjk)
     lvk = lvjk.sum(axis=1)
     ljk = lvjk.sum(axis=0)
@@ -111,7 +110,7 @@ def gibbs(current,train0,j,v,k,y01):
     
     new.la_qk = np.random.beta(a = ldotdotk, b = v*current.la_ev.mean())
     
-    new.la_pj = np.random.beta(a= (1+train0.sum(axis = 1)).reshape(j,1) ,b=(1+current.lm_tht.sum(axis =1)).reshape(j,1))
+    new.la_pj = np.random.beta(a= (1+train0.sum(axis = 1)).reshape(j,1) ,b=(1+new.lm_tht.sum(axis =1)).reshape(j,1))
     #a1 = 2
     #b1 = 2.23    
     #new.la_cj = 1/np.random.gamma(shape = (current.la_sk.sum(axis = 1)[y01]+a1), scale = 1/(b1+new.lm_tht.sum(axis=1)))    
@@ -136,14 +135,14 @@ def gibbs(current,train0,j,v,k,y01):
 start_time = time.time()    
 
 
-#new  = gibbs(current,train0,j,v,k,y01)
-#print('tht',current.lm_tht.mean(),new.lm_tht.mean())
-#print('phi',current.lm_phi[0:10,1],new.lm_phi[0:10,1])
-#print('sk',current.la_sk.mean(),new.la_sk.mean())
-#print('cj',current.la_cj.mean(),new.la_cj.mean())
-#print('ev',current.la_ev.mean(),new.la_ev.mean())
-#print('pj',current.la_pj.mean(),new.la_pj.mean())
-#print('qk',current.la_qk.mean(),new.la_qk.mean())
+new  = gibbs(current,train0,j,v,k,y01)
+print('tht',current.lm_tht.mean(),new.lm_tht.mean())
+print('phi',current.lm_phi[0:10,1],new.lm_phi[0:10,1])
+print('sk',current.la_sk.mean(),new.la_sk.mean())
+print('cj',current.la_cj.mean(),new.la_cj.mean())
+print('ev',current.la_ev.mean(),new.la_ev.mean())
+print('pj',current.la_pj.mean(),new.la_pj.mean())
+print('qk',current.la_qk.mean(),new.la_qk.mean())
 #current= copy.deepcopy(new )
 
 
@@ -173,8 +172,8 @@ for ite in np.arange(0,sim//bach_size):
     count_s1 = 0
     count_s2 = 0
     chain_la_sk[:,count_s1]=current.la_sk.reshape(1,-1)
-    chain_la_pj[count_s1]=current.la_pj.tolist()
-    chain_la_qk[count_s1]=current.la_qk.tolist()
+    chain_la_pj[count_s1]=current.la_pj.reshape(j)
+    chain_la_qk[count_s1]=current.la_qk.reshape(k)
     chain_lm_tht[:,count_s2]=current.lm_tht.reshape(1,-1)
     chain_lm_phi[:,count_s2]=current.lm_phi.reshape(1,-1)
     print('iteration--',ite,' of ',sim//bach_size)   
@@ -186,8 +185,8 @@ for ite in np.arange(0,sim//bach_size):
             print('------------', i, ' of ',bach_size) 
             count_s1+=1
             chain_la_sk[:,count_s1]=new.la_sk.reshape(1,-1)
-            chain_la_pj[count_s1]=new.la_pj.tolist()
-            chain_la_qk[count_s1]=new.la_qk.tolist()
+            chain_la_pj[count_s1]=new.la_pj.reshape(j)
+            chain_la_qk[count_s1]=new.la_qk.reshape(k)
             if i%20==0:
                 count_s2+=1
                 chain_lm_tht[:,count_s2]=new.lm_tht.reshape(1,-1)

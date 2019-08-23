@@ -229,6 +229,7 @@ bdy1 = subset(bd1, y==1)
 pvalues = c()
 for(i in 3:dim(bd1)[2]){
   pvalues[i-2] =  t.test(bdy0[,i],bdy1[,i])$p.value
+  bd1[,i] = log(bd1[,i]+1)
 }
 
 #t.test:
@@ -237,10 +238,11 @@ for(i in 3:dim(bd1)[2]){
 #to reject the null H0 the pvalue must be <0.5
 #i want to keep on my data the genes with y dif x, this 
 #i want to filter small p values. 
-ind = c(3:dim(bd1)[2])[pvalues<=0.0000001]
+ind = c(3:dim(bd1)[2])[pvalues<=0.00000001]
 bd1 = bd1[,c(1,2,ind)]
 head(bd1[,1:10])
 dim(bd1)
+
 
 write.table(bd1,paste(theRootDir,'tcga_train_gexpression.txt',sep=''), row.names = F, sep = ';')
 
