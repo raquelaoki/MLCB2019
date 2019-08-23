@@ -12,19 +12,20 @@ import copy
 
 '''
 Notes:
-- add pj array on parameters class
-- add qk in parameteers class
-- add distributions 
+- use gene expression again 
+- fix  R 
+- decrease datasize following R instructions 
+- run the model again with the gene expression this time
 
 '''
 
 
 '''Hyperparameters'''
 k = 100 #Latents Dimension 
-sim = 300 #Simulations 
-bach_size = 100 #Batch size for memory purposes 
-step1 = 5 #Saving chain every step1 steps 
-step2 = 10
+sim = 600 #Simulations 
+bach_size = 200 #Batch size for memory purposes 
+step1 = 10 #Saving chain every step1 steps 
+step2 = 20
 id = '01' #identification of simulation 
 
 #WRONG< UPDATE HERE 
@@ -84,27 +85,32 @@ def gibbs(current,train0,j,v,k,y01):
     new = copy.deepcopy(current) 
     #lvk = np.zeros((v,k))
     #ljk = np.zeros((j,k))
-    ljvk = np.zeros((j,v,k))
+    lvjk = np.zeros((v,j,k))
     
     for ki in np.arange(k):
-        for ji in np.arange(j):
-            for vi in np.arange(v):
-                ljvk[ji,vi,ki] = np.random.poisson(current.la_pj[ji]*current.lm_phi[vi,ki]*current.lm_tht[ji,ki])
-                
+        #for ji in np.arange(j):
+            #for vi in np.arange(v):
+               # ljvk[ji,vi,ki] = np.random.poisson(current.la_pj[ji]*current.lm_phi[vi,ki]*current.lm_tht[ji,ki])
+        lvjk[:,:,ki] = np.dot(current.lm_phi[:,ki].reshape(v,1),
+            np.transpose(np.multiply(current.lm_tht[:,ki].reshape(j,1),current.la_pj.reshape(j,1)).reshape(j,1)))       
+
+        
         #ldotdotk = np.multiply(np.array(current.lm_tht[:,ki].reshape(j,1)),current.lm_phi[:,ki].reshape(1,v))
         #ldotdotk = np.multiply(ldotdotk,train0).sum()
         #lvk[:,ki] = np.random.multinomial(ldotdotk,current.lm_phi[:,ki])
         #ljk[:,ki] = np.random.poisson(current.lm_tht[:,ki])
-    lvk = ljvk.sum(axis=0)
-    ljk = ljvk.sum(axis=1)
+    lvjk = np.random.poisson(lvjk)
+    lvk = lvjk.sum(axis=1)
+    ljk = lvjk.sum(axis=0)
+    ldotdotk = ljk.sum(axis=0)
     for ki in np.arange(k):    
         new.lm_phi[:,ki] = np.random.dirichlet(alpha = (lvk[:,ki]+current.la_ev),size = 1)
         new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]).reshape(j),
                   scale=(current.la_cj.reshape(j)-np.log(1-current.la_pj).reshape(j)))
-        new.la_qk[ki] = np.random.beta(a = ldotdotk, b = v*current.la_ev.mean())
+    
+    new.la_qk = np.random.beta(a = ldotdotk, b = v*current.la_ev.mean())
     
     new.la_pj = np.random.beta(a= (1+train0.sum(axis = 1)).reshape(j,1) ,b=(1+current.lm_tht.sum(axis =1)).reshape(j,1))
-    print(new.la_pj.shape)
     #a1 = 2
     #b1 = 2.23    
     #new.la_cj = 1/np.random.gamma(shape = (current.la_sk.sum(axis = 1)[y01]+a1), scale = 1/(b1+new.lm_tht.sum(axis=1)))    
@@ -129,15 +135,15 @@ def gibbs(current,train0,j,v,k,y01):
 start_time = time.time()    
 
 
-new  = gibbs(current,train0,j,v,k,y01)
-print('tht',current.lm_tht.mean(),new.lm_tht.mean())
-print('phi',current.lm_phi[0:10,1],new.lm_phi[0:10,1])
-print('sk',current.la_sk.mean(),new.la_sk.mean())
-print('cj',current.la_cj.mean(),new.la_cj.mean())
-print('ev',current.la_ev.mean(),new.la_ev.mean())
-print('pj',current.la_pj.mean(),new.la_pj.mean())
-print('qk',current.la_qk.mean(),new.la_qk.mean())
-current= copy.deepcopy(new )
+#new  = gibbs(current,train0,j,v,k,y01)
+#print('tht',current.lm_tht.mean(),new.lm_tht.mean())
+#print('phi',current.lm_phi[0:10,1],new.lm_phi[0:10,1])
+#print('sk',current.la_sk.mean(),new.la_sk.mean())
+#print('cj',current.la_cj.mean(),new.la_cj.mean())
+#print('ev',current.la_ev.mean(),new.la_ev.mean())
+#print('pj',current.la_pj.mean(),new.la_pj.mean())
+#print('qk',current.la_qk.mean(),new.la_qk.mean())
+#current= copy.deepcopy(new )
 
 
 def acc(theta,sk,y):
@@ -150,13 +156,11 @@ def acc(theta,sk,y):
     y2[y2<=1] = 0
     print(confusion_matrix(y,y2))
     
-print("--- %s seconds ---" % (time.time() - start_time))   
-
 
 '''Creating the chains'''
 chain_la_sk = np.tile(current.la_sk.reshape(-1,1),(1,int(bach_size/step1)))
-chain_la_cj = np.tile(current.la_cj.tolist(),(int(bach_size/step1),1))
-chain_la_ev = np.tile(current.la_ev.tolist(),(int(bach_size/step1),1))
+chain_la_pj = np.tile(current.la_pj.tolist(),(int(bach_size/step1),1))
+chain_la_qk = np.tile(current.la_qk.tolist(),(int(bach_size/step1),1))
 chain_lm_tht = np.tile(current.lm_tht.reshape(-1,1),(1,int(bach_size/step2)))
 chain_lm_phi = np.tile(current.lm_phi.reshape(-1,1),(1,int(bach_size/step2)))
 
@@ -168,8 +172,8 @@ for ite in np.arange(0,sim//bach_size):
     count_s1 = 0
     count_s2 = 0
     chain_la_sk[:,count_s1]=current.la_sk.reshape(1,-1)
-    chain_la_cj[count_s1]=current.la_cj.tolist()
-    chain_la_ev[count_s1]=current.la_ev.tolist()
+    chain_la_pj[count_s1]=current.la_pj.tolist()
+    chain_la_qk[count_s1]=current.la_qk.tolist()
     chain_lm_tht[:,count_s2]=current.lm_tht.reshape(1,-1)
     chain_lm_phi[:,count_s2]=current.lm_phi.reshape(1,-1)
     print('iteration--',ite,' of ',sim//bach_size)   
@@ -177,23 +181,24 @@ for ite in np.arange(0,sim//bach_size):
     for i in np.arange(1,bach_size):
         new  = gibbs(current,train0,j,v,k,y01)
         '''Updating chain'''
-        print('------------', i, ' of ',bach_size) 
         if i%10==0:
+            print('------------', i, ' of ',bach_size) 
             count_s1+=1
             chain_la_sk[:,count_s1]=new.la_sk.reshape(1,-1)
-            chain_la_cj[count_s1]=new.la_cj.tolist()
-            chain_la_ev[count_s1]=new.la_ev.tolist()
+            chain_la_pj[count_s1]=new.la_pj.tolist()
+            chain_la_qk[count_s1]=new.la_qk.tolist()
             if i%20==0:
                 count_s2+=1
                 chain_lm_tht[:,count_s2]=new.lm_tht.reshape(1,-1)
                 chain_lm_phi[:,count_s2]=new.lm_phi.reshape(1,-1)
-                #if i%100 == 0: 
+                if i%100 == 0: 
                     #print('iteration ',ite, 'bach ', i) 
-        current = new 
+                    print(acc(current.lm_tht,current.la_sk,y01))
+        current= copy.deepcopy(new )
 
     np.savetxt('Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_sk, delimiter=',',fmt='%5s')
-    np.savetxt('Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_cj, delimiter=',',fmt='%5s')
-    np.savetxt('Data\\output_laev_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_ev, delimiter=',',fmt='%5s')
+    np.savetxt('Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_pj, delimiter=',',fmt='%5s')
+    np.savetxt('Data\\output_laev_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_qk, delimiter=',',fmt='%5s')
     np.savetxt('Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_tht, delimiter=',',fmt='%5s')
     np.savetxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_phi, delimiter=',',fmt='%5s')
 #    accuracy(ite,id,data,data.shape[0],k,y01)
@@ -202,4 +207,4 @@ for ite in np.arange(0,sim//bach_size):
 print("--- %s min ---" % int((time.time() - start_time)/60))
 print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
 
-
+#4:13pm

@@ -187,3 +187,16 @@ bd = bd[,-col1]
 dim(bd)
 write.table(bd,paste(theRootDir,'tcga_train_binary.txt',sep=''), row.names = F, sep = ';')
 
+
+#-------------------------- 
+bd = read.table(paste(theRootDir,'tcga_rna_old.txt',sep=''), header=T, sep = ';')
+head(bd[,1:10])
+dim(bd)
+
+
+#check old code
+#eliminate the ones with low variance 
+require(colVars)
+var = colVars(bd[,-1])
+#eliminate the ones wich vales between 0 and 1 are not signnificantly different 
+
