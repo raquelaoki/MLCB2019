@@ -246,4 +246,12 @@ dim(bd1)
 
 write.table(bd1,paste(theRootDir,'tcga_train_gexpression.txt',sep=''), row.names = F, sep = ';')
 
-
+#balancing the dataset 
+bd = read.table(paste(theRootDir,'tcga_train_gexpression.txt',sep=''), header = T, sep = ';')
+rows = c(1:dim(bd)[1])
+rows_selc1 = rows[bd$y==1]
+rows_selc2 = sample(rows[bd$y==0],size = length(rows[bd$y==1]), replace = F)
+bd1 = bd[c(rows_selc1,rows_selc2),]
+bd1 = bd1[order(bd1$patients),]
+  
+write.table(bd1,paste(theRootDir,'tcga_train_ge_balanced.txt',sep=''), row.names = F, sep = ';')
