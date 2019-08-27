@@ -69,11 +69,11 @@ class parameters:
 
 #need to update these values considering the new dataset 
 current = parameters(np.repeat(1.65,2),#ln [0-c0,1-gamma0]
-                   np.repeat(0.04,j), #la_cj FIXED 
-                   np.repeat(200,k*2).reshape(2,k), #la_sk 2.23
+                   np.repeat(0.05,j), #la_cj 
+                   np.repeat(199.5,k*2).reshape(2,k), #la_sk 2.23
                    np.repeat(1.0004,v), #la_ev FIXED
                    np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k 
-                   np.repeat(12,j*k).reshape(j,k)) #lm_theta k x j
+                   np.repeat(12.5,j*k).reshape(j,k)) #lm_theta k x j
                    #np.repeat(0.5, j), #la_pj
                    #np.repeat(0.5,k)) #la_qk 
 
@@ -110,13 +110,13 @@ def gibbs(current,train0,j,v,k,y01):
     
     #new.la_qk = np.random.beta(a = ldotdotk, b = v*current.la_ev.mean())
     #new.la_pj = np.random.beta(a= (1+train0.sum(axis = 1)).reshape(j,1) ,b=(1+new.lm_tht.sum(axis =1)).reshape(j,1))
-    a1 = 0.04
-    b1 = 0.04    
-    new.la_cj = 1/np.random.gamma(shape = (current.la_sk.sum(axis = 1)[y01]+a1), scale = 1/(b1+new.lm_tht.sum(axis=1)))    
     #g1 = 1
     #c1 = 1
-    a2 = 15
-    b2 = 15
+    a2 = 12000
+    b2 = 2400000
+    #it shoud be +
+    b2u = (np.log(np.divide(current.la_cj ,current.la_cj+np.log(1-0.02)))).sum()
+    
     #uvk  = np.repeat(0,v)    
     for ki in np.arange(k):       
         #for vi in np.arange(v):
@@ -126,9 +126,15 @@ def gibbs(current,train0,j,v,k,y01):
         uk = np.array([0,0])
         for ji in np.arange(j):
             p = current.la_sk[y01[ji],ki]/(current.la_sk[y01[ji],ki]+np.arange(max(ljk[ji,ki],1))+1)
-            uk[y01[ji]] = uk[y01[ji]] +np.random.binomial(1,p=p).sum()
-            new.la_sk[:,ki] = np.random.gamma(a2+uk,
-                     1/(b2-(np.log(np.divide(new.la_cj ,new.la_cj-np.log(1-0.001)))).sum()))     
+            uk[y01[ji]] = uk[y01[ji]]+np.random.binomial(1,p=p).sum()
+        #print(a2+uk, 1/(b2-b2u))
+        new.la_sk[:,ki] = 1/np.random.gamma(a2+uk,1/(b2-b2u))     
+        
+    a1 = 4
+    b1 = 4
+    new.la_cj = np.random.beta(a= (a1+train0.sum(axis = 1)).reshape(j,1) ,b=(b1+new.lm_tht.sum(axis =1)).reshape(j,1))
+    #np.random.beta(shape = (new.la_sk.sum(axis = 1)[y01]+a1), scale = 1/(b1+new.lm_tht.sum(axis=1)))    
+
         
     #new.la_ev = np.random.gamma(shape = (g1+uvk),scale = c1-v*((np.log(1-new.la_qk)).sum()))
     return(new)
@@ -195,6 +201,12 @@ for ite in np.arange(0,sim//bach_size):
                 if i%100 == 0: 
                     #print('iteration ',ite, 'bach ', i) 
                     print(acc(current.lm_tht,current.la_sk,y01))
+        print('tht',current.lm_tht.mean(),new.lm_tht.mean())
+        #print('phi',current.lm_phi[0:10,1],new.lm_phi[0:10,1])
+        print('sk',current.la_sk.mean(),new.la_sk.mean())
+        print('cj',current.la_cj.mean(),new.la_cj.mean())
+        print('\n')
+
         current= copy.deepcopy(new )
 
     np.savetxt('Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_sk, delimiter=',',fmt='%5s')
