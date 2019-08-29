@@ -38,15 +38,16 @@ data = pd.read_csv(filename, sep=';')
 
 
 '''Splitting Dataset'''
-train, test = train_test_split(data, test_size=0.3, random_state=22)
+#train, test = train_test_split(data, test_size=0.3, random_state=22)
+train = data
 
 '''Organizing columns names'''
 remove = train.columns[[0,1]]
 y = train.columns[1]
 y01 = np.array(train[y])
 train = train.drop(remove, axis = 1)
-y01_t = np.array(test[y])
-test = test.drop(remove, axis = 1)
+#y01_t = np.array(test[y])
+#test = test.drop(remove, axis = 1)
 
 
 '''Defining variables'''
@@ -171,7 +172,7 @@ for ite in np.arange(0,sim//bach_size):
                 chain_lm_phi[:,count_s2]=new.lm_phi.reshape(1,-1)
                 if i%100 == 0: 
                     #print('iteration ',ite, 'bach ', i) 
-                    print(acc(current.lm_tht,current.la_sk,y01))
+                    print(acc(current.lm_tht,current.la_sk,current.la_cj, y01))
         #print('tht',current.lm_tht.mean(),new.lm_tht.mean())
         #print('phi',current.lm_phi[0:10,1],new.lm_phi[0:10,1])
         #print('sk',current.la_sk.mean(),new.la_sk.mean())
@@ -193,25 +194,34 @@ print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
 #about 4h for 600sim
 
 #checking the accuracy
-ite = 0 
-la_sk = np.loadtxt('Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',',fmt='%5s').mean(axis=1)
-la_cj = np.loadtxt('Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',',fmt='%5s').mean(axis=1)
-lm_phi = np.loadtxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',',fmt='%5s').mean(axis=1)
-lm_tht = np.loadtxt('Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',',fmt='%5s').mean(axis=1)
+ite = 1
+la_sk = np.loadtxt('Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+la_cj = np.loadtxt('Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=0)
+lm_phi = np.loadtxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+lm_tht = np.loadtxt('Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
 
 
-for ite in np.arange(1,sim//bach_size):
-    la_sk = la_sk + np.loadtxt('Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',',fmt='%5s').mean(axis=1)
-    la_cj = la_cj + np.loadtxt('Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',',fmt='%5s').mean(axis=1)
-    lm_phi = lm_phi + np.loadtxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',',fmt='%5s').mean(axis=1)
-    lm_tht = lm_tht + np.loadtxt('Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',',fmt='%5s').mean(axis=1)
+for ite in np.arange(2,sim//bach_size):
+    la_sk = la_sk + np.loadtxt('Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+    la_cj = la_cj + np.loadtxt('Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=0)
+    lm_phi = lm_phi + np.loadtxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+    lm_tht = lm_tht + np.loadtxt('Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
 
-la_sk = (la_sk/(sim//bach_size)).reshape()
-la_cj = (la_cj/(sim//bach_size)).reshape()
-lm_phi = (lm_phi/(sim//bach_size)).reshape()
-lm_tht = (lm_tht/(sim//bach_size)).reshape()
+la_sk = la_sk/((sim//bach_size)-1)
+la_cj = la_cj/((sim//bach_size)-1)
+lm_phi = lm_phi/((sim//bach_size)-1)
+lm_tht = lm_tht/((sim//bach_size)-1)
 
-#acc(lm_tht,sk,cj,y00)
+
+la_sk = la_sk.reshape(2,k)
+la_cj = la_cj.reshape(j,1)
+lm_tht = lm_tht.reshape(j,k)
+
+print(la_cj.shape, la_sk.shape,la_sk[0,:].shape ,lm_tht.shape)
+print(current.la_cj.shape, current.la_sk.shape,current.la_sk[0,:].shape ,current.lm_tht.shape)
+
+acc(lm_tht,la_sk,la_cj,y01)
+
 
 
 
