@@ -23,7 +23,7 @@ sim = 600 #Simulations
 bach_size = 200 #Batch size for memory purposes 
 step1 = 10 #Saving chain every step1 steps 
 step2 = 20
-id = '02' #identification of simulation 
+id = '04' #identification of simulation 
 
 #WRONG< UPDATE HERE 
 if bach_size//step2 <= 20:
@@ -70,11 +70,11 @@ class parameters:
 
 #need to update these values considering the new dataset 
 current = parameters(np.repeat(1.65,2),#ln [0-c0,1-gamma0]
-                   np.repeat(0.05,j), #la_cj 
-                   np.repeat(199.5,k*2).reshape(2,k), #la_sk 2.23
+                   np.repeat(0.5,j), #la_cj 
+                   np.repeat(200,k*2).reshape(2,k), #la_sk 
                    np.repeat(1.0004,v), #la_ev FIXED
                    np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k 
-                   np.repeat(12.5,j*k).reshape(j,k)) #lm_theta k x j
+                   np.repeat(100,j*k).reshape(j,k)) #lm_theta k x j
                    #np.repeat(0.5, j), #la_pj
                    #np.repeat(0.5,k)) #la_qk 
 
@@ -108,8 +108,8 @@ def gibbs(current,train0,j,v,k,y01):
             uk[y01[ji]] = uk[y01[ji]]+np.random.binomial(1,p=p).sum()
         new.la_sk[:,ki] = 1/np.random.gamma(a2+uk,1/(b2-b2u))     
         
-    a1 = 4
-    b1 = 4
+    a1 = 1000
+    b1 = 50000
     new.la_cj = np.random.beta(a= (a1+train0.sum(axis = 1)).reshape(j,1) ,b=(b1+new.lm_tht.sum(axis =1)).reshape(j,1))
     return(new)
 
@@ -195,17 +195,17 @@ print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
 
 #checking the accuracy
 ite = 1
-la_sk = np.loadtxt('Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-la_cj = np.loadtxt('Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=0)
-lm_phi = np.loadtxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-lm_tht = np.loadtxt('Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+la_sk = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+la_cj = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=0)
+lm_phi = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+lm_tht = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
 
 
 for ite in np.arange(2,sim//bach_size):
-    la_sk = la_sk + np.loadtxt('Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-    la_cj = la_cj + np.loadtxt('Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=0)
-    lm_phi = lm_phi + np.loadtxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-    lm_tht = lm_tht + np.loadtxt('Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+    la_sk = la_sk + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+    la_cj = la_cj + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=0)
+    lm_phi = lm_phi + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+    lm_tht = lm_tht + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
 
 la_sk = la_sk/((sim//bach_size)-1)
 la_cj = la_cj/((sim//bach_size)-1)
@@ -216,6 +216,7 @@ lm_tht = lm_tht/((sim//bach_size)-1)
 la_sk = la_sk.reshape(2,k)
 la_cj = la_cj.reshape(j,1)
 lm_tht = lm_tht.reshape(j,k)
+lm_phi = lm_phi.reshape(v,k)
 
 print(la_cj.shape, la_sk.shape,la_sk[0,:].shape ,lm_tht.shape)
 print(current.la_cj.shape, current.la_sk.shape,current.la_sk[0,:].shape ,current.lm_tht.shape)
@@ -223,5 +224,17 @@ print(current.la_cj.shape, current.la_sk.shape,current.la_sk[0,:].shape ,current
 acc(lm_tht,la_sk,la_cj,y01)
 
 
+'''
+y0 = gamma.logpdf(lm_tht,la_sk[0,:],la_cj)
+y1 = gamma.logpdf(lm_tht,la_sk[1,:],la_cj)
+y3 = y1-y0
+y3 = y3.sum(axis=1)
+y3[y3<=0] = 0
+y3[y3>0] = 1
+print(confusion_matrix(y,y3))
 
 
+test = np.dot(lm_tht,np.transpose(lm_phi))
+test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
+test1[0:5,0:5]
+'''
