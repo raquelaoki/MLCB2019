@@ -14,8 +14,6 @@ Notes:
 '''
 
 
-
-
 '''Hyperparameters'''
 k = 100 #Latents Dimension 
 sim = 600 #Simulations 
@@ -69,8 +67,8 @@ class parameters:
 
 #need to update these values considering the new dataset 
 current = parameters(np.repeat(1.65,2),#ln [0-c0,1-gamma0]
-                   np.repeat(0.5,j), #la_cj 
-                   np.repeat(200,k*2).reshape(2,k), #la_sk 
+                   np.repeat(0.5,j), #la_cj 0.25
+                   np.repeat(200,k*2).reshape(2,k), #la_sk 62
                    np.repeat(1.0004,v), #la_ev FIXED
                    np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k 
                    np.repeat(100,j*k).reshape(j,k)) #lm_theta k x j
@@ -108,7 +106,7 @@ def gibbs(current,train0,j,v,k,y01):
         new.la_sk[:,ki] = 1/np.random.gamma(a2+uk,1/(b2-b2u))     
         
     a1 = 1000
-    b1 = 50000
+    b1 = 13000
     new.la_cj = np.random.beta(a= (a1+train0.sum(axis = 1)).reshape(j,1) ,b=(b1+new.lm_tht.sum(axis =1)).reshape(j,1))
     return(new)
 
