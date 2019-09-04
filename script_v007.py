@@ -11,7 +11,6 @@ import copy
 Notes:
 - DATALIMIT: V = 3500 WITH EVERYTHING ELSE CLOSED 
 - compute canada: problem with files location 
-- force data to be balanced 
 '''
 
 
