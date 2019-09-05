@@ -2,7 +2,7 @@
 import pandas as pd 
 import numpy as np 
 import time
-from sklearn.model_selection import train_test_split
+#from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 from scipy.stats import gamma
 import copy
@@ -12,7 +12,7 @@ Notes:
 - DATALIMIT: V = 3500 WITH EVERYTHING ELSE CLOSED 
 - compute canada: problem with files location 
 '''
-
+computecanada = False
 
 '''Hyperparameters'''
 k = 100 #Latents Dimension 
@@ -20,19 +20,23 @@ sim = 600 #Simulations
 bach_size = 200 #Batch size for memory purposes 
 step1 = 10 #Saving chain every step1 steps 
 step2 = 20
-id = '04' #identification of simulation 
+id = '05' #identification of simulation 
 
 #WRONG< UPDATE HERE 
 if bach_size//step2 <= 20:
     print('ERROR ON MCMC, this division must be bigger than 20')
 
 '''Loading dataset'''
-#filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_filtered.txt"
-#filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_binary.txt"
-#filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_gexpression.txt"
-filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_ge_balanced.txt"
-data = pd.read_csv(filename, sep=';')
+if computecanada: 
+    #filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_filtered.txt"
+    #filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_binary.txt"
+    #filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_gexpression.txt"
+    filename = "tcga_train_ge_balanced.txt"
+else: 
+    filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_ge_balanced.txt"
+    
 
+data = pd.read_csv(filename, sep=';')
 
 '''Splitting Dataset'''
 #train, test = train_test_split(data, test_size=0.3, random_state=22)
@@ -105,8 +109,8 @@ def gibbs(current,train0,j,v,k,y01):
             uk[y01[ji]] = uk[y01[ji]]+np.random.binomial(1,p=p).sum()
         new.la_sk[:,ki] = 1/np.random.gamma(a2+uk,1/(b2-b2u))     
         
-    a1 = 1000
-    b1 = 13000
+    a1 = 4000
+    b1 = 10000
     new.la_cj = np.random.beta(a= (a1+train0.sum(axis = 1)).reshape(j,1) ,b=(b1+new.lm_tht.sum(axis =1)).reshape(j,1))
     return(new)
 
@@ -125,8 +129,8 @@ start_time = time.time()
 
 
 def acc(theta,sk,cj,y):
-    y0 = gamma.pdf(theta,sk[0,:],cj)
-    y1 = gamma.pdf(theta,sk[1,:],cj)
+    y0 = gamma.pdf(x=theta,a = sk[0,:],scale = 1/cj)
+    y1 = gamma.pdf(x=theta,a = sk[1,:],scale = 1/cj)
     y3 = np.log(y1)-np.log(y0)
     y3 = y3.sum(axis=1)
     y3[y3<=0] = 0
@@ -177,53 +181,60 @@ for ite in np.arange(0,sim//bach_size):
         #print('\n')
 
         current= copy.deepcopy(new )
-
-    np.savetxt('Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_sk, delimiter=',',fmt='%5s')
-    np.savetxt('Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_cj, delimiter=',',fmt='%5s')
-    np.savetxt('Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_tht, delimiter=',',fmt='%5s')
-    np.savetxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_phi, delimiter=',',fmt='%5s')
-
+    if computecanada: 
+        np.savetxt('$SLURM_TMPDIR/Data/output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_sk, delimiter=',',fmt='%5s')
+        np.savetxt('$SLURM_TMPDIR/Data/output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_cj, delimiter=',',fmt='%5s')
+        np.savetxt('$SLURM_TMPDIR/Data/output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_tht, delimiter=',',fmt='%5s')
+        np.savetxt('$SLURM_TMPDIRD/ata/output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_phi, delimiter=',',fmt='%5s')
+    else:
+        np.savetxt('Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_sk, delimiter=',',fmt='%5s')
+        np.savetxt('Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_cj, delimiter=',',fmt='%5s')
+        np.savetxt('Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_tht, delimiter=',',fmt='%5s')
+        np.savetxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_phi, delimiter=',',fmt='%5s')
+    
 
 print("--- %s min ---" % int((time.time() - start_time)/60))
 print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
 
 
 #about 4h for 600sim
-
-#checking the accuracy
-ite = 1
-la_sk = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-la_cj = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=0)
-lm_phi = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-lm_tht = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-
-
-for ite in np.arange(2,sim//bach_size):
-    la_sk = la_sk + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-    la_cj = la_cj + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=0)
-    lm_phi = lm_phi + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-    lm_tht = lm_tht + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-
-la_sk = la_sk/((sim//bach_size)-1)
-la_cj = la_cj/((sim//bach_size)-1)
-lm_phi = lm_phi/((sim//bach_size)-1)
-lm_tht = lm_tht/((sim//bach_size)-1)
-
-
-la_sk = la_sk.reshape(2,k)
-la_cj = la_cj.reshape(j,1)
-lm_tht = lm_tht.reshape(j,k)
-lm_phi = lm_phi.reshape(v,k)
-
-print(la_cj.shape, la_sk.shape,la_sk[0,:].shape ,lm_tht.shape)
-print(current.la_cj.shape, current.la_sk.shape,current.la_sk[0,:].shape ,current.lm_tht.shape)
-
-acc(lm_tht,la_sk,la_cj,y01)
-
-
+if computecanada: 
+    print("done!")
+else:
+    #checking the accuracy
+    ite = 1
+    la_sk = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+    la_cj = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=0)
+    lm_phi = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+    lm_tht = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+    
+    
+    for ite in np.arange(2,sim//bach_size):
+        la_sk = la_sk + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+        la_cj = la_cj + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=0)
+        lm_phi = lm_phi + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+        lm_tht = lm_tht + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+    
+    la_sk = la_sk/((sim//bach_size)-1)
+    la_cj = la_cj/((sim//bach_size)-1)
+    lm_phi = lm_phi/((sim//bach_size)-1)
+    lm_tht = lm_tht/((sim//bach_size)-1)
+    
+    
+    la_sk = la_sk.reshape(2,k)
+    la_cj = la_cj.reshape(j,1)
+    lm_tht = lm_tht.reshape(j,k)
+    lm_phi = lm_phi.reshape(v,k)
+    
+    print(la_cj.shape, la_sk.shape,la_sk[0,:].shape ,lm_tht.shape)
+    print(current.la_cj.shape, current.la_sk.shape,current.la_sk[0,:].shape ,current.lm_tht.shape)
+    
+    acc(lm_tht,la_sk,la_cj,y01)
+    
+    
 '''
-y0 = gamma.logpdf(lm_tht,la_sk[0,:],la_cj)
-y1 = gamma.logpdf(lm_tht,la_sk[1,:],la_cj)
+y0 = gamma.pdf(x=lm_tht,a=la_sk[0,:],scale=1/la_cj)
+y1 = gamma.pdf(x=lm_tht,a=la_sk[1,:],scale=1/la_cj)
 y3 = y1-y0
 y3 = y3.sum(axis=1)
 y3[y3<=0] = 0
@@ -233,5 +244,5 @@ print(confusion_matrix(y,y3))
 
 test = np.dot(lm_tht,np.transpose(lm_phi))
 test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
-test1[0:5,0:5]
+test[0:5,0:5]
 '''
