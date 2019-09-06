@@ -16,8 +16,8 @@ computecanada = False
 
 '''Hyperparameters'''
 k = 100 #Latents Dimension 
-sim = 600 #Simulations 
-bach_size = 200 #Batch size for memory purposes 
+sim = 300 #Simulations 
+bach_size = 100 #Batch size for memory purposes 
 step1 = 10 #Saving chain every step1 steps 
 step2 = 20
 id = '05' #identification of simulation 
@@ -28,9 +28,6 @@ if bach_size//step2 <= 20:
 
 '''Loading dataset'''
 if computecanada: 
-    #filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_filtered.txt"
-    #filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_binary.txt"
-    #filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_gexpression.txt"
     filename = "tcga_train_ge_balanced.txt"
 else: 
     filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_ge_balanced.txt"
@@ -96,11 +93,11 @@ def gibbs(current,train0,j,v,k,y01):
         new.lm_phi[:,ki] = np.random.dirichlet(alpha = (lvk[:,ki]+current.la_ev),size = 1)
         new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]).reshape(j),
                   scale=(np.divide(current.la_cj,1-current.la_cj)).reshape(j))
-
-    a2 = 12000
-    b2 = 2400000
+    
+    a2 = 1000000 #12000 before and average of 33
+    b2 = 100000000
     #it shoud be +
-    b2u = (np.log(np.divide(current.la_cj ,current.la_cj+np.log(1-0.02)))).sum()
+    b2u = (np.log(np.divide(current.la_cj ,current.la_cj+np.log(1-0.1)))).sum()
     
     for ki in np.arange(k):       
         uk = np.array([0,0])
