@@ -16,8 +16,8 @@ computecanada = False
 
 '''Hyperparameters'''
 k = 100 #Latents Dimension 
-sim = 300 #Simulations 
-bach_size = 100 #Batch size for memory purposes 
+sim = 1000 #Simulations 
+bach_size = 200 #Batch size for memory purposes 
 step1 = 10 #Saving chain every step1 steps 
 step2 = 20
 id = '05' #identification of simulation 
@@ -69,7 +69,7 @@ class parameters:
 #need to update these values considering the new dataset 
 current = parameters(np.repeat(1.65,2),#ln [0-c0,1-gamma0]
                    np.repeat(0.5,j), #la_cj 0.25
-                   np.repeat(200,k*2).reshape(2,k), #la_sk 62
+                   np.repeat(199.50,k*2).reshape(2,k), #la_sk 62
                    np.repeat(1.0004,v), #la_ev FIXED
                    np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k 
                    np.repeat(100,j*k).reshape(j,k)) #lm_theta k x j
@@ -238,8 +238,8 @@ y3[y3<=0] = 0
 y3[y3>0] = 1
 print(confusion_matrix(y,y3))
 
+test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
 
 test = np.dot(lm_tht,np.transpose(lm_phi))
-test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
 test[0:5,0:5]
 '''
