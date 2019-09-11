@@ -4,6 +4,7 @@ Files/
 DatadataIn/
 __pycache__/
 latent_variable_jason_work
+build/
 
 .ipynb_checkpoints/
 .Rhistory
@@ -11,3 +12,5 @@ latent_variable_jason_work
 .RDataTmp
 .png
 .txt
+.pyd 
+.c

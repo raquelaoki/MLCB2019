@@ -4,7 +4,7 @@ cimport numpy as np
 import cython
 
 
-cdef gibbs (np.ndarray[np.float64_t, ndim=2] c_la_sk, np.ndarray[np.float64_t, ndim=1] c_la_cj, np.ndarray[np.float64_t, ndim=2] c_lm_tht,
+def gibbs (np.ndarray[np.float64_t, ndim=2] c_la_sk, np.ndarray[np.float64_t, ndim=1] c_la_cj, np.ndarray[np.float64_t, ndim=2] c_lm_tht,
            np.ndarray[np.float64_t, ndim=2] c_lm_phi,  np.ndarray[np.float64_t, ndim=2] train0,
            int j,int v, int k, np.ndarray[np.int_t, ndim=1] y01):
     cdef np.ndarray[np.float64_t, ndim=2,negative_indices=False] n_la_sk = c_la_sk
