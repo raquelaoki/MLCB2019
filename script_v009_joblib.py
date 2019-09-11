@@ -6,17 +6,12 @@ import time
 from sklearn.metrics import confusion_matrix
 from scipy.stats import gamma
 import copy
-from simulations import gibbs
 
 '''
 Notes:
 - DATALIMIT: V = 3500 WITH EVERYTHING ELSE CLOSED 
-- compute canada: problem with files location 
 - 1000sim is 8h 
-- make some plots
-- introducing cython
-- parallel processing for loop python https://homes.cs.washington.edu/~jmschr/lectures/Parallel_Processing_in_Python.html
-
+- joblib
 '''
 
 '''Hyperparameters'''
@@ -24,10 +19,8 @@ k = 100 #Latents Dimension
 sim = 1000 #Simulations 
 bach_size = 200 #Batch size for memory purposes 
 step1 = 10 #Saving chain every step1 steps 
-id = '06' #identification of simulation 
+id = '07' #identification of simulation 
 
-
-'''Loading dataset'''
 filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_ge_balanced.txt"
 data = pd.read_csv(filename, sep=';')
 
@@ -40,9 +33,6 @@ remove = train.columns[[0,1]]
 y = train.columns[1]
 y01 = np.array(train[y])
 train = train.drop(remove, axis = 1)
-#y01_t = np.array(test[y])
-#test = test.drop(remove, axis = 1)
-
 
 '''Defining variables'''
 v = train.shape[1] #genes
@@ -50,16 +40,31 @@ j = train.shape[0] #patients
 
 
 '''Parameters'''
-c_la_cj =  np.repeat(0.5,j).reshape((j,1)) #la_cj 0.25
-c_la_sk =  np.repeat(100.50,k*2).reshape((2,k)) #la_sk 62
-c_lm_phi = np.repeat(1/v,v*k).reshape((v,k))#lm_phi v x k 
-c_lm_tht = np.repeat(100.5,j*k).reshape((j,k)) #lm_theta k x j
+class parameters:
+    __slots__ = ('la_cj','la_sk','la_c1','lm_phi','lm_tht')   
+    def __init__(self, latent_cj,latent_sk, latent_phi ,latent_tht):
+        self.la_cj = latent_cj #string of array J 
+        self.la_sk = latent_sk #matrix Kx2
+        self.lm_phi = latent_phi #string of matrix (kv) in array format
+        self.lm_tht = latent_tht #string of matrix  (jk) in array format 
 
+
+#need to update these values considering the new dataset 
+current = parameters(np.repeat(0.5,j), #la_cj 0.25
+                   np.repeat(199.50,k*2).reshape(2,k), #la_sk 62
+                   np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k 
+                   np.repeat(100,j*k).reshape(j,k)) #lm_theta k x j
+                   #np.repeat(0.5, j), #la_pj
+                   #np.repeat(0.5,k)) #la_qk 
 
 '''Gibbs Sampling'''
 train0 = np.matrix(train)
 
-def gibbs_old(current,train0,j,v,k,y01):
+
+from joblib import Parallel, delayed
+def dotmultiply(matrix1,matrix2,v,j)
+
+def gibbs(current,train0,j,v,k,y01):
     new = copy.deepcopy(current) 
     lvjk = np.zeros((v,j,k))
     
@@ -93,6 +98,18 @@ def gibbs_old(current,train0,j,v,k,y01):
 
 start_time = time.time()    
 
+
+#new  = gibbs(current,train0,j,v,k,y01)
+#print('tht',current.lm_tht.mean(),new.lm_tht.mean())
+#print('phi',current.lm_phi[0:10,1],new.lm_phi[0:10,1])
+#print('sk',current.la_sk.mean(),new.la_sk.mean())
+#print('cj',current.la_cj.mean(),new.la_cj.mean())
+#print('ev',current.la_ev.mean(),new.la_ev.mean())
+#print('pj',current.la_pj.mean(),new.la_pj.mean())
+#print('qk',current.la_qk.mean(),new.la_qk.mean())
+#current= copy.deepcopy(new )
+
+
 def acc(theta,sk,cj,y):
     y0 = gamma.pdf(x=theta,a = sk[0,:],scale = 1/cj)
     y1 = gamma.pdf(x=theta,a = sk[1,:],scale = 1/cj)
@@ -104,10 +121,10 @@ def acc(theta,sk,cj,y):
     
 
 '''Creating the chains'''
-chain_la_sk = np.tile(c_la_sk.reshape((-1,1)),(1,int(bach_size/step1)))
-chain_la_cj = np.tile(c_la_cj.reshape((-1,1)),(1,int(bach_size/step1)))
-chain_lm_tht = np.tile(c_lm_tht.reshape((-1,1)),(1,int(bach_size/step1)))
-chain_lm_phi = np.tile(c_lm_phi.reshape((-1,1)),(1,int(bach_size/step1)))
+chain_la_sk = np.tile(current.la_sk.reshape(-1,1),(1,int(bach_size/step1)))
+chain_la_cj = np.tile(current.la_cj.tolist(),(int(bach_size/step1),1))
+chain_lm_tht = np.tile(current.lm_tht.reshape(-1,1),(1,int(bach_size/step1)))
+chain_lm_phi = np.tile(current.lm_phi.reshape(-1,1),(1,int(bach_size/step1)))
 
 '''Starting chain and parametrs'''
 
@@ -115,31 +132,28 @@ start_time = time.time()
     
 for ite in np.arange(0,sim//bach_size):    
     count_s1 = 0
-    chain_la_sk[:,count_s1]=np.array(c_la_sk).reshape(1,-1)
-    chain_la_cj[:,count_s1]=np.array(c_la_cj).reshape(1,-1)
-    chain_lm_tht[:,count_s1]=np.array(c_lm_tht).reshape(1,-1)
-    chain_lm_phi[:,count_s1]=np.array(c_lm_phi).reshape(1,-1)
+    count_s2 = 0
+    chain_la_sk[:,count_s1]=current.la_sk.reshape(1,-1)
+    chain_la_cj[count_s1]=current.la_cj.reshape(j)
+    #chain_la_qk[count_s1]=current.la_qk.reshape(k)
+    chain_lm_tht[:,count_s2]=current.lm_tht.reshape(1,-1)
+    chain_lm_phi[:,count_s2]=current.lm_phi.reshape(1,-1)
     print('iteration--',ite,' of ',sim//bach_size)   
     #.print('it should be 981',data.shape)       
     for i in np.arange(1,bach_size):
-        n_la_sk,n_la_cj,n_lm_tht,n_lm_phi  = gibbs(c_la_sk,c_la_cj,c_lm_tht,c_lm_phi,train0,j,v,k,y01)
+        new  = gibbs(current,train0,j,v,k,y01)
         '''Updating chain'''
         if i%10==0:
             print('------------', i, ' of ',bach_size) 
             count_s1+=1
-            chain_la_sk[:,count_s1]=np.array(n_la_sk).reshape(1,-1)
-            chain_la_cj[:,count_s1]=np.array(n_la_cj).reshape(1,-1)
-            chain_lm_tht[:,count_s1]=np.array(n_lm_tht).reshape(1,-1)
-            chain_lm_phi[:,count_s1]=np.array(n_lm_phi).reshape(1,-1)
-            #if i%100 == 0: 
-        c_la_sk= copy.deepcopy(n_la_sk ) 
-        c_la_cj= copy.deepcopy(n_la_cj ) 
-        c_lm_tht= copy.deepcopy(n_lm_tht ) 
-        c_lm_phi= copy.deepcopy(n_lm_phi ) 
-        
-    
-    print(acc(n_lm_tht,n_la_sk,n_la_cj, y01))
-    
+            chain_la_sk[:,count_s1]=new.la_sk.reshape(1,-1)
+            chain_la_cj[count_s1]=new.la_cj.reshape(j)
+            chain_lm_tht[:,count_s1]=new.lm_tht.reshape(1,-1)
+            chain_lm_phi[:,count_s1]=new.lm_phi.reshape(1,-1)
+            if i%100 == 0: 
+                print(acc(current.lm_tht,current.la_sk,current.la_cj, y01))
+
+        current= copy.deepcopy(new )
     np.savetxt('Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_sk, delimiter=',',fmt='%5s')
     np.savetxt('Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_cj, delimiter=',',fmt='%5s')
     np.savetxt('Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_tht, delimiter=',',fmt='%5s')
@@ -178,7 +192,7 @@ lm_tht = lm_tht.reshape(j,k)
 lm_phi = lm_phi.reshape(v,k)
 
 print(la_cj.shape, la_sk.shape,la_sk[0,:].shape ,lm_tht.shape)
-print(c_la_cj.shape, c_la_sk.shape,c_la_sk[0,:].shape ,c_lm_tht.shape)
+print(current.la_cj.shape, current.la_sk.shape,current.la_sk[0,:].shape ,current.lm_tht.shape)
 
 acc(lm_tht,la_sk,la_cj,y01)
     
@@ -196,97 +210,4 @@ test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
 
 test = np.dot(lm_tht,np.transpose(lm_phi))
 test[0:5,0:5]
-'''
-
-
-'''
-PLOTS 
-
-
-def plot_chain_sk(location,size,i):
-    ite = 1
-    la_array = np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=',')
-    la_array= pd.DataFrame(la_array)
-    for ite in np.arange(1,size):
-        la_array = pd.concat([la_array, 
-                           pd.DataFrame(np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=','))], axis = 1)
-    la_array = la_array.iloc[[i,100+i]]
-    la_array = la_array.transpose().reset_index(drop=True)
-    la_array = la_array.unstack().reset_index()
-    la_array.columns = ['parameter','sim','value'] 
-    la_array['parameter'] = la_array['parameter'].astype(str)
-    lim = [la_array['value'].min()*0.995, la_array['value'].max()*1.005]
-    fig = (
-           ggplot(la_array,aes(x='sim',y='value' , color = 'parameter'))+
-           geom_line()+scale_y_continuous(limits = (lim[0],lim[1]))
-    )
-    return fig 
-
-plot_chain_sk('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lask_id',sim//bach_size, 15)
-
-
-def plot_chain_cj(location,size,i):
-    ite = 1
-    la_array = np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=',')
-    la_array= pd.DataFrame(la_array)
-    for ite in np.arange(1,size):
-        la_array = pd.concat([la_array, 
-                           pd.DataFrame(np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=','))], axis = 0)
-    la_array = la_array.iloc[:,i].reset_index(drop=True)
-    la_array = la_array.reset_index(drop=False)
-    la_array = la_array.reset_index(drop=True)
-    la_array.columns = ['sim','value'] 
-    #la_array['parameter'] = la_array['parameter'].astype(str)
-    lim = [la_array['value'].min()*0.995, la_array['value'].max()*1.005]
-    fig = (
-           ggplot(la_array,aes(x='sim',y='value'))+
-           geom_line()+scale_y_continuous(limits = (lim[0],lim[1]))
-    )
-    return fig 
-
-plot_chain_cj('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lacj_id',sim//bach_size, 15)
-
-def plot_chain_tht(location,size,i):
-    ite = 1
-    la_array = np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=',')
-    la_array= pd.DataFrame(la_array)
-    for ite in np.arange(1,size):
-        la_array = pd.concat([la_array, 
-                           pd.DataFrame(np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=','))], axis = 1)
-    la_array = la_array.iloc[i]
-    la_array = la_array.transpose().reset_index(drop=True)
-    la_array = la_array.reset_index(drop=False)
-    la_array.columns = ['sim','value'] 
-    #la_array['parameter'] = la_array['parameter'].astype(str)
-    lim = [la_array['value'].min()*0.995, la_array['value'].max()*1.005]
-    fig = (
-           ggplot(la_array,aes(x='sim',y='value'))+
-           geom_line()+scale_y_continuous(limits = (lim[0],lim[1]))
-    )
-    return fig 
-
-plot_chain_tht('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmtht_id',sim//bach_size, 15)
-
-
-def plot_chain_phi(location,size,i):
-    ite = 1
-    la_array = np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=',')
-    la_array= pd.DataFrame(la_array)
-    for ite in np.arange(1,size):
-        la_array = pd.concat([la_array, 
-                           pd.DataFrame(np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=','))], axis = 1)
-    la_array = la_array.iloc[i]
-    la_array = la_array.transpose().reset_index(drop=True)
-    la_array = la_array.reset_index(drop=False)
-    la_array.columns = ['sim','value'] 
-    #la_array['parameter'] = la_array['parameter'].astype(str)
-    lim = [la_array['value'].min()*0.995, la_array['value'].max()*1.005]
-    fig = (
-           ggplot(la_array,aes(x='sim',y='value'))+
-           geom_line()+scale_y_continuous(limits = (lim[0],lim[1]))
-    )
-    return fig 
-
-plot_chain_phi('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmphi_id',sim//bach_size, 15)
-
 '''
