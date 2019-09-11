@@ -6,7 +6,7 @@ import time
 from sklearn.metrics import confusion_matrix
 from scipy.stats import gamma
 import copy
-import simulations
+from simulations import gibbs
 
 '''
 Notes:
@@ -15,6 +15,8 @@ Notes:
 - 1000sim is 8h 
 - make some plots
 - introducing cython
+- parallel processing for loop python https://homes.cs.washington.edu/~jmschr/lectures/Parallel_Processing_in_Python.html
+
 '''
 
 '''Hyperparameters'''
@@ -48,10 +50,10 @@ j = train.shape[0] #patients
 
 
 '''Parameters'''
-c_la_cj =  np.repeat(0.5,j), #la_cj 0.25
-c_la_sk =  np.repeat(100.50,k*2).reshape(2,k), #la_sk 62
-c_lm_phi = np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k 
-c_lm_tht = np.repeat(100,j*k).reshape(j,k) #lm_theta k x j
+c_la_cj =  np.repeat(0.5,j).reshape((j,1)) #la_cj 0.25
+c_la_sk =  np.repeat(100.50,k*2).reshape((2,k)) #la_sk 62
+c_lm_phi = np.repeat(1/v,v*k).reshape((v,k))#lm_phi v x k 
+c_lm_tht = np.repeat(100.5,j*k).reshape((j,k)) #lm_theta k x j
 
 
 '''Gibbs Sampling'''
@@ -102,10 +104,10 @@ def acc(theta,sk,cj,y):
     
 
 '''Creating the chains'''
-chain_la_sk = np.tile(np.array(c_la_sk).reshape(-1,1),(1,int(bach_size/step1)))
-chain_la_cj = np.tile(np.array(c_la_cj).tolist(),(int(bach_size/step1),1))
-chain_lm_tht = np.tile(np.array(c_lm_tht).reshape(-1,1),(1,int(bach_size/step1)))
-chain_lm_phi = np.tile(np.array(c_lm_phi).reshape(-1,1),(1,int(bach_size/step1)))
+chain_la_sk = np.tile(c_la_sk.reshape((-1,1)),(1,int(bach_size/step1)))
+chain_la_cj = np.tile(c_la_cj.reshape((-1,1)),(1,int(bach_size/step1)))
+chain_lm_tht = np.tile(c_lm_tht.reshape((-1,1)),(1,int(bach_size/step1)))
+chain_lm_phi = np.tile(c_lm_phi.reshape((-1,1)),(1,int(bach_size/step1)))
 
 '''Starting chain and parametrs'''
 
@@ -114,19 +116,19 @@ start_time = time.time()
 for ite in np.arange(0,sim//bach_size):    
     count_s1 = 0
     chain_la_sk[:,count_s1]=np.array(c_la_sk).reshape(1,-1)
-    chain_la_cj[count_s1]=np.array(c_la_cj).reshape(j)
+    chain_la_cj[:,count_s1]=np.array(c_la_cj).reshape(1,-1)
     chain_lm_tht[:,count_s1]=np.array(c_lm_tht).reshape(1,-1)
     chain_lm_phi[:,count_s1]=np.array(c_lm_phi).reshape(1,-1)
     print('iteration--',ite,' of ',sim//bach_size)   
     #.print('it should be 981',data.shape)       
     for i in np.arange(1,bach_size):
-        n_la_sk,n_la_cj,n_lm_tht,n_lm_phi  = simulations.gibbs(c_la_sk,c_la_cj,c_lm_tht,c_lm_phi,train0,j,v,k,y01)
+        n_la_sk,n_la_cj,n_lm_tht,n_lm_phi  = gibbs(c_la_sk,c_la_cj,c_lm_tht,c_lm_phi,train0,j,v,k,y01)
         '''Updating chain'''
         if i%10==0:
             print('------------', i, ' of ',bach_size) 
             count_s1+=1
             chain_la_sk[:,count_s1]=np.array(n_la_sk).reshape(1,-1)
-            chain_la_cj[count_s1]=np.array(n_la_cj).reshape(j)
+            chain_la_cj[:,count_s1]=np.array(n_la_cj).reshape(1,-1)
             chain_lm_tht[:,count_s1]=np.array(n_lm_tht).reshape(1,-1)
             chain_lm_phi[:,count_s1]=np.array(n_lm_phi).reshape(1,-1)
             #if i%100 == 0: 

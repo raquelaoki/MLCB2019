@@ -5,6 +5,6 @@ import numpy
 
 setup(
     name='simulations',
-    ext_modules = cythonize("simulations.pyx",language_level=3,language='c++'), #nthreads
+    ext_modules = cythonize("simulations.pyx",language_level=3), #nthreads
     include_dirs=[numpy.get_include()]
 )
