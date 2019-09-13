@@ -15,3 +15,6 @@ build/
 .pyd 
 .c
 .cpp
+.exe 
+.dll 
+.obj
