@@ -5,7 +5,6 @@ DatadataIn/
 __pycache__/
 latent_variable_jason_work
 build/
-
 .ipynb_checkpoints/
 .Rhistory
 .RData
