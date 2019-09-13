@@ -11,7 +11,10 @@ import copy
 Notes:
 - DATALIMIT: V = 3500 WITH EVERYTHING ELSE CLOSED 
 - 1000sim is 8h 
-- joblib
+- C++ 
+https://github.com/raquelaoki/MasterThesis-UFMG-2017/blob/master/kdd2017_mcmc.cpp#L60
+http://www.cplusplus.com/reference/random/gamma_distribution/
+
 '''
 
 '''Hyperparameters'''
@@ -61,24 +64,40 @@ current = parameters(np.repeat(0.5,j), #la_cj 0.25
 train0 = np.matrix(train)
 
 
-from joblib import Parallel, delayed
-def dotmultiply(matrix1,matrix2,v,j)
 
-def gibbs(current,train0,j,v,k,y01):
-    new = copy.deepcopy(current) 
-    lvjk = np.zeros((v,j,k))
+from joblib import Parallel, delayed
+#https://stackoverflow.com/questions/35663498/how-do-i-return-a-matrix-with-joblib-python
+def dotmultiply(matrix1,matrix2):
+    return np.dot(matrix1, matrix2) 
+
+
     
-    for ki in np.arange(k):
-        lvjk[:,:,ki] = np.dot(current.lm_phi[:,ki].reshape(v,1), current.lm_tht[:,ki].reshape(1,j))       
-    #check sum of poisson. I might be able to apply poisson after the sum, so will be faster
-    lvjk = np.random.poisson(lvjk)
-    lvk = lvjk.sum(axis=1)
-    ljk = lvjk.sum(axis=0)
-    for ki in np.arange(k):    
-        new.lm_phi[:,ki] = np.random.dirichlet(alpha = (lvk[:,ki]+current.la_ev),size = 1)
-        new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]).reshape(j),
-                  scale=(np.divide(current.la_cj,1-current.la_cj)).reshape(j))
+#def gibbs(current,train0,j,v,k,y01):
+new = copy.deepcopy(current) 
+
+#start_time = time.time()  
+#lvjk0 = Parallel(n_jobs=4)(delayed(dotmultiply)(current.lm_phi[:,ki].reshape(v,1),
+#                       current.lm_tht[:,ki].reshape(1,j)) for ki in np.arange(k))
+#print("--- %s ---" % int((time.time() - start_time)))
+
+#start_time = time.time()  
+lvjk = np.zeros((v,j,k))
+for ki in np.arange(k):
+    lvjk[:,:,ki] = np.dot(current.lm_phi[:,ki].reshape(v,1), current.lm_tht[:,ki].reshape(1,j)) 
+#print("--- %s ---" % int((time.time() - start_time)))
+  
     
+#check sum of poisson. I might be able to apply poisson after the sum, so will be faster
+lvjk = np.random.poisson(lvjk)
+lvk = lvjk.sum(axis=1)
+ljk = lvjk.sum(axis=0)
+start_time = time.time() 
+for ki in np.arange(k):    
+    new.lm_phi[:,ki] = np.random.dirichlet(alpha = (lvk[:,ki]+1.04),size = 1)
+    new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]).reshape(j),
+              scale=(np.divide(current.la_cj,1-current.la_cj)).reshape(j))
+print("--- %s ---" % int((time.time() - start_time)))
+
     a2 = 1000000 #12000 before and average of 33
     b2 = 100000000
     #it shoud be +
