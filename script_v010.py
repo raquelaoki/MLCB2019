@@ -16,8 +16,7 @@ Notes:
 - make some plots
 - additing parameter to control data influence and limite size of parameters
 
-- problems in the accucary, the algorithm is finding prob equal 0 - what is bad 
-
+-changing some distributions
 '''
 
 '''Hyperparameters'''
@@ -65,8 +64,9 @@ class parameters:
 
 
 #need to update these values considering the new dataset 
-current = parameters(np.repeat(0.45,j), #la_cj 0.25
-                   np.repeat(300.5,k*2).reshape(2,k), #la_sk 62
+#FIX CJ 
+current = parameters(np.repeat(12.5,j), #la_cj 0.25
+                   np.repeat(12.5,k*2).reshape(2,k), #la_sk 62
                    np.repeat(1.0004,v), #la_ev FIXED
                    np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k 
                    np.repeat(150.5,j*k).reshape(j,k)) #lm_theta k x j
@@ -93,11 +93,11 @@ def gibbs(current,train0,j,v,k,y01):
         new.lm_tht[:ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]).reshape(j),
                   scale=(current.la_cj+v).reshape(j))
     
-    a2 = 32#1000000 #12000 before and average of 33
-    b2 = 300*31#100000000
+    a2 = 8#1000000 #12000 before and average of 33
+    b2 = 12*7#100000000
     c2 = 1/1000000
     #it shoud be +
-    b2u = (np.log(np.divide(current.la_cj ,current.la_cj+np.log(1-0.001)))).sum()
+    #b2u = (np.log(np.divide(current.la_cj ,current.la_cj+np.log(1-0.001)))).sum()
     
     for ki in np.arange(k):       
         uk = np.array([0,0])
@@ -256,3 +256,8 @@ test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
 test = np.dot(lm_tht,np.transpose(lm_phi))
 test[0:5,0:5]
 '''
+
+
+
+
+

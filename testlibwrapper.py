@@ -7,4 +7,5 @@ Created on Fri Sep 13 11:47:29 2019
 
 import ctypes
 
-ptestlib.myprint()
+testlib = ctypes.CDLL('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\testlib.dll')
+testlib.myprint()
