@@ -10,14 +10,10 @@ import copy
 '''
 Notes:
 - DATALIMIT: V = 3500 WITH EVERYTHING ELSE CLOSED 
-- compute canada: problem with files location 
-
 - 1000sim is 8h 
-- make some plots
-- additing parameter to control data influence and limite size of parameters
+- problems in the accucary, it is too good to be true
 
-- problems in the accucary, the algorithm is finding prob equal 0 - what is bad 
-
+-implementing test set
 '''
 
 '''Hyperparameters'''
@@ -34,6 +30,7 @@ filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tc
     
 
 data = pd.read_csv(filename, sep=';')
+#data = data.iloc[:, 0:300]
 
 '''Splitting Dataset'''
 #train, test = train_test_split(data, test_size=0.3, random_state=22)
@@ -81,7 +78,8 @@ def gibbs(current,train0,j,v,k,y01):
     lvjk = np.zeros((v,j,k))
     
     for ki in np.arange(k):
-        lvjk[:,:,ki] = np.dot(current.lm_phi[:,ki].reshape(v,1), current.lm_tht[:,ki].reshape(1,j))       
+        #0.79 decrease, 0.8 increase  
+        lvjk[:,:,ki] = np.dot(0.795*current.lm_phi[:,ki].reshape(v,1), current.lm_tht[:,ki].reshape(1,j))       
     #check sum of poisson. I might be able to apply poisson after the sum, so will be faster
     #lvjk = np.random.poisson(lvjk)
     lvk = np.random.poisson(lvjk.sum(axis=1))
@@ -186,7 +184,7 @@ for ite in np.arange(0,sim//bach_size):
             chain_la_cj[:,count_s1]=new.la_cj.reshape(1,-1)
             chain_lm_tht[:,count_s1]=new.lm_tht.reshape(1,-1)
             chain_lm_phi[:,count_s1]=new.lm_phi.reshape(1,-1)
-            if i%40 == 0: 
+            if i%20 == 0: 
                 #print('iteration ',ite, 'bach ', i) 
                 print(acc(current.lm_tht,current.la_sk,current.la_cj, y01))
                 test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
@@ -268,3 +266,108 @@ with pm.Model() as pmf:
     trace = pm.sample(500, step, start=start)
 
 '''
+
+'''
+PLOTS 
+
+
+def plot_chain_sk(location,size,i):
+    ite = 1
+    la_array = np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=',')
+    la_array= pd.DataFrame(la_array)
+    for ite in np.arange(1,size):
+        la_array = pd.concat([la_array, 
+                           pd.DataFrame(np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=','))], axis = 1)
+    la_array = la_array.iloc[[i,100+i]]
+    la_array = la_array.transpose().reset_index(drop=True)
+    la_array = la_array.unstack().reset_index()
+    la_array.columns = ['parameter','sim','value'] 
+    la_array['parameter'] = la_array['parameter'].astype(str)
+    lim = [la_array['value'].min()*0.995, la_array['value'].max()*1.005]
+    fig = (
+           ggplot(la_array,aes(x='sim',y='value' , color = 'parameter'))+
+           geom_line()+scale_y_continuous(limits = (lim[0],lim[1]))
+    )
+    return fig 
+
+plot_chain_sk('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lask_id',sim//bach_size, 15)
+
+
+def plot_chain_cj(location,size,i):
+    ite = 1
+    la_array = np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=',')
+    la_array= pd.DataFrame(la_array)
+    for ite in np.arange(1,size):
+        la_array = pd.concat([la_array, 
+                           pd.DataFrame(np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=','))], axis = 0)
+    la_array = la_array.iloc[:,i].reset_index(drop=True)
+    la_array = la_array.reset_index(drop=False)
+    la_array = la_array.reset_index(drop=True)
+    la_array.columns = ['sim','value'] 
+    #la_array['parameter'] = la_array['parameter'].astype(str)
+    lim = [la_array['value'].min()*0.995, la_array['value'].max()*1.005]
+    fig = (
+           ggplot(la_array,aes(x='sim',y='value'))+
+           geom_line()+scale_y_continuous(limits = (lim[0],lim[1]))
+    )
+    return fig 
+
+plot_chain_cj('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lacj_id',sim//bach_size, 15)
+
+def plot_chain_tht(location,size,i):
+    ite = 1
+    la_array = np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=',')
+    la_array= pd.DataFrame(la_array)
+    for ite in np.arange(1,size):
+        la_array = pd.concat([la_array, 
+                           pd.DataFrame(np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=','))], axis = 1)
+    la_array = la_array.iloc[i]
+    la_array = la_array.transpose().reset_index(drop=True)
+    la_array = la_array.reset_index(drop=False)
+    la_array.columns = ['sim','value'] 
+    #la_array['parameter'] = la_array['parameter'].astype(str)
+    lim = [la_array['value'].min()*0.995, la_array['value'].max()*1.005]
+    fig = (
+           ggplot(la_array,aes(x='sim',y='value'))+
+           geom_line()+scale_y_continuous(limits = (lim[0],lim[1]))
+    )
+    return fig 
+
+plot_chain_tht('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmtht_id',sim//bach_size, 15)
+
+
+def plot_chain_phi(location,size,i):
+    ite = 1
+    la_array = np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=',')
+    la_array= pd.DataFrame(la_array)
+    for ite in np.arange(1,size):
+        la_array = pd.concat([la_array, 
+                           pd.DataFrame(np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=','))], axis = 1)
+    la_array = la_array.iloc[i]
+    la_array = la_array.transpose().reset_index(drop=True)
+    la_array = la_array.reset_index(drop=False)
+    la_array.columns = ['sim','value'] 
+    #la_array['parameter'] = la_array['parameter'].astype(str)
+    lim = [la_array['value'].min()*0.995, la_array['value'].max()*1.005]
+    fig = (
+           ggplot(la_array,aes(x='sim',y='value'))+
+           geom_line()+scale_y_continuous(limits = (lim[0],lim[1]))
+    )
+    return fig 
+
+plot_chain_phi('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmphi_id',sim//bach_size, 15)
+
+'''
+
+
+'''
+#LOGISTIC REGRESSION 
+from sklearn.linear_model import LogisticRegression
+x1 = current.lm_tht
+clf = LogisticRegression(random_state=0, solver='lbfgs',multi_class='multinomial').fit(x1, y01)
+pred = clf.predict(x1)
+confusion_matrix(pred,y01)
+'''
+
+
+
