@@ -65,8 +65,8 @@ class parameters:
 
 
 #need to update these values considering the new dataset 
-current = parameters(np.repeat(0.45,j), #la_cj 0.25
-                   np.repeat(300.5,k*2).reshape(2,k), #la_sk 62
+current = parameters(np.repeat(0.5,j), #la_cj 0.25
+                   np.repeat(150.5,k*2).reshape(2,k), #la_sk 62
                    np.repeat(1.0004,v), #la_ev FIXED
                    np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k 
                    np.repeat(150.5,j*k).reshape(j,k)) #lm_theta k x j
@@ -90,27 +90,23 @@ def gibbs(current,train0,j,v,k,y01):
         new.lm_phi[:,ki] = np.random.dirichlet(alpha = (lvk[:,ki]+current.la_ev),size = 1)
         #new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]).reshape(j),
         #          scale=(np.divide(current.la_cj,1-current.la_cj)).reshape(j))
-        new.lm_tht[:ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]).reshape(j),
-                  scale=(current.la_cj+v).reshape(j))
+        new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]).reshape(j), 
+                  scale=np.repeat(0.5,j).reshape(j))
     
-    a2 = 32#1000000 #12000 before and average of 33
-    b2 = 300*31#100000000
-    c2 = 1/1000000
-    #it shoud be +
-    b2u = (np.log(np.divide(current.la_cj ,current.la_cj+np.log(1-0.001)))).sum()
-    
-    for ki in np.arange(k):       
-        uk = np.array([0,0])
-        for ji in np.arange(j):
-            p = current.la_sk[y01[ji],ki]/(current.la_sk[y01[ji],ki]+np.arange(max(ljk[ji,ki],1))+1)
-            uk[y01[ji]] = uk[y01[ji]]+np.random.binomial(1,p=p).sum()
-        #print(a2,uk,b2,b2u,a2+c2*uk,b2-b2u)
-        new.la_sk[:,ki] = 1/np.random.gamma(a2+c2*uk,1/(b2-b2u))     
+    #one for y=0 and another for y=1    
+    lk1 = np.dot(y01,ljk)
+    lk0 = np.dot(1-y01,ljk)
+    a2 = 187
+    b2 = 0.8
+    c2 = y01.sum()
+    new.la_sk[0,:] = np.random.gamma((a2/k)+lk0/(j-c2),b2+0.69)     
+    new.la_sk[1,:] = np.random.gamma((a2/k)+lk1/c2,b2+0.69)     
         
-    a1 = 40#4000
-    b1 = 100#10000
-    c1 = 1/1000
-    new.la_cj = np.random.beta(a= (a1+c1*train0.sum(axis = 1)).reshape(j,1) ,b=(b1+c1*new.lm_tht.sum(axis =1)).reshape(j,1))
+    #a1 = 40#4000
+    #b1 = 100#10000
+    #c1 = 1/1000
+    #new.la_cj = np.random.beta(a= (a1+c1*train0.sum(axis = 1)).reshape(j,1) ,b=(b1+c1*new.lm_tht.sum(axis =1)).reshape(j,1))
+    new.la_cj = np.repeat(0.5,j).reshape(j,1)
     return(new)
 
 start_time = time.time()    
@@ -118,6 +114,8 @@ start_time = time.time()
 '''
 What do I want? 
 tht about 150 
+sk about 150 
+cj/1-cj = 1
 test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi)) about 6 
 
 
@@ -127,13 +125,11 @@ cj = 0.35
 tht = 37.64 (expect was 28/0.35 = 80)
 '''
 
-a2 = 32#1000000 #12000 before and average of 33
-b2 = 300*31#100000000
-a1 = 40#4000
-b1 = 100#10000
+a2 = 187
+b2 = 0.8
 print(current.la_sk.mean(),b2/(a2-1), np.sqrt(current.la_sk.var()),b2*b2/((a2-1)*(a2-1)*(a2-2)*(a2-2)))
-print(current.la_cj.mean(),a1/(a1+b1),np.sqrt(current.la_cj.var()),a1*b1/((a1+b1)*(a1+b1)*(a1+b1+1)))
-print(current.lm_tht.mean(),(b2/(a2-1))*(a1/(a1+b1)),np.sqrt(current.lm_tht.var()))
+#print(current.la_cj.mean(),a1/(a1+b1),np.sqrt(current.la_cj.var()),a1*b1/((a1+b1)*(a1+b1)*(a1+b1+1)))
+print(current.lm_tht.mean(),(b2/(a2-1)),np.sqrt(current.lm_tht.var()))
 test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
 print(test1.mean(), train0.mean())
 
@@ -152,8 +148,8 @@ print(test1.mean(), train0.mean())
 
 
 def acc(theta,sk,cj,y):
-    y0 = gamma.logpdf(x=theta,a = sk[0,:],scale = 1/cj)
-    y1 = gamma.logpdf(x=theta,a = sk[1,:],scale =1/cj)
+    y0 = gamma.logpdf(x=theta,a = sk[0,:],scale = 1)
+    y1 = gamma.logpdf(x=theta,a = sk[1,:],scale = 1)
     y3 = y1-y0
     y3 = y3.sum(axis=1)
     y3[y3<=0] = 0
@@ -190,9 +186,11 @@ for ite in np.arange(0,sim//bach_size):
             chain_la_cj[:,count_s1]=new.la_cj.reshape(1,-1)
             chain_lm_tht[:,count_s1]=new.lm_tht.reshape(1,-1)
             chain_lm_phi[:,count_s1]=new.lm_phi.reshape(1,-1)
-            if i%90 == 0: 
+            if i%40 == 0: 
                 #print('iteration ',ite, 'bach ', i) 
                 print(acc(current.lm_tht,current.la_sk,current.la_cj, y01))
+                test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
+                print(test1.mean(), train0.mean())
         #print('tht',current.lm_tht.mean(),new.lm_tht.mean())
         #print('phi',current.lm_phi[0:10,1],new.lm_phi[0:10,1])
         #print('sk',current.la_sk.mean(),new.la_sk.mean())
