@@ -16,7 +16,8 @@ Notes:
 - make some plots
 - additing parameter to control data influence and limite size of parameters
 
--changing some distributions
+- problems in the accucary, the algorithm is finding prob equal 0 - what is bad 
+
 '''
 
 '''Hyperparameters'''
@@ -64,9 +65,8 @@ class parameters:
 
 
 #need to update these values considering the new dataset 
-#FIX CJ 
-current = parameters(np.repeat(12.5,j), #la_cj 0.25
-                   np.repeat(12.5,k*2).reshape(2,k), #la_sk 62
+current = parameters(np.repeat(0.45,j), #la_cj 0.25
+                   np.repeat(300.5,k*2).reshape(2,k), #la_sk 62
                    np.repeat(1.0004,v), #la_ev FIXED
                    np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k 
                    np.repeat(150.5,j*k).reshape(j,k)) #lm_theta k x j
@@ -93,11 +93,11 @@ def gibbs(current,train0,j,v,k,y01):
         new.lm_tht[:ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]).reshape(j),
                   scale=(current.la_cj+v).reshape(j))
     
-    a2 = 8#1000000 #12000 before and average of 33
-    b2 = 12*7#100000000
+    a2 = 32#1000000 #12000 before and average of 33
+    b2 = 300*31#100000000
     c2 = 1/1000000
     #it shoud be +
-    #b2u = (np.log(np.divide(current.la_cj ,current.la_cj+np.log(1-0.001)))).sum()
+    b2u = (np.log(np.divide(current.la_cj ,current.la_cj+np.log(1-0.001)))).sum()
     
     for ki in np.arange(k):       
         uk = np.array([0,0])
@@ -255,9 +255,18 @@ test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
 
 test = np.dot(lm_tht,np.transpose(lm_phi))
 test[0:5,0:5]
+
+
+with pm.Model() as pmf: 
+    pmf_sk = pmf.Gamma('sk',alpha=3,beta=3,shape=(k,2))
+    pmf_tht = pmf.Gamma('tht', alpha=pmf_sk,beta=12, shape=(j, k))
+    pmf_phi = pmf.multivariate.Dirichlet('phi',a=current.la_ev, shape=(v, k)) #by column 
+    pmf_n = pmf.Poisson('n_obs', mu=T.tensor.dot(pmf_tht, pmf_phi.T), observed=train)
+
+    # Find mode of posterior using optimization
+    start = pm.find_MAP(fmin=sp.optimize.fmin_powell)  # Find starting values by optimization
+
+    step = pm.NUTS(scaling=start)
+    trace = pm.sample(500, step, start=start)
+
 '''
-
-
-
-
-
