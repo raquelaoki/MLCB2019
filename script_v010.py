@@ -2,7 +2,7 @@
 import pandas as pd 
 import numpy as np 
 import time
-#from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 from scipy.stats import gamma
 import copy
@@ -18,31 +18,32 @@ Notes:
 
 '''Hyperparameters'''
 k = 100 #Latents Dimension 
-sim = 400 #Simulations 
-bach_size = 100 #Batch size for memory purposes 
+sim = 1000 #Simulations 
+bach_size = 200 #Batch size for memory purposes 
 step1 = 10 #Saving chain every step1 steps 
 #step2 = 20
-id = '07' #identification of simulation 
+id = '08' #identification of simulation 
 
 
 '''Loading dataset'''
-filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_ge_balanced.txt"
-    
+filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_gexpression.txt"
+#filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_ge_balanced.txt"
+   
 
 data = pd.read_csv(filename, sep=';')
 #data = data.iloc[:, 0:300]
 
 '''Splitting Dataset'''
-#train, test = train_test_split(data, test_size=0.3, random_state=22)
-train = data
+train, test = train_test_split(data, test_size=0.3, random_state=22)
+#train = data
 
 '''Organizing columns names'''
 remove = train.columns[[0,1]]
 y = train.columns[1]
 y01 = np.array(train[y])
 train = train.drop(remove, axis = 1)
-#y01_t = np.array(test[y])
-#test = test.drop(remove, axis = 1)
+y01_t = np.array(test[y])
+test = test.drop(remove, axis = 1)
 
 
 '''Defining variables'''
@@ -184,7 +185,7 @@ for ite in np.arange(0,sim//bach_size):
             chain_la_cj[:,count_s1]=new.la_cj.reshape(1,-1)
             chain_lm_tht[:,count_s1]=new.lm_tht.reshape(1,-1)
             chain_lm_phi[:,count_s1]=new.lm_phi.reshape(1,-1)
-            if i%20 == 0: 
+            if i%90 == 0: 
                 #print('iteration ',ite, 'bach ', i) 
                 print(acc(current.lm_tht,current.la_sk,current.la_cj, y01))
                 test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
@@ -237,6 +238,33 @@ print(current.la_cj.shape, current.la_sk.shape,current.la_sk[0,:].shape ,current
 
 acc(lm_tht,la_sk,la_cj,y01)
     
+test2 = np.dot(lm_tht,np.transpose(lm_phi))
+print(test2.mean(), train0.mean())
+
+
+'''
+#PREDICTIONS
+#1) I need to predict the theta value for each patient in order to make good predictions 
+#2) tht is JxK, so i need the hidden representation of my data according with the number J 
+#3) i could use similarity between patients, the most similar patient receive that same values,  
+#however, this don't seems very robust. 
+$4) If I also use similarity between genes, 
+#5) possible solution https://medium.com/beek-tech/predicting-ratings-with-matrix-factorization-methods-cf6c68da775
+'''    
+def theta_predictions(phi,testset):
+    #A = np.dot(np.transpose(phi),phi)
+    #B = np.linalg.inv(A)
+    #C = np.dot(phi,B)
+    A = np.dot(phi,np.linalg.inv(np.dot(np.transpose(phi),phi)))
+    return(np.dot(testset,A))
+
+lm_tht_pred = theta_predictions(lm_phi,test)
+acc(lm_tht_pred,la_sk,la_cj,y01_t)
+
+
+
+
+
     
 '''
 y0 = gamma.pdf(x=lm_tht,a=la_sk[0,:],scale=1/la_cj)
@@ -268,8 +296,9 @@ with pm.Model() as pmf:
 '''
 
 '''
-PLOTS 
+#PLOTS 
 
+import plotnine as p9
 
 def plot_chain_sk(location,size,i):
     ite = 1
@@ -284,10 +313,8 @@ def plot_chain_sk(location,size,i):
     la_array.columns = ['parameter','sim','value'] 
     la_array['parameter'] = la_array['parameter'].astype(str)
     lim = [la_array['value'].min()*0.995, la_array['value'].max()*1.005]
-    fig = (
-           ggplot(la_array,aes(x='sim',y='value' , color = 'parameter'))+
-           geom_line()+scale_y_continuous(limits = (lim[0],lim[1]))
-    )
+    fig = p9.ggplot(la_array, p9.aes(x='sim',y='value' , color = 'parameter'))
+    fig = fig + p9.geom_line()+p9.scale_y_continuous(limits = (lim[0],lim[1]))
     return fig 
 
 plot_chain_sk('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lask_id',sim//bach_size, 15)
@@ -307,8 +334,8 @@ def plot_chain_cj(location,size,i):
     #la_array['parameter'] = la_array['parameter'].astype(str)
     lim = [la_array['value'].min()*0.995, la_array['value'].max()*1.005]
     fig = (
-           ggplot(la_array,aes(x='sim',y='value'))+
-           geom_line()+scale_y_continuous(limits = (lim[0],lim[1]))
+           p9.ggplot(la_array,p9.aes(x='sim',y='value'))+
+           p9.geom_line()+p9.scale_y_continuous(limits = (lim[0],lim[1]))
     )
     return fig 
 
@@ -328,8 +355,8 @@ def plot_chain_tht(location,size,i):
     #la_array['parameter'] = la_array['parameter'].astype(str)
     lim = [la_array['value'].min()*0.995, la_array['value'].max()*1.005]
     fig = (
-           ggplot(la_array,aes(x='sim',y='value'))+
-           geom_line()+scale_y_continuous(limits = (lim[0],lim[1]))
+           p9.ggplot(la_array,p9.aes(x='sim',y='value'))+
+           p9.geom_line()+p9.scale_y_continuous(limits = (lim[0],lim[1]))
     )
     return fig 
 
@@ -368,6 +395,17 @@ clf = LogisticRegression(random_state=0, solver='lbfgs',multi_class='multinomial
 pred = clf.predict(x1)
 confusion_matrix(pred,y01)
 '''
+
+
+
+
+
+
+
+
+
+
+
 
 
 
