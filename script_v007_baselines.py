@@ -22,7 +22,6 @@ sim = 600 #Simulations
 bach_size = 200 #Batch size for memory purposes 
 step1 = 10 #Saving chain every step1 steps 
 step2 = 20
-id = '04' #identification of simulation 
 
 #WRONG< UPDATE HERE 
 if bach_size//step2 <= 20:
@@ -32,21 +31,22 @@ if bach_size//step2 <= 20:
 #filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_filtered.txt"
 #filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_binary.txt"
 #filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_gexpression.txt"
-filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_ge_balanced.txt"
+#filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_ge_balanced.txt"
+filename = "C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\Data\\tcga_train_gexpression.txt"
 data = pd.read_csv(filename, sep=';')
 
 
 '''Splitting Dataset'''
-#train, test = train_test_split(data, test_size=0.3, random_state=22)
-train = data
+train, test = train_test_split(data, test_size=0.3, random_state=22)
+#train = data
 
 '''Organizing columns names'''
 remove = train.columns[[0,1]]
 y = train.columns[1]
 y01 = np.array(train[y])
 train = train.drop(remove, axis = 1)
-#y01_t = np.array(test[y])
-#test = test.drop(remove, axis = 1)
+y01_t = np.array(test[y])
+test = test.drop(remove, axis = 1)
 
 
 '''Defining variables'''
@@ -58,6 +58,22 @@ j = train.shape[0] #patients
 from sklearn.decomposition import NMF
 model1 = NMF(n_components=100, init='random', random_state=0)
 latent1 = model1.fit_transform(train)
+latent1_t= model1.transform(test)
+
+'''Logistc Regression''' 
+from sklearn.linear_model import LogisticRegressionCV
+model6 = LogisticRegressionCV(Cs=6,penalty='l2',fit_intercept=True).fit(latent1,y01)
+pred6 = model6.predict(latent1)
+pred6_t = model6.predict(latent1_t)
+
+confusion_matrix(pred6,y01)
+confusion_matrix(pred6_t,y01_t)
+
+#with k=100, tcga_train_geexpression, acc on testing set is 0.73 and training set is 0.79
+
+
+
+
 
 '''Auto-enconder''' 
 #https://github.com/greenelab/tybalt
