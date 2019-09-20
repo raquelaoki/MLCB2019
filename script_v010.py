@@ -14,16 +14,20 @@ Notes:
 - 1000sim is 8h 
 - problems in the accucary, it is too good to be true
 
--overfitting, try k less than 100
+-overfitting, try k less than 100 - same
+
+- try with k=50, but changing a bit sk so the variance is smaller
+- test with k=2 to see if acc on training set still 1
+
 '''
 
 '''Hyperparameters'''
-k = 50 #Latents Dimension 
-sim = 1400 #Simulations 
+k = 30 #Latents Dimension 
+sim = 1000 #Simulations 
 bach_size = 200 #Batch size for memory purposes 
 step1 = 10 #Saving chain every step1 steps 
 #step2 = 20
-id = '10' #identification of simulation 
+id = '11' #identification of simulation 
 
 
 #id 08: k = 100, 7h, 3k simulations and 200 batch, acc 0.57 on testing set and 1 on training
@@ -149,7 +153,7 @@ def acc(theta,sk,cj,y):
     y3 = y3.sum(axis=1)
     y3[y3<=0] = 0
     y3[y3>0] = 1
-    print(confusion_matrix(y,y3))
+    return confusion_matrix(y,y3)
     
 
 '''Creating the chains'''
@@ -205,14 +209,14 @@ print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
 
 #about 4h for 600sim
 #checking the accuracy
-ite = 3
+ite = 2
 la_sk = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
 la_cj = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
 lm_phi = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
 lm_tht = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
 
 
-for ite in np.arange(3,sim//bach_size):
+for ite in np.arange(2,sim//bach_size):
     la_sk = la_sk + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
     la_cj = la_cj + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
     lm_phi = lm_phi + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
@@ -233,7 +237,7 @@ print(la_cj.shape, la_sk.shape,la_sk[0,:].shape ,lm_tht.shape)
 print(current.la_cj.shape, current.la_sk.shape,current.la_sk[0,:].shape ,current.lm_tht.shape)
 
 acc(lm_tht,la_sk,la_cj,y01)
-acc(current.lm_tht,current.la_sk,current.la_cj,y01)
+#acc(current.lm_tht,current.la_sk,current.la_cj,y01)
 
 test2 = np.dot(lm_tht,np.transpose(lm_phi))
 print(test2.mean(), train0.mean())
@@ -261,13 +265,13 @@ def theta_predictions(phi,tht,testset):
     scaler= sk.preprocessing.MinMaxScaler(feature_range=(tht.min(),tht.max())).fit(B)
     return(scaler.transform(B))
 
-lm_tht_pred = theta_predictions(lm_phi,test)
+lm_tht_pred = theta_predictions(lm_phi,lm_tht, test)
 
 print(lm_tht.min(),lm_tht.mean(),lm_tht.max(),lm_tht.var())
 print(lm_tht_pred.min(),lm_tht_pred.mean(),lm_tht_pred.max(),lm_tht_pred.var())
-print('testing set')
-
-acc(lm_tht_pred,la_sk,la_cj,y01_t)
+print('testing set - ')
+ac = acc(lm_tht_pred,la_sk,la_cj,y01_t)
+print('acc using matrix multiplication',(ac[0,0]+ac[1,1])/ac.sum())
 
 
 #y0 = gamma.logpdf(x=lm_tht_pred,a = la_sk[0,:],scale = 1)
@@ -290,10 +294,10 @@ acc(lm_tht_pred,la_sk,la_cj,y01_t)
 
    
 '''
-y0 = gamma.logpdf(x=lm_tht,a=la_sk[0,:],scale=1)
-y1 = gamma.logpdf(x=lm_tht,a=la_sk[1,:],scale=1)
+y0 = gamma.logpdf(x=lm_tht[0:10,],a=la_sk[0,:],scale=1).sum(axis=1)
+y1 = gamma.logpdf(x=lm_tht[0:10,],a=la_sk[1,:],scale=1).sum(axis=1)
 y3 = y1-y0
-y3 = y3.sum(axis=1)
+#y3 = y3.sum(axis=1)
 y3[y3<=0] = 0
 y3[y3>0] = 1
 print(confusion_matrix(y01,y3))
@@ -409,6 +413,25 @@ clf = LogisticRegression(random_state=0, solver='lbfgs',multi_class='multinomial
 pred = clf.predict(x1)
 confusion_matrix(pred,y01)
 '''
+
+
+
+#Similarity function
+from sklearn.metrics.pairwise import cosine_similarity
+
+lm_tht_pred = np.repeat(0.5,test.shape[0]*k).reshape(test.shape[0],k)
+test0 = np.matrix(test) 
+    
+for j in np.arange(test.shape[0]):
+    # intialise data of lists. 
+    sim = list(cosine_similarity(test0[j,:], train0)[0])
+    sim = pd.DataFrame({'sim':sim})
+    sim = sim.sort_values(by=['sim'],  ascending=False)
+    lm_tht_pred[j,:] = lm_tht[list(sim.index[0:3])].mean(axis=0)         
+
+
+ac = acc(lm_tht_pred,la_sk,la_cj,y01_t)
+print('ac using similarity',(ac[0,0]+ac[1,1])/ac.sum())
 
 
 
