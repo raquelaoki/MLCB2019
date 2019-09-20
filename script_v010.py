@@ -6,6 +6,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix
 from scipy.stats import gamma
 import copy
+import sklearn as sk
 
 '''
 Notes:
@@ -13,16 +14,21 @@ Notes:
 - 1000sim is 8h 
 - problems in the accucary, it is too good to be true
 
--implementing test set
+-overfitting, try k less than 100
 '''
 
 '''Hyperparameters'''
-k = 100 #Latents Dimension 
-sim = 1000 #Simulations 
+k = 50 #Latents Dimension 
+sim = 1400 #Simulations 
 bach_size = 200 #Batch size for memory purposes 
 step1 = 10 #Saving chain every step1 steps 
 #step2 = 20
-id = '08' #identification of simulation 
+id = '10' #identification of simulation 
+
+
+#id 08: k = 100, 7h, 3k simulations and 200 batch, acc 0.57 on testing set and 1 on training
+#id 08: the current start value already predict corrently all the 0
+#id 09: k = 30, 1h, 1k simulation, 1 training set, only guess on class 0 
 
 
 '''Loading dataset'''
@@ -71,6 +77,17 @@ current = parameters(np.repeat(0.5,j), #la_cj 0.25
                    #np.repeat(0.5, j), #la_pj
                    #np.repeat(0.5,k)) #la_qk 
 
+'''
+y0 = gamma.logpdf(x=current.lm_tht,a=current.la_sk[0,:],scale=1)
+y1 = gamma.logpdf(x=current.lm_tht,a=current.la_sk[1,:],scale=1)
+y3 = y1-y0
+y3 = y3.sum(axis=1)
+y3[y3<=0] = 0
+y3[y3>0] = 1
+print(confusion_matrix(y3,y01))
+'''
+
+
 '''Gibbs Sampling'''
 train0 = np.matrix(train)
 
@@ -110,27 +127,6 @@ def gibbs(current,train0,j,v,k,y01):
 
 start_time = time.time()    
 
-'''
-What do I want? 
-tht about 150 
-sk about 150 
-cj/1-cj = 1
-test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi)) about 6 
-
-
-currently: 
-sk = 28 
-cj = 0.35
-tht = 37.64 (expect was 28/0.35 = 80)
-'''
-
-a2 = 187
-b2 = 0.8
-print(current.la_sk.mean(),b2/(a2-1), np.sqrt(current.la_sk.var()),b2*b2/((a2-1)*(a2-1)*(a2-2)*(a2-2)))
-#print(current.la_cj.mean(),a1/(a1+b1),np.sqrt(current.la_cj.var()),a1*b1/((a1+b1)*(a1+b1)*(a1+b1+1)))
-print(current.lm_tht.mean(),(b2/(a2-1)),np.sqrt(current.lm_tht.var()))
-test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
-print(test1.mean(), train0.mean())
 
 
 #new  = gibbs(current,train0,j,v,k,y01)
@@ -209,14 +205,14 @@ print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
 
 #about 4h for 600sim
 #checking the accuracy
-ite = 1
+ite = 3
 la_sk = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
 la_cj = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
 lm_phi = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
 lm_tht = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
 
 
-for ite in np.arange(2,sim//bach_size):
+for ite in np.arange(3,sim//bach_size):
     la_sk = la_sk + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
     la_cj = la_cj + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
     lm_phi = lm_phi + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
@@ -237,7 +233,8 @@ print(la_cj.shape, la_sk.shape,la_sk[0,:].shape ,lm_tht.shape)
 print(current.la_cj.shape, current.la_sk.shape,current.la_sk[0,:].shape ,current.lm_tht.shape)
 
 acc(lm_tht,la_sk,la_cj,y01)
-    
+acc(current.lm_tht,current.la_sk,current.la_cj,y01)
+
 test2 = np.dot(lm_tht,np.transpose(lm_phi))
 print(test2.mean(), train0.mean())
 
@@ -247,33 +244,59 @@ print(test2.mean(), train0.mean())
 #1) I need to predict the theta value for each patient in order to make good predictions 
 #2) tht is JxK, so i need the hidden representation of my data according with the number J 
 #3) i could use similarity between patients, the most similar patient receive that same values,  
-#however, this don't seems very robust. 
-$4) If I also use similarity between genes, 
-#5) possible solution https://medium.com/beek-tech/predicting-ratings-with-matrix-factorization-methods-cf6c68da775
+#however, this don't seems very robust.  (memory based approach)
+#4) possible solution https://medium.com/beek-tech/predicting-ratings-with-matrix-factorization-methods-cf6c68da775
+
+#5) using matrix multiplication don't work because some of the predicted values are negative. 
+#memory based approaches may be my only option. Explore a little bit more before take this decision.           
+            
+            
 '''    
-def theta_predictions(phi,testset):
+def theta_predictions(phi,tht,testset):
     #A = np.dot(np.transpose(phi),phi)
     #B = np.linalg.inv(A)
     #C = np.dot(phi,B)
     A = np.dot(phi,np.linalg.inv(np.dot(np.transpose(phi),phi)))
-    return(np.dot(testset,A))
+    B = np.dot(testset,A)
+    scaler= sk.preprocessing.MinMaxScaler(feature_range=(tht.min(),tht.max())).fit(B)
+    return(scaler.transform(B))
 
 lm_tht_pred = theta_predictions(lm_phi,test)
+
+print(lm_tht.min(),lm_tht.mean(),lm_tht.max(),lm_tht.var())
+print(lm_tht_pred.min(),lm_tht_pred.mean(),lm_tht_pred.max(),lm_tht_pred.var())
+print('testing set')
+
 acc(lm_tht_pred,la_sk,la_cj,y01_t)
 
 
+#y0 = gamma.logpdf(x=lm_tht_pred,a = la_sk[0,:],scale = 1)
+#y1 = gamma.logpdf(x=lm_tht_pred,a = la_sk[1,:],scale = 1)
+#y3 = y1-y0
+#y3 = y3.sum(axis=1)
+#y3[y3<=0] = 0
+#y3[y3>0] = 1
+#print(confusion_matrix(y01_t,y3))
 
+#y0 = gamma.logpdf(x=lm_tht,a = la_sk[0,:],scale = 1)
+#y1 = gamma.logpdf(x=lm_tht,a = la_sk[1,:],scale = 1)
+#y3 = y1-y0
+#y3 = y3.sum(axis=1)
+#y3[y3<=0] = 0
+#y3[y3>0] = 1
+#print(confusion_matrix(y01,y3))
 
+ 
 
-    
+   
 '''
-y0 = gamma.pdf(x=lm_tht,a=la_sk[0,:],scale=1/la_cj)
-y1 = gamma.pdf(x=lm_tht,a=la_sk[1,:],scale=1/la_cj)
+y0 = gamma.logpdf(x=lm_tht,a=la_sk[0,:],scale=1)
+y1 = gamma.logpdf(x=lm_tht,a=la_sk[1,:],scale=1)
 y3 = y1-y0
 y3 = y3.sum(axis=1)
 y3[y3<=0] = 0
 y3[y3>0] = 1
-print(confusion_matrix(y,y3))
+print(confusion_matrix(y01,y3))
 
 test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
 
@@ -281,17 +304,8 @@ test = np.dot(lm_tht,np.transpose(lm_phi))
 test[0:5,0:5]
 
 
-with pm.Model() as pmf: 
-    pmf_sk = pmf.Gamma('sk',alpha=3,beta=3,shape=(k,2))
-    pmf_tht = pmf.Gamma('tht', alpha=pmf_sk,beta=12, shape=(j, k))
-    pmf_phi = pmf.multivariate.Dirichlet('phi',a=current.la_ev, shape=(v, k)) #by column 
-    pmf_n = pmf.Poisson('n_obs', mu=T.tensor.dot(pmf_tht, pmf_phi.T), observed=train)
 
-    # Find mode of posterior using optimization
-    start = pm.find_MAP(fmin=sp.optimize.fmin_powell)  # Find starting values by optimization
 
-    step = pm.NUTS(scaling=start)
-    trace = pm.sample(500, step, start=start)
 
 '''
 
@@ -307,7 +321,7 @@ def plot_chain_sk(location,size,i):
     for ite in np.arange(1,size):
         la_array = pd.concat([la_array, 
                            pd.DataFrame(np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=','))], axis = 1)
-    la_array = la_array.iloc[[i,100+i]]
+    la_array = la_array.iloc[[i,50+i]]
     la_array = la_array.transpose().reset_index(drop=True)
     la_array = la_array.unstack().reset_index()
     la_array.columns = ['parameter','sim','value'] 
