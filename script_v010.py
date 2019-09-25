@@ -195,8 +195,8 @@ for experiment in np.arange(0,100):
         np.savetxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_phi, delimiter=',',fmt='%5s')
     
     
-        print("--- %s min ---" % int((time.time() - start_time)/60))
-        print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
+    print("--- %s min ---" % int((time.time() - start_time)/60))
+    print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
     
     
     '''Loading average values back for predictions'''
@@ -242,21 +242,18 @@ for experiment in np.arange(0,100):
         sim_list = sim_list.sort_values(by=['sim'],  ascending=False)
         lm_tht_pred[j,:] = lm_tht[list(sim_list.index[0:6])].mean(axis=0)         
     
-        y01_t_p = PGM_pred(lm_tht_pred,la_sk,la_cj,y01_t)
-        ac = confusion_matrix(y01_t, y01_t_p)
+    y01_t_p = PGM_pred(lm_tht_pred,la_sk,la_cj,y01_t)
+    ac = confusion_matrix(y01_t, y01_t_p)
+    acc_sample.append((ac[0,0]+ac[1,1])/ac.sum())    
+    f1_sample.append(f1_score(y01_t, y01_t_p))
         
-        acc_sample.append((ac[0,0]+ac[1,1])/ac.sum())    
-        f1_sample.append(f1_score(y01_t, y01_t_p))
-        
-
-
-with open('pgm_id12_f1.txt', 'w') as f:
-    for item in f1_sample:
-        f.write("%s\n" % item)
-
-with open('pgm_id12_acc.txt', 'w') as f:
-    for item in acc_sample:
-        f.write("%s\n" % item)
+    with open('pgm_id12_f1.txt', 'w') as f:
+        for item in f1_sample:
+            f.write("%s\n" % item)
+    
+    with open('pgm_id12_acc.txt', 'w') as f:
+        for item in acc_sample:
+            f.write("%s\n" % item)
 
 
 print('acc: ',acc_sample)

@@ -88,9 +88,22 @@ with open('baselines_acc.txt', 'w') as f:
     for item in acc_sample:
         f.write("%s\n" % item)
 
-print('min, mean, max and var \n')
-print('F1: ',f1_sample.min(), f1_sample.mean(),f1_sample.max() ,f1_sample.var(),'\n')
-print('Acc: ',acc_sample.min(), acc_sample.mean(),acc_sample.max() ,acc_sample.var())
+
+'''
+fileName1 = 'baselines_f1.txt'
+fileName2 = 'baselines_acc.txt'
+
+f1 = [line.rstrip('\n') for line in open(fileName1)]
+ac = [line.rstrip('\n') for line in open(fileName2)]
+
+f1 = np.array(f1).astype(float)
+ac = np.array(ac).astype(float)
+
+'''
+
+#print('min, mean, max and var \n')
+#print('F1: ',f1_sample.min(), f1_sample.mean(),f1_sample.max() ,f1_sample.var(),'\n')
+#print('Acc: ',acc_sample.min(), acc_sample.mean(),acc_sample.max() ,acc_sample.var())
 
 '''Auto-enconder''' 
 #https://github.com/greenelab/tybalt
