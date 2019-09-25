@@ -56,7 +56,7 @@ j = train.shape[0] #patients
 
 '''Matrix Factorization''' 
 from sklearn.decomposition import NMF
-model1 = NMF(n_components=100, init='random', random_state=0)
+model1 = NMF(n_components=20, init='random', random_state=0)
 latent1 = model1.fit_transform(train)
 latent1_t= model1.transform(test)
 
@@ -66,9 +66,10 @@ model6 = LogisticRegressionCV(Cs=6,penalty='l2',fit_intercept=True).fit(latent1,
 pred6 = model6.predict(latent1)
 pred6_t = model6.predict(latent1_t)
 
-confusion_matrix(pred6,y01)
-confusion_matrix(pred6_t,y01_t)
-
+ac = confusion_matrix(pred6,y01)
+print((ac[0,0]+ac[1,1])/ac.sum())
+ac_t = confusion_matrix(pred6_t,y01_t)
+print( (ac_t[0,0]+ac_t[1,1])/ac_t.sum())
 #with k=100, tcga_train_geexpression, acc on testing set is 0.73 and training set is 0.79
 
 
