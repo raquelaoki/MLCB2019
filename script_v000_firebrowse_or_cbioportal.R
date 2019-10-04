@@ -4,10 +4,10 @@ rm(list=ls())
 #DATE: 2019/02/08
 #Explorative script, getting to know the datasets first
 #PROBLEM:
-#There is two possible packages to use, Firebrowse or Cbioportal. 
-#Check which one is better or more updated. 
+#There is two possible packages to use, Firebrowse or Cbioportal.
+#Check which one is better or more updated. (firebrowse)
 #-----#-----#-----#-----#-----#-----#-----#-----#-----#-----#-----#
-#Workdiretory 
+#Workdiretory
 setwd("~/GitHub/project_spring2019")
 
 #-----#-----#-----#-----#-----#-----#-----#-----#-----#-----#-----#
@@ -15,7 +15,7 @@ setwd("~/GitHub/project_spring2019")
 #-----#-----#-----#-----#-----#-----#-----#-----#-----#-----#-----#
 
 #References: https://github.com/mariodeng/FirebrowseR/blob/master/vignettes/FirebrowseR.Rmd
-#Install and load packages 
+#Install and load packages
 if (!require("FirebrowseR")) devtools::install_github("mariodeng/FirebrowseR")
 require(FirebrowseR)
 
@@ -57,12 +57,12 @@ require(cgdsr)
 mycgds = CGDS("http://www.cbioportal.org/")
 
 # Test the CGDS endpoint URL using a few simple API tests
-test(mycgds) 
+test(mycgds)
 
 # Get list of cancer studies at server
 getCancerStudies(mycgds)
 
-# Get available case lists (collection of samples) for a given cancer study  
+# Get available case lists (collection of samples) for a given cancer study
 mycancerstudy = getCancerStudies(mycgds)[33,1]
 mycaselist = getCaseLists(mycgds,mycancerstudy)[1,1]
 
@@ -79,7 +79,7 @@ bd2 = getClinicalData(mycgds,mycaselist)
 #COMPARING DATESETS
 #-----#-----#-----#-----#-----#-----#-----#-----#-----#-----#-----#
 
-#checking the barcodes 
+#checking the barcodes
 id1 = as.character(bd1[,1])
 id2 = as.character(row.names(bd2))
 
@@ -102,5 +102,5 @@ bd2$FORM_COMPLETION_DATE
 summary(bd1$year_of_dcc_upload)
 
 
-#CONCLUSION: Firebrowse seems to be more update and has more data than cbioportal. 
-#most of the patients are presente in both studies. 
+#CONCLUSION: Firebrowse seems to be more update and has more data than cbioportal.
+#most of the patients are presente in both studies.

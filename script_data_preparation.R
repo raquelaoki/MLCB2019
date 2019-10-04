@@ -3,17 +3,16 @@ rm(list=ls())
 #AUTHOR: Raquel Aoki
 #DATE: 2019/08
 #check reference on email sent to Olga on March 2019 about download the data
-#
-#Notes: 
-#1) The old scripts contain information about how to download/process RNA-seq, but we 
+#Notes:
+#1) The old scripts contain information about how to download/process RNA-seq, but we
 #decided to not use this datatype for now
-#2) The merge between gene mutations and clinical information has a small intersection. 
+#2) The merge between gene mutations and clinical information has a small intersection.
 #In some cancer types the intersection is 0 and for some others some patients with metastases are
-#lost. The problem wasn't the date of the last data update, because I checked on the tcga official repo 
+#lost. The problem wasn't the date of the last data update, because I checked on the tcga official repo
 #and the data is also old there and the clinical information also incomplete. The main problem is that
-#in the merge, many patients with mutation data have [incomplete information] on the variable 
-#'new_tumor_event_dx_indicator', while the patients with NO or YES on this variable don't have the mutation data. 
-#3) For some reason, the website https://portal.gdc.cancer.gov/repository don't open at SFU labs, but it works at my wifi. 
+#in the merge, many patients with mutation data have [incomplete information] on the variable
+#'new_tumor_event_dx_indicator', while the patients with NO or YES on this variable don't have the mutation data.
+#3) For some reason, the website https://portal.gdc.cancer.gov/repository don't open at SFU labs, but it works at my wifi.
 #-----#-----#-----#-----#-----#-----#-----#-----#-----#-----#-----#
 
 setwd("C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019")
@@ -29,7 +28,7 @@ diseaseAbbrvs <- c("ACC", "BLCA", "BRCA", "CHOL", "ESCA", "HNSC", "LGG", "LIHC",
 diseaseAbbrvs_l <- c("acc", 'BRCA' ,"blca", "chol","esca", "hnsc", "lgg", "lihc", "lusc",  "paad", "prad", "sarc", "skcm",  "tgct", "ucs")
 
 
-#------------------------ DOWNLOAD CLINICAL INFORMATION 
+#------------------------ DOWNLOAD CLINICAL INFORMATION
 clinicalFilesDir <- paste(theRootDir, "clinical/", sep="")
 dir.create(clinicalFilesDir, showWarnings = FALSE) # make this directory if it doesn't exist.
 
@@ -42,7 +41,7 @@ if(donwload_clinical){
 }
 
 
-#------------------------ DOWNLOAD SOMATIC MUTATION 
+#------------------------ DOWNLOAD SOMATIC MUTATION
 mutFilesDir <- paste(theRootDir, "\\mutation_data", sep="")
 dir.create(mutFilesDir, showWarnings = FALSE) # make this directory if it doesn't exist.
 if(donwload_mutation){
@@ -66,12 +65,12 @@ fname1 <- paste(clinicalFilesDir,"nationwidechildrens.org_clinical_patient_",dis
 
 #Rotine to read the files, select the important features, and bind in a unique dataset
 i = 1
-bd.aux = read.csv(fname1[i], sep = "\t") 
+bd.aux = read.csv(fname1[i], sep = "\t")
 bd.aux$abr = diseaseAbbrvs[i]
 bd.c = subset(bd.aux, select = cnames)
 
 for(i in 2:length(fname1)){
-  bd.aux = read.csv(fname1[i], sep = "\t", header = T) 
+  bd.aux = read.csv(fname1[i], sep = "\t", header = T)
   bd.aux$abr = diseaseAbbrvs[i]
   bd.c = rbind(bd.c, subset(bd.aux, select = cnames))
 }
@@ -117,12 +116,12 @@ if(process_mutation){
         }
       }
     }
-  }  
-  #Remove NA for 0 
+  }
+  #Remove NA for 0
   bd.m[is.na(bd.m)] <- 0
   bd.m = bd.m[bd.m$Hugo_Symbol!='.']
   write.table(bd.m,paste(theRootDir,'tcga_mu.txt',sep=''), row.names = F, sep = ';')
-  
+
 }
 
 
@@ -149,8 +148,8 @@ head(bd.m[,c(1:10)])
 
 #Creating a variable indicator with the prediction value in the 0/1 format
 bd.c$y = as.character(bd.c$new_tumor_event_dx_indicator)
-bd.c$y[bd.c$y=="NO"] = 0 
-bd.c$y[bd.c$y=="YES"] = 1 
+bd.c$y[bd.c$y=="NO"] = 0
+bd.c$y[bd.c$y=="YES"] = 1
 bd.c = subset(bd.c, select = -c(new_tumor_event_dx_indicator))
 
 #Merge: this part has problems, the intersection between the two datasets eliminate many good patients of our sampel
@@ -163,7 +162,7 @@ prop.table(table(bd$y))
 
 write.table(bd,paste(theRootDir,'tcga_train.txt',sep=''), row.names = F, sep = ';')
 
-#------------------------ GENES SELECTION 
+#------------------------ GENES SELECTION
 bd = read.table(paste(theRootDir,'tcga_train.txt',sep=''), header=T, sep = ';')
 head(bd[,c(1:10)])
 dim(bd)
@@ -188,7 +187,7 @@ dim(bd)
 write.table(bd,paste(theRootDir,'tcga_train_binary.txt',sep=''), row.names = F, sep = ';')
 
 
-#-------------------------- GENE EXPRESSION GENE SELECTION 
+#-------------------------- GENE EXPRESSION GENE SELECTION
 bd = read.table(paste(theRootDir,'tcga_rna_old.txt',sep=''), header=T, sep = ';')
 bd = subset(bd, select = -c(patients2))
 head(bd[,1:10])
@@ -198,14 +197,14 @@ cl = read.table(paste(theRootDir,'tcga_cli_old.txt',sep=''), header=T, sep = ';'
 cl = subset(cl, select = c(patients, new_tumor_event_dx_indicator))
 names(cl)[2] = 'y'
 cl$y = as.character(cl$y)
-cl$y[cl$y=='NO'] = 0 
+cl$y[cl$y=='NO'] = 0
 cl$y[cl$y=='YES'] = 1
 
 bd1 = merge(cl,bd,by.x = 'patients',by.y = 'patients', all = F)
 head(bd1[,1:10])
 
 #check old code
-#eliminate the ones with low variance 
+#eliminate the ones with low variance
 require(resample)
 var = colVars(bd1[,-c(1,2)])
 var[is.na(var)]=0
@@ -223,9 +222,9 @@ order = c('patients','y',names(bd1))
 order = unique(order)
 bd1 = bd1[,order]
 
-#eliminate the ones wich vales between 0 and 1 are not signnificantly different 
+#eliminate the ones wich vales between 0 and 1 are not signnificantly different
 bdy0 = subset(bd1, y==0)
-bdy1 = subset(bd1, y==1) 
+bdy1 = subset(bd1, y==1)
 pvalues = c()
 for(i in 3:dim(bd1)[2]){
   pvalues[i-2] =  t.test(bdy0[,i],bdy1[,i])$p.value
@@ -234,10 +233,10 @@ for(i in 3:dim(bd1)[2]){
 
 #t.test:
 #H0: y = x
-#H1: y dif x 
+#H1: y dif x
 #to reject the null H0 the pvalue must be <0.5
-#i want to keep on my data the genes with y dif x, this 
-#i want to filter small p values. 
+#i want to keep on my data the genes with y dif x, this
+#i want to filter small p values.
 ind = c(3:dim(bd1)[2])[pvalues<=0.00000001]
 bd1 = bd1[,c(1,2,ind)]
 head(bd1[,1:10])
@@ -246,12 +245,12 @@ dim(bd1)
 
 write.table(bd1,paste(theRootDir,'tcga_train_gexpression.txt',sep=''), row.names = F, sep = ';')
 
-#balancing the dataset 
+#balancing the dataset
 bd = read.table(paste(theRootDir,'tcga_train_gexpression.txt',sep=''), header = T, sep = ';')
 rows = c(1:dim(bd)[1])
 rows_selc1 = rows[bd$y==1]
 rows_selc2 = sample(rows[bd$y==0],size = length(rows[bd$y==1]), replace = F)
 bd1 = bd[c(rows_selc1,rows_selc2),]
 bd1 = bd1[order(bd1$patients),]
-  
+
 write.table(bd1,paste(theRootDir,'tcga_train_ge_balanced.txt',sep=''), row.names = F, sep = ';')
