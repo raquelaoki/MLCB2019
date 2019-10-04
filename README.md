@@ -14,4 +14,4 @@ A common limitation in causal inference is the influence of confounders, variabl
 
 ## Code description 
 This project contains all the codes used for the experiments and implementation. 
-The data download and pre processing is in R language, while the model and experiments is in Python (script_v010). 
+The data download and pre processing is in R language, while the model and experiments are in Python (script_v010). 
