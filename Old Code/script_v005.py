@@ -1,11 +1,10 @@
 '''Loading libraries'''
-import pandas as pd 
+import pandas as pd
 import numpy as np 
 import time
-#import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 
-import sys 
+import sys
 sys.path.append('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019')
 from script_v005_def import *
 import matplotlib.pyplot as plt
@@ -13,13 +12,12 @@ from scipy.stats import norm
 
 '''
 Notes:
-- check the first term, is too larfe the number, positive or negatie 
+- check the first term, is too larfe the number, positive or negatie
 - check if B is always 0 or if just too small (then round 2 digits I don't see any difference)
-- change to gibs?     
-- check the values, I think i'm having inf or na 
+- change to gibs?
+- check the values, I think i'm having inf or na
 - Change my dirichelt, check on overleaf the theory
 - https://hackernoon.com/implementation-of-gaussian-naive-bayes-in-python-from-scratch-c4ea64e3944d
-
 '''
 
 
@@ -65,7 +63,7 @@ start = parameters(np.repeat(1.65,2),#ln [0-c0,1-gamma0]
                    np.repeat(2.72,j), #la_cj
                    np.repeat(2.72,k*2).reshape(2,k), #la_sk
                    np.repeat(1.0004,v), #la_ev
-                   np.repeat(1/(data.shape[1]-aux),(data.shape[1]-aux)*k).reshape((data.shape[1]-aux),k),#lm_phi v x k 
+                   np.repeat(1/(data.shape[1]-aux),(data.shape[1]-aux)*k).reshape((data.shape[1]-aux),k),#lm_phi v x k
                    np.repeat(7.42,(data.shape[0])*k).reshape(k,(data.shape[0]))) #lm_theta k x j
                    #np.concatenate(([4], np.repeat(0,k+aux-1))))  #p, k+aux-1  because intercept is already counted
 
@@ -81,60 +79,23 @@ chain_lm_tht = np.tile(start.lm_tht.reshape(-1,1),(1,int(bach_size/step2)))
 chain_lm_phi = np.tile(start.lm_phi.reshape(-1,1),(1,int(bach_size/step2)))
 
 
-for ite in np.arange(0,sim//bach_size):    
-    print('iteration--',ite,' of ',sim//bach_size)   
-    #.print('it should be 981',data.shape)       
+for ite in np.arange(0,sim//bach_size):
+    print('iteration--',ite,' of ',sim//bach_size)
+    #.print('it should be 981',data.shape)
     current, a_F = MCMC(start,bach_size,data,k,lr,y,id,ite,step1,step2,
                              chain_ln,chain_la_sk,chain_la_cj,chain_la_ev,
                              chain_lm_tht,chain_lm_phi)
     start = current
 
-    
+
 end_time = time.time() - start_time
 print("--- %s seconds ---" % (time.time() - start_time))
 print("--- %s min ---" % int((time.time() - start_time)/60))
 print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
 
-#current, a_P, a_F = MCMC(start,bach_size,data,k,lr,y,chain,id,0)
 '''WORK IN PROGRESS'''
-
-#accuracy(sim//bach_size,id,data,j,k)
-#accuracy(sim//bach_size,id,test,j,k)
-#similarity between patients 
-#accuracy_final(sim//bach_size,id,data,j,k)
-
-
-
-#lask, lacj, laev, ln, p
 
 conv_plots(sim,bach_size,'lask',id)
 conv_plots(sim,bach_size,'lacj',id)
 conv_plots(sim,bach_size,'laev',id)
 conv_plots(sim,bach_size,'ln',id)
-
-
-'''
-files = []
-for ite in range(sim//bach_size):
-    files.append('Data\\output_'+parameter+'_id'+id+'_bach'+str(ite)+'.txt')
-
-f=pd.read_csv(files[0],sep=',', header=None)
-for i in range(1,len(files)):
-    f = pd.concat([f,pd.read_csv(files[i],sep=',', header=None)],axis =0,sort=False)
-
-
-
-if parameter!='ln':
-    k = random.sample(range(f.shape[1]),3)
-else:
-    k = [0,1]
-
-fig, pltarray = plt.subplots(len(k), sharex=True)
-pltarray[0].set_title(parameter)   
-for i in range(len(k)):
-    pltarray[i].plot(np.arange(0,f.shape[0]),f.iloc[:,k[i]], 'r-', alpha=1)
-    pltarray[i].set_ylabel('Position '+str(k[i]))
-
-fig.subplots_adjust(hspace=0.3)
-plt.show()
-'''
