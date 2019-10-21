@@ -80,3 +80,33 @@ print(dgenes.groupby(["driver", "driver_gene"]).size().reset_index(name="Time"))
 #missing: ACC, CHOL, LIHC, SARC, SKCM, TCGT, UCS
 #driver_statement
 
+dgenes.to_csv('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\DriverGenes1.csv',index=False)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

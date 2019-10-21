@@ -1,10 +1,12 @@
+DataOLD/
 Data/
 DataNew/
 Files/
 DatadataIn/
 __pycache__/
-latent_variable_jason_work
+latent_variable_jason_work/
 build/
+data/
 .ipynb_checkpoints/
 .Rhistory
 .RData

@@ -4,35 +4,23 @@ import numpy as np
 import time
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix,f1_score
-from scipy.stats import gamma
 import copy
-#import sklearn as sk
+import sys 
+import os
 from sklearn.metrics.pairwise import cosine_similarity
+path = 'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019'
+sys.path.append(path)
+import functions as fc
+os.chdir(path)
 
 
 '''
 Note: 
     - Fitting the outcome model 
     - first attempt will be a combine model with original features and latent features, in a rf, nb, nn and lr
-
+    - model id = '12'
 
 '''
-
-'''Hyperparameters'''
-k = 30 #Latents Dimension 
-sim = 1000 #Simulations 
-bach_size = 200 #Batch size for memory purposes 
-step1 = 10 #Saving chain every step1 steps 
-id = '12' #identification of simulation 
-
-
-'''Loading dataset'''
-filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_gexpression.txt"
-#filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_ge_balanced.txt"
-   
-data = pd.read_csv(filename, sep=';')
-
-#data = data.iloc[:, 0:300]
 '''Parameters'''
 class parameters:
     __slots__ = ( 'la_cj','la_sk','la_ev','lm_phi','lm_tht')   
@@ -44,69 +32,24 @@ class parameters:
         self.lm_tht = latent_tht #string of matrix  (jk) in array format 
 
 
-'''Gibbs Sampling'''
-def gibbs(current,train0,j,v,k,y01):
-    new = copy.deepcopy(current) 
-    lvjk = np.zeros((v,j,k))
-    
-    for ki in np.arange(k):
-        #0.79 decrease, 0.8 increase   #0.795 it's perferct for k=100
-        lvjk[:,:,ki] = np.dot(0.795*current.lm_phi[:,ki].reshape(v,1), current.lm_tht[:,ki].reshape(1,j))       
-    #check sum of poisson. I might be able to apply poisson after the sum, so will be faster
-    #lvjk = np.random.poisson(lvjk)
-    lvk = np.random.poisson(lvjk.sum(axis=1))
-    ljk = np.random.poisson(lvjk.sum(axis=0))
-    for ki in np.arange(k):    
-        new.lm_phi[:,ki] = np.random.dirichlet(alpha = (lvk[:,ki]+current.la_ev),size = 1)
-        #new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]).reshape(j),
-        #          scale=(np.divide(current.la_cj,1-current.la_cj)).reshape(j))
-        new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]).reshape(j), 
-                  scale=np.repeat(0.5,j).reshape(j))
-    
-    #one for y=0 and another for y=1    
-    lk1 = np.dot(y01,ljk)
-    lk0 = np.dot(1-y01,ljk)
-    a2 = 187
-    b2 = 0.8
-    c2 = y01.sum()
-    new.la_sk[0,:] = np.random.gamma((a2/k)+lk0/(j-c2),b2+0.69)     
-    new.la_sk[1,:] = np.random.gamma((a2/k)+lk1/c2,b2+0.69)     
-        
-    #a1 = 40#4000
-    #b1 = 100#10000
-    #c1 = 1/1000
-    #new.la_cj = np.random.beta(a= (a1+c1*train0.sum(axis = 1)).reshape(j,1) ,b=(b1+c1*new.lm_tht.sum(axis =1)).reshape(j,1))
-    new.la_cj = np.repeat(0.5,j).reshape(j,1)
-    return(new)
+'''Hyperparameters'''
+k = 30 #Latents Dimension 
+sim = 1000 #Simulations 
+bach_size = 200 #Batch size for memory purposes 
+step1 = 10 #Saving chain every step1 steps 
+id = '13' #identification of simulation 
+simulations = 1
 
-'''Accuracy'''
-def acc(theta,sk1,cj,y):
-    y0 = gamma.logpdf(x=theta,a = sk1[0,:],scale = 1)
-    y1 = gamma.logpdf(x=theta,a = sk1[1,:],scale = 1)
-    y3 = y1-y0
-    y3 = y3.sum(axis=1)
-    y3[y3<=0] = 0
-    y3[y3>0] = 1
-    #print(f1_score(y,y3))
-    return confusion_matrix(y,y3)
-
-'''Accuracy'''
-def PGM_pred(theta,sk1,cj,y):
-    y0 = gamma.logpdf(x=theta,a = sk1[0,:],scale = 1)
-    y1 = gamma.logpdf(x=theta,a = sk1[1,:],scale = 1)
-    y3 = y1-y0
-    y3 = y3.sum(axis=1)
-    y3[y3<=0] = 0
-    y3[y3>0] = 1
-    #print(f1_score(y,y3))
-    return y3
-
-#LOOP
-
+'''Loading dataset'''
+filename = "data\\tcga_train_gexpression.txt"
+#filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_ge_balanced.txt"
+   
+data = pd.read_csv(filename, sep=';')
+data = data.iloc[:, 0:300]
 
 f1_sample = []
 acc_sample = []    
-for experiment in np.arange(0,100):  
+for experiment in np.arange(0,simulations):  
     print('Experiment ', experiment, ' of 100')
     '''Splitting Dataset'''
     train, test = train_test_split(data, test_size=0.3) #random_state=22
@@ -156,7 +99,7 @@ for experiment in np.arange(0,100):
         print('iteration--',ite,' of ',sim//bach_size)   
         #.print('it should be 981',data.shape)       
         for i in np.arange(1,bach_size):
-            new  = gibbs(current,train0,j,v,k,y01)
+            new  = fc.gibbs(current,train0,j,v,k,y01)
             '''Updating chain'''
             if i%10==0:
                 #print('------------', i, ' of ',bach_size) 
@@ -177,10 +120,10 @@ for experiment in np.arange(0,100):
             #print('\n')
     
             current= copy.deepcopy(new )  
-        np.savetxt('Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_sk, delimiter=',',fmt='%5s')
-        np.savetxt('Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_cj, delimiter=',',fmt='%5s')
-        np.savetxt('Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_tht, delimiter=',',fmt='%5s')
-        np.savetxt('Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_phi, delimiter=',',fmt='%5s')
+        np.savetxt('results\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_sk, delimiter=',',fmt='%5s')
+        np.savetxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_cj, delimiter=',',fmt='%5s')
+        np.savetxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_tht, delimiter=',',fmt='%5s')
+        np.savetxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_phi, delimiter=',',fmt='%5s')
     
     
     print("--- %s min ---" % int((time.time() - start_time)/60))
@@ -189,17 +132,17 @@ for experiment in np.arange(0,100):
     
     '''Loading average values back for predictions'''
     ite0 = 2
-    la_sk = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lask_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
-    la_cj = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lacj_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
-    lm_phi = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmphi_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
-    lm_tht = np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmtht_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
+    la_sk = np.loadtxt('results\\output_lask_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
+    la_cj = np.loadtxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
+    lm_phi = np.loadtxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
+    lm_tht = np.loadtxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
     
     
     for ite in np.arange(ite0+1,sim//bach_size):
-        la_sk = la_sk + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-        la_cj = la_cj + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-        lm_phi = lm_phi + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-        lm_tht = lm_tht + np.loadtxt('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+        la_sk = la_sk + np.loadtxt('results\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+        la_cj = la_cj + np.loadtxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+        lm_phi = lm_phi + np.loadtxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+        lm_tht = lm_tht + np.loadtxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
     
     la_sk = la_sk/((sim//bach_size)-1)
     la_cj = la_cj/((sim//bach_size)-1)
@@ -230,7 +173,7 @@ for experiment in np.arange(0,100):
         sim_list = sim_list.sort_values(by=['sim'],  ascending=False)
         lm_tht_pred[j,:] = lm_tht[list(sim_list.index[0:6])].mean(axis=0)         
     
-    y01_t_p = PGM_pred(lm_tht_pred,la_sk,la_cj,y01_t)
+    y01_t_p = fc.PGM_pred(lm_tht_pred,la_sk,la_cj,y01_t)
     ac = confusion_matrix(y01_t, y01_t_p)
     acc_sample.append((ac[0,0]+ac[1,1])/ac.sum())    
     f1_sample.append(f1_score(y01_t, y01_t_p))
@@ -420,9 +363,4 @@ pred = clf.predict(x1)
 confusion_matrix(pred,y01)
 '''
 
-
-
-
-
-
-
+fc.preprocessing_dg1('test.csv')
