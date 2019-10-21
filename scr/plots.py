@@ -39,7 +39,6 @@ def plot_chain_cj(location,size,i):
     )
     return fig
 
-plot_chain_cj('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lacj_id',sim//bach_size, 15)
 
 def plot_chain_tht(location,size,i):
     ite = 1
@@ -60,8 +59,6 @@ def plot_chain_tht(location,size,i):
     )
     return fig
 
-plot_chain_tht('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmtht_id',sim//bach_size, 15)
-
 
 def plot_chain_phi(location,size,i):
     ite = 1
@@ -81,5 +78,3 @@ def plot_chain_phi(location,size,i):
            geom_line()+scale_y_continuous(limits = (lim[0],lim[1]))
     )
     return fig
-
-plot_chain_phi('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmphi_id',sim//bach_size, 15)

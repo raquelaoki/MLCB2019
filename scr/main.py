@@ -7,7 +7,6 @@ from sklearn.metrics import confusion_matrix,f1_score
 import copy
 import sys 
 import os
-from sklearn.metrics.pairwise import cosine_similarity
 path = 'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019'
 sys.path.append(path+'\\scr')
 import functions as fc
@@ -21,8 +20,8 @@ Note:
     - first attempt will be a combine model with original features and latent features, in a rf, nb, nn and lr
     - model id = '12'
     - test plots 
-    - testing testing set predictions
-
+    - test mcmc 
+    - test outcome 
 '''
 '''Parameters'''
 class parameters:
@@ -48,7 +47,7 @@ filename = "data\\tcga_train_gexpression.txt"
 #filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_ge_balanced.txt"
    
 data = pd.read_csv(filename, sep=';')
-data = data.iloc[:, 0:300]
+data = data.iloc[0:500, 0:100]
 
 
 f1_sample = []
@@ -153,36 +152,7 @@ for experiment in np.arange(0,simulations):
     lm_tht = lm_tht.reshape(j,k)
     lm_phi = lm_phi.reshape(v,k)
     
-    #print(la_cj.shape, la_sk.shape,la_sk[0,:].shape ,lm_tht.shape)
-    #print(current.la_cj.shape, current.la_sk.shape,current.la_sk[0,:].shape ,current.lm_tht.shape)
-    
-    #print('final accucary on the average values sampled')
-    #acc(lm_tht,la_sk,la_cj,y01)
-    #acc(current.lm_tht,current.la_sk,current.la_cj,y01)
-    
-    '''Predictions on testing set
-    lm_tht_pred = np.repeat(0.5,test.shape[0]*k).reshape(test.shape[0],k)
-    test0 = np.matrix(test) 
-    
-    for j in np.arange(test.shape[0]):
-        # intialise data of lists. 
-        sim_list = list(cosine_similarity(test0[j,:], train0)[0])
-        sim_list= pd.DataFrame({'sim':sim_list})
-        sim_list = sim_list.sort_values(by=['sim'],  ascending=False)
-        lm_tht_pred[j,:] = lm_tht[list(sim_list.index[0:6])].mean(axis=0)         
-    
-    y01_t_p = fc.PGM_pred(lm_tht_pred,la_sk,la_cj,y01_t)
-    ac = confusion_matrix(y01_t, y01_t_p)
-    acc_sample.append((ac[0,0]+ac[1,1])/ac.sum())    
-    f1_sample.append(f1_score(y01_t, y01_t_p))
-        
-    with open('pgm_id12_f1.txt', 'w') as f:
-        for item in f1_sample:
-            f.write("%s\n" % item)
-    
-    with open('pgm_id12_acc.txt', 'w') as f:
-        for item in acc_sample:
-            f.write("%s\n" % item)'''
+
     fc.predictions_test(test,train0,y01_t,lm_tht,la_sk,la_cj,k)
 
 
@@ -195,9 +165,9 @@ print('f1 : ', f1_sample)
 '''
 #PLOTS 
 
-pl.plot_chain_sk('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lask_id',sim//bach_size, 15,id)
-pl.plot_chain_cj('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lacj_id',sim//bach_size, 15)
-pl.plot_chain_tht('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmtht_id',sim//bach_size, 15)
-pl.plot_chain_phi('C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\Data\\output_lmphi_id',sim//bach_size, 15)
+pl.plot_chain_sk('results\\output_lask_id',sim//bach_size, 15,id)
+pl.plot_chain_cj('results\\output_lacj_id',sim//bach_size, 15)
+pl.plot_chain_tht('results\\output_lmtht_id',sim//bach_size, 15)
+pl.plot_chain_phi('results\\output_lmphi_id',sim//bach_size, 15)
 
 '''
