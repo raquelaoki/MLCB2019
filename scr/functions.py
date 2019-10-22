@@ -7,7 +7,8 @@ import pandas as pd
 #import random
 #import matplotlib.pyplot as plt
 #from sklearn import metrics
-#from sklearn.model_selection import train_test_split
+import time
+from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix,f1_score
 from scipy.stats import gamma
 import copy
@@ -28,12 +29,12 @@ class parameters:
 '''
 Gibbs Sampling: the math, proposal of values
 Parameters:
-    current: class parameters
-    train0: traning set
-    j patients, v genes, k latent features
-    y01: array true label
+    current: class (parameters)
+    train0: traning set (np.matrix)
+    j patients, v genes, k latent features (int)
+    y01: array true label (np.array)
 Return:
-    new: class parameters
+    new: class (parameters)
 '''
 def gibbs(current,train0,j,v,k,y01):
     new = copy.deepcopy(current)
@@ -63,17 +64,22 @@ def gibbs(current,train0,j,v,k,y01):
     new.la_cj = np.repeat(0.5,j).reshape(j,1)
     return(new)
 
-
-
-
 '''
-MCMC
+MCMC: call gibbs function and save proposed parameters in a chain
+Parameters
+    data: full dataset before splitting (pd)
+    sim, bach_size, step1: simulations, bach size and step size (int)
+    k: latent variables size (int)
+    id: id of the simulation  (str)
+
 Return
-    test and train0 matrix
+    train0 and test matrix (np.matrix)
+    j, v: j patients and v genes (int)
+    y01, y01_t: true labels on training and testing set (np.array)
 '''
-def mcmc(data, sim, bach_size, step1):
+def mcmc(data, sim, bach_size, step1,k,id,run):
     '''Splitting Dataset'''
-    train, test = train_test_split(data, test_size=0.3) #random_state=22
+    train, test = train_test_split(data, test_size=0.3,random_state=22) #random_state=22
 
     '''Organizing columns names'''
     remove = train.columns[[0,1]]
@@ -87,81 +93,105 @@ def mcmc(data, sim, bach_size, step1):
     '''Defining variables'''
     v = train.shape[1] #genes
     j = train.shape[0] #patients
-
-    '''Initial Values'''
-    current = parameters(np.repeat(0.5,j), #la_cj 0.25
-                       np.repeat(150.5,k*2).reshape(2,k), #la_sk 62
-                       np.repeat(1.0004,v), #la_ev FIXED
-                       np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k
-                       np.repeat(150.5,j*k).reshape(j,k)) #lm_theta k x j
-                       #np.repeat(0.5, j), #la_pj
-                       #np.repeat(0.5,k)) #la_qk
-
-
-    '''Creating the chains'''
-    chain_la_sk = np.tile(current.la_sk.reshape(-1,1),(1,int(bach_size/step1)))
-    chain_la_cj = np.tile(current.la_cj.reshape(-1,1),(1,int(bach_size/step1)))
-    chain_lm_tht = np.tile(current.lm_tht.reshape(-1,1),(1,int(bach_size/step1)))
-    chain_lm_phi = np.tile(current.lm_phi.reshape(-1,1),(1,int(bach_size/step1)))
-
-    '''Sampling'''
-    start_time = time.time()
-
-    for ite in np.arange(0,sim//bach_size):
-        count_s1 = 0
-        count_s2 = 0
-        chain_la_sk[:,count_s1]=current.la_sk.reshape(1,-1)
-        chain_la_cj[:,count_s1]=current.la_cj.reshape(1,-1)
-        chain_lm_tht[:,count_s1]=current.lm_tht.reshape(1,-1)
-        chain_lm_phi[:,count_s1]=current.lm_phi.reshape(1,-1)
-        print('iteration--',ite,' of ',sim//bach_size)
-        for i in np.arange(1,bach_size):
-            new  = fc.gibbs(current,train0,j,v,k,y01)
-            '''Updating chain'''
-            if i%10==0:
-                #print('------------', i, ' of ',bach_size)
-                count_s1+=1
-                chain_la_sk[:,count_s1]=new.la_sk.reshape(1,-1)
-                chain_la_cj[:,count_s1]=new.la_cj.reshape(1,-1)
-                chain_lm_tht[:,count_s1]=new.lm_tht.reshape(1,-1)
-                chain_lm_phi[:,count_s1]=new.lm_phi.reshape(1,-1)
-                if i%90 == 0:
-                    test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
-                    print(test1.mean(), train0.mean())
+    if run:
+        '''Initial Values'''
+        current = parameters(np.repeat(0.5,j), #la_cj 0.25
+                           np.repeat(150.5,k*2).reshape(2,k), #la_sk 62
+                           np.repeat(1.0004,v), #la_ev FIXED
+                           np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k
+                           np.repeat(150.5,j*k).reshape(j,k)) #lm_theta k x j
+                           #np.repeat(0.5, j), #la_pj
+                           #np.repeat(0.5,k)) #la_qk
 
 
-            current= copy.deepcopy(new )
-        np.savetxt('results\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_sk, delimiter=',',fmt='%5s')
-        np.savetxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_cj, delimiter=',',fmt='%5s')
-        np.savetxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_tht, delimiter=',',fmt='%5s')
-        np.savetxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_phi, delimiter=',',fmt='%5s')
+        '''Creating the chains'''
+        chain_la_sk = np.tile(current.la_sk.reshape(-1,1),(1,int(bach_size/step1)))
+        chain_la_cj = np.tile(current.la_cj.reshape(-1,1),(1,int(bach_size/step1)))
+        chain_lm_tht = np.tile(current.lm_tht.reshape(-1,1),(1,int(bach_size/step1)))
+        chain_lm_phi = np.tile(current.lm_phi.reshape(-1,1),(1,int(bach_size/step1)))
+
+        '''Sampling'''
+        start_time = time.time()
+
+        for ite in np.arange(0,sim//bach_size):
+            count_s1 = 0
+            count_s2 = 0
+            chain_la_sk[:,count_s1]=current.la_sk.reshape(1,-1)
+            chain_la_cj[:,count_s1]=current.la_cj.reshape(1,-1)
+            chain_lm_tht[:,count_s1]=current.lm_tht.reshape(1,-1)
+            chain_lm_phi[:,count_s1]=current.lm_phi.reshape(1,-1)
+            print('iteration--',ite,' of ',sim//bach_size)
+            for i in np.arange(1,bach_size):
+                new  = gibbs(current,train0,j,v,k,y01)
+                '''Updating chain'''
+                if i%10==0:
+                    #print('------------', i, ' of ',bach_size)
+                    count_s1+=1
+                    chain_la_sk[:,count_s1]=new.la_sk.reshape(1,-1)
+                    chain_la_cj[:,count_s1]=new.la_cj.reshape(1,-1)
+                    chain_lm_tht[:,count_s1]=new.lm_tht.reshape(1,-1)
+                    chain_lm_phi[:,count_s1]=new.lm_phi.reshape(1,-1)
+                    if i%90 == 0:
+                        test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
+                        print(test1.mean(), train0.mean())
 
 
-    print("--- %s min ---" % int((time.time() - start_time)/60))
-    print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
-    return test, train0
+                current= copy.deepcopy(new )
+            np.savetxt('results\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_sk, delimiter=',',fmt='%5s')
+            np.savetxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_cj, delimiter=',',fmt='%5s')
+            np.savetxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_tht, delimiter=',',fmt='%5s')
+            np.savetxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_phi, delimiter=',',fmt='%5s')
 
 
+        print("--- %s min ---" % int((time.time() - start_time)/60))
+        print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
+    return train0,test, j, v, y01, y01_t
 
+'''
+Load chains of values after MCMC
+paramters:
+    id: id of the experiment (str)
+    sim, bach_size: simulations and bach size (int)
+    j,v,k: patients, genes, latent variables size (int)
+return:
+    average parameters predicted without the burn-in period
+    la_sk, la_cj, lm_tht, lm_phi: (np.matrix)
+'''
+def load_chain(id,sim,bach_size,j,v,k):
+    ite0 = 2
+    la_sk = np.loadtxt('results\\output_lask_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
+    la_cj = np.loadtxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
+    lm_phi = np.loadtxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
+    lm_tht = np.loadtxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
 
+    for ite in np.arange(ite0+1,sim//bach_size):
+        la_sk = la_sk + np.loadtxt('results\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+        la_cj = la_cj + np.loadtxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+        lm_phi = lm_phi + np.loadtxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+        lm_tht = lm_tht + np.loadtxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
 
+    la_sk = la_sk/((sim//bach_size)-1)
+    la_cj = la_cj/((sim//bach_size)-1)
+    lm_phi = lm_phi/((sim//bach_size)-1)
+    lm_tht = lm_tht/((sim//bach_size)-1)
 
+    la_sk = la_sk.reshape(2,k)
+    la_cj = la_cj.reshape(j,1)
+    lm_tht = lm_tht.reshape(j,k)
+    lm_phi = lm_phi.reshape(v,k)
 
-
-
-
-
+    return la_sk,la_cj,lm_tht,lm_phi
 
 
 '''
 Label Predictions
 Parameters:
-    theta: np matrix
-    sk: np matrix
-    cj: array (constant)
-    y: true label
+    theta: current or average value (np.matrix)
+    sk: current or average value (np.matrix)
+    cj: current or average value (np.array)
+    y: true label (np.array)
 Return:
-    Array Predictions 0/1
+    y_pred: Predictions 0/1 (np.array)
  '''
 def PGM_pred(theta,sk1,cj,y):
     y0 = gamma.logpdf(x=theta,a = sk1[0,:],scale = 1)
@@ -177,37 +207,41 @@ Testing set predictions: this function will find similar patients on the traning
 and use the average of the lm_tht in the top 6 to make predictions.
 Matrix multiplication didn't work because negative values
 Paramters:
-    test set
-    train0 set
-    y01_t true label on testing set
-    lm_tht, la_sk, la_cj: parameter's predicted values (average from the chain)
-    k: latente size
+    test set: (np.matrix)
+    train0 set (np.matrix)
+    y01_t true label on testing set (np.array)
+    lm_tht, la_sk, la_cj: parameter's predicted values (average from the chain) (np.matrix)
+    k: latente size (int)
+Return:
+    null, save two txt files
 '''
-def predictions_test(test, train0,y01_t,lm_tht,la_sk,la_cj,k):
-    f1_sample = []
-    acc_sample = []
-    lm_tht_pred = np.repeat(0.5,test.shape[0]*k).reshape(test.shape[0],k)
-    test0 = np.matrix(test)
+def predictions_test(test, train0,y01_t,lm_tht,la_sk,la_cj,k,RUN):
+    #print(test.shape,train0.shape,len(y01_t),lm_tht.shape)
+    if RUN:
+        f1_sample = []
+        acc_sample = []
+        lm_tht_pred = np.repeat(0.5,test.shape[0]*k).reshape(test.shape[0],k)
+        test0 = np.matrix(test)
 
-    for j in np.arange(test.shape[0]):
-        # intialise data of lists.
-        sim_list = list(cosine_similarity(test0[j,:], train0)[0])
-        sim_list= pd.DataFrame({'sim':sim_list})
-        sim_list = sim_list.sort_values(by=['sim'],  ascending=False)
-        lm_tht_pred[j,:] = lm_tht[list(sim_list.index[0:6])].mean(axis=0)
+        for j in np.arange(test.shape[0]):
+            # intialise data of lists.
+            sim_list = list(cosine_similarity(test0[j,:], train0)[0])
+            sim_list= pd.DataFrame({'sim':sim_list})
+            sim_list = sim_list.sort_values(by=['sim'],  ascending=False)
+            lm_tht_pred[j,:] = lm_tht[list(sim_list.index[0:6])].mean(axis=0)
 
-    y01_t_p = PGM_pred(lm_tht_pred,la_sk,la_cj,y01_t)
-    ac = confusion_matrix(y01_t, y01_t_p)
-    acc_sample.append((ac[0,0]+ac[1,1])/ac.sum())
-    f1_sample.append(f1_score(y01_t, y01_t_p))
+        y01_t_p = PGM_pred(lm_tht_pred,la_sk,la_cj,y01_t)
+        ac = confusion_matrix(y01_t, y01_t_p)
+        acc_sample.append((ac[0,0]+ac[1,1])/ac.sum())
+        f1_sample.append(f1_score(y01_t, y01_t_p))
 
-    with open('results//testing_f1.txt', 'w') as f:
-        for item in f1_sample:
-            f.write("%s\n" % item)
+        with open('results//testing_f1.txt', 'w') as f:
+            for item in f1_sample:
+                f.write("%s\n" % item)
 
-    with open('results//testing_acc.txt', 'w') as f:
-        for item in acc_sample:
-            f.write("%s\n" % item)
+        with open('results//testing_acc.txt', 'w') as f:
+            for item in acc_sample:
+                f.write("%s\n" % item)
 
 
 '''
@@ -216,7 +250,7 @@ Pre-Processing driver genes Intogen
 #BLCA, BRCA ,ESCA,HNSC , LGG, LUSC,PAAD,PRAD
 #missing: ACC, CHOL, LIHC, SARC, SKCM, TCGT, UCS
 Parameters:
-    name: file name
+    name: file name (str)
 Output:
     csv file
 '''
@@ -261,10 +295,12 @@ from sklearn.ensemble import RandomForestClassifier
 
 
 def OutcomeModel(type, train, theta, y01):
-    X = pd.concat([train,theta],axis=1,sort = False)
+    X = pd.DataFrame(train,theta)
     if type == 'rf':
         clf = RandomForestClassifier(n_estimators=100, max_depth=6, random_state=0)
         output = clf.fit(X, y01)
-        #output.feature_importances_
-        #output.predict(X)
+        coef = output.feature_importances_
+        f1 = f1_score(y01,output.predict(X))
+    if type == 'lr'
         
+    return coef, f1 #, confusion_matrix(y01,output.predict(X))

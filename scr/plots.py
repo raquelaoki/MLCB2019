@@ -1,5 +1,6 @@
 import plotnine as p9
 import numpy as np
+import pandas as pd
 
 def plot_chain_sk(location,size,i,id):
     ite = 1

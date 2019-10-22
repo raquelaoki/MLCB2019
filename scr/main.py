@@ -1,17 +1,25 @@
 '''Loading libraries'''
 import pandas as pd 
 import numpy as np 
-import time
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix,f1_score
-import copy
 import sys 
 import os
 path = 'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019'
 sys.path.append(path+'\\scr')
 import functions as fc
-import plots as pl
 os.chdir(path)
+
+
+'''
+Flags
+'''
+RUN_MCMC = False
+RUN_OUTCOME = False
+RUN_PREDICTIONS = False
+
+if RUN_MCMC:  #simulations to have an ic for acc and f1
+    simulations = 1#00 
+else: 
+    simulations = 1
 
 
 '''
@@ -19,10 +27,21 @@ Note:
     - Fitting the outcome model 
     - first attempt will be a combine model with original features and latent features, in a rf, nb, nn and lr
     - model id = '12'
-    - test plots 
-    - test mcmc 
     - test outcome 
+    - explain how mcmc save values
+    - add the help explaining how to use the function 
 '''
+
+'''Hyperparameters'''
+k = 30 #Latents Dimension 
+sim = 1000 #Simulations 
+bach_size = 200 #Batch size for memory purposes 
+step1 = 10 #Saving chain every step1 steps 
+id = '13' #identification of simulation 
+
+'''Loading dataset'''
+filename = "data\\tcga_train_gexpression.txt"
+
 '''Parameters'''
 class parameters:
     __slots__ = ( 'la_cj','la_sk','la_ev','lm_phi','lm_tht')   
@@ -34,140 +53,28 @@ class parameters:
         self.lm_tht = latent_tht #string of matrix  (jk) in array format 
 
 
-'''Hyperparameters'''
-k = 30 #Latents Dimension 
-sim = 1000 #Simulations 
-bach_size = 200 #Batch size for memory purposes 
-step1 = 10 #Saving chain every step1 steps 
-id = '13' #identification of simulation 
-simulations = 1
-
-'''Loading dataset'''
-filename = "data\\tcga_train_gexpression.txt"
-#filename = "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\tcga_train_ge_balanced.txt"
    
 data = pd.read_csv(filename, sep=';')
 data = data.iloc[0:500, 0:100]
-
-
-f1_sample = []
-acc_sample = []    
+   
 for experiment in np.arange(0,simulations):  
     print('Experiment ', experiment, ' of 100')
-    '''Splitting Dataset'''
-    train, test = train_test_split(data, test_size=0.3) #random_state=22
-    #train = data
-    
-    '''Organizing columns names'''
-    remove = train.columns[[0,1]]
-    y = train.columns[1]
-    y01 = np.array(train[y])
-    train = train.drop(remove, axis = 1)
-    y01_t = np.array(test[y])
-    test = test.drop(remove, axis = 1)
-    train0 = np.matrix(train)
-    
-    
-    '''Defining variables'''
-    v = train.shape[1] #genes
-    j = train.shape[0] #patients 
-    
-    
-    '''Initial Values'''
-    current = parameters(np.repeat(0.5,j), #la_cj 0.25
-                       np.repeat(150.5,k*2).reshape(2,k), #la_sk 62
-                       np.repeat(1.0004,v), #la_ev FIXED
-                       np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k 
-                       np.repeat(150.5,j*k).reshape(j,k)) #lm_theta k x j
-                       #np.repeat(0.5, j), #la_pj
-                       #np.repeat(0.5,k)) #la_qk 
-     
-    
-    '''Creating the chains'''
-    chain_la_sk = np.tile(current.la_sk.reshape(-1,1),(1,int(bach_size/step1)))
-    chain_la_cj = np.tile(current.la_cj.reshape(-1,1),(1,int(bach_size/step1)))
-    chain_lm_tht = np.tile(current.lm_tht.reshape(-1,1),(1,int(bach_size/step1)))
-    chain_lm_phi = np.tile(current.lm_phi.reshape(-1,1),(1,int(bach_size/step1)))
-    
-    '''Sampling'''
-    start_time = time.time()    
-        
-    for ite in np.arange(0,sim//bach_size):    
-        count_s1 = 0
-        count_s2 = 0
-        chain_la_sk[:,count_s1]=current.la_sk.reshape(1,-1)
-        chain_la_cj[:,count_s1]=current.la_cj.reshape(1,-1)
-        chain_lm_tht[:,count_s1]=current.lm_tht.reshape(1,-1)
-        chain_lm_phi[:,count_s1]=current.lm_phi.reshape(1,-1)
-        print('iteration--',ite,' of ',sim//bach_size)   
-        #.print('it should be 981',data.shape)       
-        for i in np.arange(1,bach_size):
-            new  = fc.gibbs(current,train0,j,v,k,y01)
-            '''Updating chain'''
-            if i%10==0:
-                #print('------------', i, ' of ',bach_size) 
-                count_s1+=1
-                chain_la_sk[:,count_s1]=new.la_sk.reshape(1,-1)
-                chain_la_cj[:,count_s1]=new.la_cj.reshape(1,-1)
-                chain_lm_tht[:,count_s1]=new.lm_tht.reshape(1,-1)
-                chain_lm_phi[:,count_s1]=new.lm_phi.reshape(1,-1)
-                if i%90 == 0: 
-                    test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
-                    print(test1.mean(), train0.mean())
-
-    
-            current= copy.deepcopy(new )  
-        np.savetxt('results\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_sk, delimiter=',',fmt='%5s')
-        np.savetxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_cj, delimiter=',',fmt='%5s')
-        np.savetxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_tht, delimiter=',',fmt='%5s')
-        np.savetxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_phi, delimiter=',',fmt='%5s')
-    
-    
-    print("--- %s min ---" % int((time.time() - start_time)/60))
-    print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
-    
-    
+    train0, test, j, v, y01, y01_t = fc.mcmc(data,sim,bach_size,step1,k,id,RUN_MCMC)
+       
     '''Loading average values back for predictions'''
-    ite0 = 2
-    la_sk = np.loadtxt('results\\output_lask_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
-    la_cj = np.loadtxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
-    lm_phi = np.loadtxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
-    lm_tht = np.loadtxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
-    
-    
-    for ite in np.arange(ite0+1,sim//bach_size):
-        la_sk = la_sk + np.loadtxt('results\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-        la_cj = la_cj + np.loadtxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-        lm_phi = lm_phi + np.loadtxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-        lm_tht = lm_tht + np.loadtxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-    
-    la_sk = la_sk/((sim//bach_size)-1)
-    la_cj = la_cj/((sim//bach_size)-1)
-    lm_phi = lm_phi/((sim//bach_size)-1)
-    lm_tht = lm_tht/((sim//bach_size)-1)
-    
-    
-    la_sk = la_sk.reshape(2,k)
-    la_cj = la_cj.reshape(j,1)
-    lm_tht = lm_tht.reshape(j,k)
-    lm_phi = lm_phi.reshape(v,k)
-    
-
-    fc.predictions_test(test,train0,y01_t,lm_tht,la_sk,la_cj,k)
-
-
-print('acc: ',acc_sample)
-print('f1 : ', f1_sample)
-
-
+    la_sk,la_cj,lm_tht,lm_phi = fc.load_chain(id,sim,bach_size,j,v,k)
+    fc.predictions_test(test,train0,y01_t,lm_tht,la_sk,la_cj,k,RUN_PREDICTIONS)
 
 
 '''
-#PLOTS 
-
-pl.plot_chain_sk('results\\output_lask_id',sim//bach_size, 15,id)
-pl.plot_chain_cj('results\\output_lacj_id',sim//bach_size, 15)
-pl.plot_chain_tht('results\\output_lmtht_id',sim//bach_size, 15)
-pl.plot_chain_phi('results\\output_lmphi_id',sim//bach_size, 15)
-
+PLOTS: evaluating the convergency  
 '''
+#pl.plot_chain_sk('results\\output_lask_id',sim//bach_size, 15,id)
+#pl.plot_chain_cj('results\\output_lacj_id',sim//bach_size, 15)
+#pl.plot_chain_tht('results\\output_lmtht_id',sim//bach_size, 15)
+#pl.plot_chain_phi('results\\output_lmphi_id',sim//bach_size, 15)
+
+
+
+'''Outcome Model'''
+c,f = fc.OutcomeModel('rf',train0,lm_tht,y01)
