@@ -288,11 +288,12 @@ def preprocessing_dg1(name):
 
 '''
 Outcome Model
-type: nb (naive bayes), nn (neural network), lr (logistic regression), rf (random forest)
+type: nb (naive bayes),lr (logistic regression), rf (random forest)
 return: coeficients
 '''
 from sklearn.ensemble import RandomForestClassifier
-
+from sklearn.linear_model import LogisticRegression
+from sklearn.naive_bayes import GaussianNB
 
 def OutcomeModel(type, train, theta, y01):
     X = pd.DataFrame(train,theta)
@@ -301,6 +302,14 @@ def OutcomeModel(type, train, theta, y01):
         output = clf.fit(X, y01)
         coef = output.feature_importances_
         f1 = f1_score(y01,output.predict(X))
-    if type == 'lr'
-        
-    return coef, f1 #, confusion_matrix(y01,output.predict(X))
+    if type == 'lr':
+        clf = LogisticRegression(penalty='l1', solver='liblinear')
+        output = clf.fit(X, y01)
+        coef = clf.coef_
+        f1 = f1_score(y01,output.predict(X))
+    if type == 'nb':
+        clf = GaussianNB()
+        output = clf.fit(X, y01)
+        coef = ""
+        f1 = f1_score(y01,output.predict(X))
+    return coef, f1 ,confusion_matrix(y01,output.predict(X))

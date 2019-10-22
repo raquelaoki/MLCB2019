@@ -27,7 +27,7 @@ Note:
     - Fitting the outcome model 
     - first attempt will be a combine model with original features and latent features, in a rf, nb, nn and lr
     - model id = '12'
-    - test outcome 
+    - outcome model: problem with the nb, how to get coefs and prefictiosn are really bad
     - explain how mcmc save values
     - add the help explaining how to use the function 
 '''
@@ -77,4 +77,4 @@ PLOTS: evaluating the convergency
 
 
 '''Outcome Model'''
-c,f = fc.OutcomeModel('rf',train0,lm_tht,y01)
+c,f,cm = fc.OutcomeModel('nb',train0,lm_tht,y01)
