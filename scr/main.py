@@ -7,14 +7,14 @@ path = 'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019'
 sys.path.append(path+'\\scr')
 import functions as fc
 os.chdir(path)
-
+from sklearn.metrics import confusion_matrix
 
 '''
 Flags
 '''
 RUN_MCMC = False
 RUN_OUTCOME = False
-RUN_PREDICTIONS = False
+RUN_PREDICTIONS = True
 
 if RUN_MCMC:  #simulations to have an ic for acc and f1
     simulations = 1#00 
@@ -30,6 +30,7 @@ Note:
     - outcome model: problem with the nb, how to get coefs and prefictiosn are really bad
     - explain how mcmc save values
     - add the help explaining how to use the function 
+    - improve random forest
 '''
 
 '''Hyperparameters'''
@@ -37,7 +38,7 @@ k = 30 #Latents Dimension
 sim = 1000 #Simulations 
 bach_size = 200 #Batch size for memory purposes 
 step1 = 10 #Saving chain every step1 steps 
-id = '13' #identification of simulation 
+id = '12' #identification of simulation 
 
 '''Loading dataset'''
 filename = "data\\tcga_train_gexpression.txt"
@@ -55,7 +56,7 @@ class parameters:
 
    
 data = pd.read_csv(filename, sep=';')
-data = data.iloc[0:500, 0:100]
+#data = data.iloc[0:500, 0:100]
    
 for experiment in np.arange(0,simulations):  
     print('Experiment ', experiment, ' of 100')
@@ -63,8 +64,11 @@ for experiment in np.arange(0,simulations):
        
     '''Loading average values back for predictions'''
     la_sk,la_cj,lm_tht,lm_phi = fc.load_chain(id,sim,bach_size,j,v,k)
-    fc.predictions_test(test,train0,y01_t,lm_tht,la_sk,la_cj,k,RUN_PREDICTIONS)
+    y01_t_pred = fc.predictions_test(test,train0,y01_t,lm_tht,la_sk,la_cj,k,RUN_PREDICTIONS)
 
+#
+confusion_matrix(y01,fc.PGM_pred(lm_tht,la_sk,la_cj))  
+confusion_matrix(y01_t,y01_t_pred)  
 
 '''
 PLOTS: evaluating the convergency  
@@ -77,4 +81,7 @@ PLOTS: evaluating the convergency
 
 
 '''Outcome Model'''
-c,f,cm = fc.OutcomeModel('nb',train0,lm_tht,y01)
+c,f,cm = fc.OutcomeModel('rf',train0,lm_tht,y01)
+print(c,'\n',f,'\n',cm)
+c,f,cm = fc.OutcomeModel('lr',train0,lm_tht,y01)
+print(c,'\n',f,'\n',cm)

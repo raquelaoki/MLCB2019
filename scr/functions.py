@@ -230,7 +230,7 @@ def predictions_test(test, train0,y01_t,lm_tht,la_sk,la_cj,k,RUN):
             sim_list = sim_list.sort_values(by=['sim'],  ascending=False)
             lm_tht_pred[j,:] = lm_tht[list(sim_list.index[0:6])].mean(axis=0)
 
-        y01_t_p = PGM_pred(lm_tht_pred,la_sk,la_cj,y01_t)
+        y01_t_p = PGM_pred(lm_tht_pred,la_sk,la_cj)
         ac = confusion_matrix(y01_t, y01_t_p)
         acc_sample.append((ac[0,0]+ac[1,1])/ac.sum())
         f1_sample.append(f1_score(y01_t, y01_t_p))
@@ -242,7 +242,7 @@ def predictions_test(test, train0,y01_t,lm_tht,la_sk,la_cj,k,RUN):
         with open('results//testing_acc.txt', 'w') as f:
             for item in acc_sample:
                 f.write("%s\n" % item)
-
+        return y01_t_p
 
 '''
 Pre-Processing driver genes Intogen
@@ -288,7 +288,8 @@ def preprocessing_dg1(name):
 
 '''
 Outcome Model
-type: nb (naive bayes),lr (logistic regression), rf (random forest)
+type:lr (logistic regression), rf (random forest)
+missing:  nb (naive bayes) (lack of coef)
 return: coeficients
 '''
 from sklearn.ensemble import RandomForestClassifier
