@@ -24,13 +24,12 @@ else:
 
 '''
 Note: 
-    - Fitting the outcome model 
-    - first attempt will be a combine model with original features and latent features, in a rf, nb, nn and lr
     - model id = '12'
     - outcome model: problem with the nb, how to get coefs and prefictiosn are really bad
     - explain how mcmc save values
     - add the help explaining how to use the function 
-    - improve random forest
+    - outcome model should have train and testing set? check with the baseline paper 
+    
 '''
 
 '''Hyperparameters'''
@@ -83,5 +82,6 @@ PLOTS: evaluating the convergency
 '''Outcome Model'''
 c,f,cm = fc.OutcomeModel('rf',train0,lm_tht,y01)
 print(c,'\n',f,'\n',cm)
+
 c,f,cm = fc.OutcomeModel('lr',train0,lm_tht,y01)
 print(c,'\n',f,'\n',cm)

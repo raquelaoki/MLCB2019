@@ -299,15 +299,26 @@ from sklearn.naive_bayes import GaussianNB
 def OutcomeModel(type, train, theta, y01):
     X = pd.DataFrame(train,theta)
     if type == 'rf':
-        clf = RandomForestClassifier(n_estimators=100, max_depth=6, random_state=0)
+        clf = RandomForestClassifier(n_estimators=100, max_depth=15, random_state=0)
         output = clf.fit(X, y01)
         coef = output.feature_importances_
         f1 = f1_score(y01,output.predict(X))
+        clf0 = RandomForestClassifier(n_estimators=100, max_depth=15, random_state=0)
+        clf1 = RandomForestClassifier(n_estimators=100, max_depth=15, random_state=0)
+
+        print('f1 training and lm ',f1)
+        print("\nf1 just training set",f1_score(y01,clf0.fit(pd.DataFrame(train),y01).predict(pd.DataFrame(train))))
+        print("\nf1 just theta set",f1_score(y01,clf1.fit(pd.DataFrame(theta),y01).predict(pd.DataFrame(theta))))
     if type == 'lr':
         clf = LogisticRegression(penalty='l1', solver='liblinear')
         output = clf.fit(X, y01)
         coef = clf.coef_
         f1 = f1_score(y01,output.predict(X))
+        clf0 = LogisticRegression(penalty='l1', solver='liblinear')
+        clf1 = LogisticRegression(penalty='l1', solver='liblinear')
+        print('f1 training and lm ',f1)
+        print("\nf1 just training set",f1_score(y01,clf0.fit(pd.DataFrame(train),y01).predict(pd.DataFrame(train))))
+        print("\nf1 just theta set",f1_score(y01,clf1.fit(pd.DataFrame(theta),y01).predict(pd.DataFrame(theta))))
     if type == 'nb':
         clf = GaussianNB()
         output = clf.fit(X, y01)
