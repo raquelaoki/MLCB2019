@@ -193,7 +193,7 @@ Parameters:
 Return:
     y_pred: Predictions 0/1 (np.array)
  '''
-def PGM_pred(theta,sk1,cj,y):
+def PGM_pred(theta,sk1,cj):
     y0 = gamma.logpdf(x=theta,a = sk1[0,:],scale = 1)
     y1 = gamma.logpdf(x=theta,a = sk1[1,:],scale = 1)
     y3 = y1-y0
@@ -213,7 +213,7 @@ Paramters:
     lm_tht, la_sk, la_cj: parameter's predicted values (average from the chain) (np.matrix)
     k: latente size (int)
 Return:
-    null, save two txt files
+    y01 [0,1] predictions for testing set and save two txt files
 '''
 def predictions_test(test, train0,y01_t,lm_tht,la_sk,la_cj,k,RUN):
     #print(test.shape,train0.shape,len(y01_t),lm_tht.shape)
@@ -285,6 +285,24 @@ def preprocessing_dg1(name):
     cancer_list = ["ACC", "BLCA", "BRCA", "CHOL", "ESCA","HNSC", "LGG", "LIHC", "LUSC", "PAAD", "PRAD", "SARC", "SKCM", "TGCT", "UCS"]
     dgenes = dgenes.loc[dgenes['cancer'].isin(cancer_list)]
     dgenes.to_csv('data\\'+name,index=False)
+
+
+def cgc():
+    path = 'data\\cancer_gene_census.csv'
+    dgenes = pd.read_csv('data\\cancer_gene_census.csv',sep=',')
+    #remove = ['Synonyms',]
+    #dgenes = dgenes.dropna(axis=1)
+    #print(dgenes.loc[dgenes['Tumour Types(Somatic)'].isna(),'Tumour Types(Somatic)'].shape)
+    #dgenes.loc[dgenes['Tumour Types(Somatic)'].isna(),'Tumour Types(Somatic)'] = dgenes['Tumour Types(Somatic)']
+    #print(dgenes.loc[dgenes['Tumour Types(Somatic)'].isna(),'Tumour Types(Somatic)'].shape)
+    dgenes['Tumour Types(Somatic)'] = dgenes['Tumour Types(Somatic)'].fillna(dgenes['Tumour Types(Germline)'])
+    return dgenes
+
+
+
+
+
+
 
 '''
 Outcome Model

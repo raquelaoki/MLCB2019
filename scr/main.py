@@ -8,6 +8,8 @@ sys.path.append(path+'\\scr')
 import functions as fc
 os.chdir(path)
 from sklearn.metrics import confusion_matrix
+pd.set_option('display.max_columns', 500)
+
 
 '''
 Flags
@@ -20,7 +22,6 @@ if RUN_MCMC:  #simulations to have an ic for acc and f1
     simulations = 1#00 
 else: 
     simulations = 1
-
 
 '''
 Note: 
@@ -85,3 +86,7 @@ print(c,'\n',f,'\n',cm)
 
 c,f,cm = fc.OutcomeModel('lr',train0,lm_tht,y01)
 print(c,'\n',f,'\n',cm)
+
+
+'''Driver Genes'''
+bd = fc.cgc()
