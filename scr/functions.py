@@ -300,13 +300,13 @@ def cgc():
     #treat cases where these two values are different
     #starnd names of tumors
 
-    ct_rawnames = [dgenes.iloc[:,9].unique(),dgenes.iloc[:,10].unique()]
-    ct_rawnames2 = [item for sublist in ct_rawnames for item in sublist]
-    ct_rawnames2 = [str(item).split(", ") for item in ct_rawnames2]
-    ct_rawnames2 = [item for sublist in ct_rawnames2 for item in sublist]
-    ct_rawnames2 = list(set(ct_rawnames2))
+    #ct_rawnames = [dgenes.iloc[:,9].unique(),dgenes.iloc[:,10].unique()]
+    #ct_rawnames2 = [item for sublist in ct_rawnames for item in sublist]
+    #ct_rawnames2 = [str(item).split(", ") for item in ct_rawnames2]
+    #ct_rawnames2 = [item for sublist in ct_rawnames2 for item in sublist]
+    #ct_rawnames2 = list(set(ct_rawnames2))
 
-    return dgenes,ct_rawnames2
+    return dgenes#,ct_rawnames2
 
 
 
@@ -331,22 +331,22 @@ def OutcomeModel(type, train, theta, y01):
         output = clf.fit(X, y01)
         coef = output.feature_importances_
         f1 = f1_score(y01,output.predict(X))
-        clf0 = RandomForestClassifier(n_estimators=100, max_depth=15, random_state=0)
-        clf1 = RandomForestClassifier(n_estimators=100, max_depth=15, random_state=0)
+        #clf0 = RandomForestClassifier(n_estimators=100, max_depth=15, random_state=0)
+        #clf1 = RandomForestClassifier(n_estimators=100, max_depth=15, random_state=0)
 
-        print('f1 training and lm ',f1)
-        print("\nf1 just training set",f1_score(y01,clf0.fit(pd.DataFrame(train),y01).predict(pd.DataFrame(train))))
-        print("\nf1 just theta set",f1_score(y01,clf1.fit(pd.DataFrame(theta),y01).predict(pd.DataFrame(theta))))
+        #print('f1 training and lm ',f1)
+        #print("\nf1 just training set",f1_score(y01,clf0.fit(pd.DataFrame(train),y01).predict(pd.DataFrame(train))))
+        #print("\nf1 just theta set",f1_score(y01,clf1.fit(pd.DataFrame(theta),y01).predict(pd.DataFrame(theta))))
     if type == 'lr':
         clf = LogisticRegression(penalty='l1', solver='liblinear')
         output = clf.fit(X, y01)
         coef = clf.coef_
         f1 = f1_score(y01,output.predict(X))
-        clf0 = LogisticRegression(penalty='l1', solver='liblinear')
-        clf1 = LogisticRegression(penalty='l1', solver='liblinear')
-        print('f1 training and lm ',f1)
-        print("\nf1 just training set",f1_score(y01,clf0.fit(pd.DataFrame(train),y01).predict(pd.DataFrame(train))))
-        print("\nf1 just theta set",f1_score(y01,clf1.fit(pd.DataFrame(theta),y01).predict(pd.DataFrame(theta))))
+        #clf0 = LogisticRegression(penalty='l1', solver='liblinear')
+        #clf1 = LogisticRegression(penalty='l1', solver='liblinear')
+        #print('f1 training and lm ',f1)
+        #print("\nf1 just training set",f1_score(y01,clf0.fit(pd.DataFrame(train),y01).predict(pd.DataFrame(train))))
+        #print("\nf1 just theta set",f1_score(y01,clf1.fit(pd.DataFrame(theta),y01).predict(pd.DataFrame(theta))))
     if type == 'nb':
         clf = GaussianNB()
         output = clf.fit(X, y01)

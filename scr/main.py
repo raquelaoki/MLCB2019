@@ -30,6 +30,7 @@ Note:
     - explain how mcmc save values
     - add the help explaining how to use the function 
     - outcome model should have train and testing set? check with the baseline paper 
+    - updating training set to force the presence of known driver genes
     
 '''
 
@@ -84,9 +85,42 @@ PLOTS: evaluating the convergency
 c,f,cm = fc.OutcomeModel('rf',train0,lm_tht,y01)
 print(c,'\n',f,'\n',cm)
 
-c,f,cm = fc.OutcomeModel('lr',train0,lm_tht,y01)
-print(c,'\n',f,'\n',cm)
+#c,f,cm = fc.OutcomeModel('lr',train0,lm_tht,y01)
+#print(c,'\n',f,'\n',cm)
 
 
 '''Driver Genes'''
-bd,raw = fc.cgc()
+cgc_list = fc.cgc()
+
+
+
+'''Exploring Outcome Model's results'''
+c_gene = data.drop(['patients','y'],axis=1).columns
+gene_coef = pd.DataFrame({'genes':c_gene,
+                          'coefs': c[0]})
+
+gene_coef['coefs_abs'] = abs(gene_coef['coefs'] )    
+gene_coef.sort_values(['coefs_abs'], axis = 0, ascending=False,inplace=True)
+gene_coef.head()
+
+
+#Selecting top 10% (200 genes)
+gene_coef_sub = gene_coef.iloc[0:200,].reset_index( drop='True')
+
+#merging
+
+gene_coef_sub = pd.merge(gene_coef_sub,cgc_list, left_on = 'genes',right_on='Gene Symbol')
+
+print(gene_coef_sub.shape)
+
+
+
+
+
+
+
+
+
+
+
+
