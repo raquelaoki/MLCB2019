@@ -296,7 +296,17 @@ def cgc():
     #dgenes.loc[dgenes['Tumour Types(Somatic)'].isna(),'Tumour Types(Somatic)'] = dgenes['Tumour Types(Somatic)']
     #print(dgenes.loc[dgenes['Tumour Types(Somatic)'].isna(),'Tumour Types(Somatic)'].shape)
     dgenes['Tumour Types(Somatic)'] = dgenes['Tumour Types(Somatic)'].fillna(dgenes['Tumour Types(Germline)'])
-    return dgenes
+
+    #treat cases where these two values are different
+    #starnd names of tumors
+
+    ct_rawnames = [dgenes.iloc[:,9].unique(),dgenes.iloc[:,10].unique()]
+    ct_rawnames2 = [item for sublist in ct_rawnames for item in sublist]
+    ct_rawnames2 = [str(item).split(", ") for item in ct_rawnames2]
+    ct_rawnames2 = [item for sublist in ct_rawnames2 for item in sublist]
+    ct_rawnames2 = list(set(ct_rawnames2))
+
+    return dgenes,ct_rawnames2
 
 
 
