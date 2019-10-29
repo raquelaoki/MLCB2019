@@ -21,8 +21,9 @@ setwd("C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019")
 donwload_clinical = FALSE
 donwload_mutation = FALSE
 process_mutation = FALSE
+process_clinical = FALSE
 
-theRootDir <- "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\DataNew\\"
+theRootDir <- "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\data\\"
 #Cancer types, MESO had to be removed for problems on the mutations part
 diseaseAbbrvs <- c("ACC", "BLCA", "BRCA", "CHOL", "ESCA", "HNSC", "LGG", "LIHC", "LUSC", "PAAD", "PRAD", "SARC", "SKCM", "TGCT", "UCS")
 diseaseAbbrvs_l <- c("acc", 'BRCA' ,"blca", "chol","esca", "hnsc", "lgg", "lihc", "lusc",  "paad", "prad", "sarc", "skcm",  "tgct", "ucs")
@@ -57,29 +58,30 @@ if(donwload_mutation){
 
 #------------------------ CLINICAL INFORMATION DATA PROCESSING
 #NOTE: columns have different names in each cancer type. These are more commom among them all
-cnames = c("bcr_patient_barcode",'new_tumor_event_dx_indicator','abr') #"gender", "race" , "ethnicity", "tumor_status", "vital_status", #metastases is new_tumor_event
-
-
-#Files names
-fname1 <- paste(clinicalFilesDir,"nationwidechildrens.org_clinical_patient_",diseaseAbbrvs_l,".txt" , sep='')
-
-#Rotine to read the files, select the important features, and bind in a unique dataset
-i = 1
-bd.aux = read.csv(fname1[i], sep = "\t")
-bd.aux$abr = diseaseAbbrvs[i]
-bd.c = subset(bd.aux, select = cnames)
-
-for(i in 2:length(fname1)){
-  bd.aux = read.csv(fname1[i], sep = "\t", header = T)
+if(process_clinical){
+  cnames = c("bcr_patient_barcode",'new_tumor_event_dx_indicator','abr') #"gender", "race" , "ethnicity", "tumor_status", "vital_status", #metastases is new_tumor_event
+  
+  
+  #Files names
+  fname1 <- paste(clinicalFilesDir,"nationwidechildrens.org_clinical_patient_",diseaseAbbrvs_l,".txt" , sep='')
+  
+  #Rotine to read the files, select the important features, and bind in a unique dataset
+  i = 1
+  bd.aux = read.csv(fname1[i], sep = "\t")
   bd.aux$abr = diseaseAbbrvs[i]
-  bd.c = rbind(bd.c, subset(bd.aux, select = cnames))
+  bd.c = subset(bd.aux, select = cnames)
+  
+  for(i in 2:length(fname1)){
+    bd.aux = read.csv(fname1[i], sep = "\t", header = T)
+    bd.aux$abr = diseaseAbbrvs[i]
+    bd.c = rbind(bd.c, subset(bd.aux, select = cnames))
+  }
+  
+  bd.c = subset(bd.c, new_tumor_event_dx_indicator=="YES"|new_tumor_event_dx_indicator=="NO")
+  bd.c$new_tumor_event_dx_indicator  = as.character(bd.c$new_tumor_event_dx_indicator)
+  
+  write.table(bd.c,paste(theRootDir,'tcga_cli.txt',sep=''), row.names = F, sep = ';')
 }
-
-bd.c = subset(bd.c, new_tumor_event_dx_indicator=="YES"|new_tumor_event_dx_indicator=="NO")
-bd.c$new_tumor_event_dx_indicator  = as.character(bd.c$new_tumor_event_dx_indicator)
-
-write.table(bd.c,paste(theRootDir,'tcga_cli.txt',sep=''), row.names = F, sep = ';')
-
 #------------------------  MAF FILES / MUTATION DATA PROCESSING (time consuming)
 #INSTALLING PACKAGES
 if (!require("BiocManager"))
@@ -187,7 +189,7 @@ dim(bd)
 write.table(bd,paste(theRootDir,'tcga_train_binary.txt',sep=''), row.names = F, sep = ';')
 
 
-#-------------------------- GENE EXPRESSION GENE SELECTION
+#-------------------------- GENE EXPRESSION GENE SELECTION - keeping the driver genes
 bd = read.table(paste(theRootDir,'tcga_rna_old.txt',sep=''), header=T, sep = ';')
 bd = subset(bd, select = -c(patients2))
 head(bd[,1:10])
@@ -203,17 +205,20 @@ cl$y[cl$y=='YES'] = 1
 bd1 = merge(cl,bd,by.x = 'patients',by.y = 'patients', all = F)
 head(bd1[,1:10])
 
-#check old code
+cgc = read.table(paste(theRootDir,'cancer_gene_census.csv',sep = ''),header=T, sep=',')[,c(1,5)]
+
 #eliminate the ones with low variance
 require(resample)
 var = colVars(bd1[,-c(1,2)])
 var[is.na(var)]=0
-#var = subset(var, !is.na(col))
-datavar = data.frame(col = 1:dim(bd1)[2], var = c(100000,100000,var))
-dim(datavar)
-#datavar = subset(datavar, var>4.767836e+04 )
-datavar = datavar[datavar$var>26604.77,]
-dim(datavar)
+datavar = data.frame(col = 1:dim(bd1)[2], colname = names(bd1), var = c(100000,100000,var))
+
+#adding driver gene info 
+#42 are not found
+datavar = merge(datavar, cgc, by.x='colname','Gene.Symbol',all.x=T)
+rows_eliminate = rownames(datavar)[datavar$var<26604.77 & is.na(datavar$Tier)]
+datavar = datavar[-as.numeric(as.character(rows_eliminate)),]
+
 bd1 = bd1[,c(datavar$col)]
 head(bd1[,1:10])
 dim(bd1)
@@ -225,11 +230,17 @@ bd1 = bd1[,order]
 #eliminate the ones wich vales between 0 and 1 are not signnificantly different
 bdy0 = subset(bd1, y==0)
 bdy1 = subset(bd1, y==1)
-pvalues = c()
+pvalues = rep(0,dim(bd1)[2])
 for(i in 3:dim(bd1)[2]){
-  pvalues[i-2] =  t.test(bdy0[,i],bdy1[,i])$p.value
-  bd1[,i] = log(bd1[,i]+1)
+  #pvalues[i] =  t.test(bdy0[,i],bdy1[,i])$p.value
+  #bd1[,i] = log(bd1[,i]+1)
+  pvalues[i] = wilcox.test(bdy0[,i],bdy1[,i])$p.value
 }
+
+datap = data.frame(col = 1:dim(bd1)[2], colname = names(bd1), pvalues = pvalues)
+datap = merge(datap, cgc, by.x='colname','Gene.Symbol',all.x=T)
+rows_eliminate = rownames(datap)[datap$pvalues>0.00000002 & is.na(datap$Tier)]
+datap = datap[-as.numeric(as.character(rows_eliminate)),]
 
 #t.test:
 #H0: y = x
@@ -237,13 +248,12 @@ for(i in 3:dim(bd1)[2]){
 #to reject the null H0 the pvalue must be <0.5
 #i want to keep on my data the genes with y dif x, this
 #i want to filter small p values.
-ind = c(3:dim(bd1)[2])[pvalues<=0.00000001]
-bd1 = bd1[,c(1,2,ind)]
+bd1 = bd1[,c(datap$col)]
 head(bd1[,1:10])
 dim(bd1)
 
 
-write.table(bd1,paste(theRootDir,'tcga_train_gexpression.txt',sep=''), row.names = F, sep = ';')
+write.table(bd1,paste(theRootDir,'tcga_train_gexpression_cgc.txt',sep=''), row.names = F, sep = ';')
 
 #balancing the dataset
 bd = read.table(paste(theRootDir,'tcga_train_gexpression.txt',sep=''), header = T, sep = ';')
