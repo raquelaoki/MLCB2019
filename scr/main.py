@@ -14,7 +14,7 @@ pd.set_option('display.max_columns', 500)
 '''
 Flags
 '''
-RUN_MCMC = False
+RUN_MCMC = True
 RUN_OUTCOME = False
 RUN_PREDICTIONS = True
 
@@ -39,10 +39,10 @@ k = 30 #Latents Dimension
 sim = 1000 #Simulations 
 bach_size = 200 #Batch size for memory purposes 
 step1 = 10 #Saving chain every step1 steps 
-id = '12' #identification of simulation 
+id = '14' #identification of simulation 
 
 '''Loading dataset'''
-filename = "data\\tcga_train_gexpression.txt"
+filename = "data\\tcga_train_gexpression_cgc.txt" #
 
 '''Parameters'''
 class parameters:

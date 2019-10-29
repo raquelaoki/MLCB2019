@@ -233,7 +233,7 @@ bdy1 = subset(bd1, y==1)
 pvalues = rep(0,dim(bd1)[2])
 for(i in 3:dim(bd1)[2]){
   #pvalues[i] =  t.test(bdy0[,i],bdy1[,i])$p.value
-  #bd1[,i] = log(bd1[,i]+1)
+  bd1[,i] = log(bd1[,i]+1)
   pvalues[i] = wilcox.test(bdy0[,i],bdy1[,i])$p.value
 }
 
@@ -251,6 +251,10 @@ datap = datap[-as.numeric(as.character(rows_eliminate)),]
 bd1 = bd1[,c(datap$col)]
 head(bd1[,1:10])
 dim(bd1)
+
+order = c('patients','y',names(bd1))
+order = unique(order)
+bd1 = bd1[,order]
 
 
 write.table(bd1,paste(theRootDir,'tcga_train_gexpression_cgc.txt',sep=''), row.names = F, sep = ';')

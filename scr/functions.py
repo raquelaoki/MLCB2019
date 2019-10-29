@@ -44,8 +44,15 @@ def gibbs(current,train0,j,v,k,y01):
         lvjk[:,:,ki] = np.dot(0.795*current.lm_phi[:,ki].reshape(v,1), current.lm_tht[:,ki].reshape(1,j))
     lvk = np.random.poisson(lvjk.sum(axis=1))
     ljk = np.random.poisson(lvjk.sum(axis=0))
+    #print(new.lm_tht.shape, ljk.shape,j,v,k )
+    #print('\nphi:',new.lm_phi.shape)
     for ki in np.arange(k):
         new.lm_phi[:,ki] = np.random.dirichlet(alpha = (lvk[:,ki]+current.la_ev),size = 1)
+        #print('done')
+        #print(y01)
+        #print(ki)
+        #print(current.la_sk[y01,ki].shape)
+        #print(ljk[:,ki].shape)
         new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]).reshape(j),
                   scale=np.repeat(0.5,j).reshape(j))
 
@@ -80,7 +87,8 @@ Return
 def mcmc(data, sim, bach_size, step1,k,id,run):
     '''Splitting Dataset'''
     train, test = train_test_split(data, test_size=0.3,random_state=22) #random_state=22
-
+    train = train.reset_index(drop=True)
+    test = test.reset_index(drop=True)
     '''Organizing columns names'''
     remove = train.columns[[0,1]]
     y = train.columns[1]
