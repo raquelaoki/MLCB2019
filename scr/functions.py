@@ -90,11 +90,13 @@ def mcmc(data, sim, bach_size, step1,k,id,run):
     train = train.reset_index(drop=True)
     test = test.reset_index(drop=True)
     '''Organizing columns names'''
-    remove = train.columns[[0,1]]
+    remove = train.columns[[0,1,2]]
     y = train.columns[1]
     y01 = np.array(train[y])
+    abr = np.array(train[train.columns[2]])
     train = train.drop(remove, axis = 1)
     y01_t = np.array(test[y])
+    abr_t = np.array(test[test.columns[2]])
     test = test.drop(remove, axis = 1)
     train0 = np.matrix(train)
 
@@ -153,7 +155,7 @@ def mcmc(data, sim, bach_size, step1,k,id,run):
 
         print("--- %s min ---" % int((time.time() - start_time)/60))
         print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
-    return train0,test, j, v, y01, y01_t
+    return train0,test, j, v, y01, y01_t, abr, abr_t
 
 '''
 Load chains of values after MCMC
@@ -243,13 +245,14 @@ def predictions_test(test, train0,y01_t,lm_tht,la_sk,la_cj,k,RUN):
         acc_sample.append((ac[0,0]+ac[1,1])/ac.sum())
         f1_sample.append(f1_score(y01_t, y01_t_p))
 
-        with open('results//testing_f1.txt', 'w') as f:
+        with open('results//test_set_f1.txt', 'w') as f:
             for item in f1_sample:
                 f.write("%s\n" % item)
 
-        with open('results//testing_acc.txt', 'w') as f:
+        with open('results//test_set_acc.txt', 'w') as f:
             for item in acc_sample:
                 f.write("%s\n" % item)
+        print(f1_sample)
         return y01_t_p
 
 '''

@@ -22,6 +22,10 @@ donwload_clinical = FALSE
 donwload_mutation = FALSE
 process_mutation = FALSE
 process_clinical = FALSE
+merge_clinical_mutation = FALSE
+genes_selection = TRUE
+dataset_balancing = FALSE
+
 
 theRootDir <- "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\data\\"
 #Cancer types, MESO had to be removed for problems on the mutations part
@@ -130,141 +134,154 @@ if(process_mutation){
 
 #------------------------ MERGE CLINICAL INFORMATION AND MUTATION
 
-bd.m = read.csv(paste(theRootDir, 'tcga_mu.txt',sep=''), header=T, sep=',')
-bd.c = read.csv(paste(theRootDir, 'tcga_cli.txt',sep=''), header = T, sep=';')
-
-
-#Transposing mutation dataset and fixing patient id (time consuming)
-bd.m = t(bd.m)
-bd.m = data.frame(rownames(bd.m),bd.m)
-rownames(bd.m) = NULL
-for( i in 1:dim(bd.m)[2]){
-  names(bd.m)[i] = as.character(bd.m[1,i])
+if(merge_clinical_mutation){
+  bd.m = read.csv(paste(theRootDir, 'tcga_mu.txt',sep=''), header=T, sep=',')
+  bd.c = read.csv(paste(theRootDir, 'tcga_cli.txt',sep=''), header = T, sep=';')
+  
+  
+  #Transposing mutation dataset and fixing patient id (time consuming)
+  bd.m = t(bd.m)
+  bd.m = data.frame(rownames(bd.m),bd.m)
+  rownames(bd.m) = NULL
+  for( i in 1:dim(bd.m)[2]){
+    names(bd.m)[i] = as.character(bd.m[1,i])
+  }
+  bd.m = bd.m[-1,]
+  names(bd.m)[1] = 'bcr_patient_barcode'
+  bd.m$bcr_patient_barcode = as.character(bd.m$bcr_patient_barcode)
+  bd.m$bcr_patient_barcode = gsub(pattern = '.', replacement = '-',bd.m$bcr_patient_barcode, fixed = T)
+  head(bd.m[,c(1:10)])
+  
+  
+  #Creating a variable indicator with the prediction value in the 0/1 format
+  bd.c$y = as.character(bd.c$new_tumor_event_dx_indicator)
+  bd.c$y[bd.c$y=="NO"] = 0
+  bd.c$y[bd.c$y=="YES"] = 1
+  bd.c = subset(bd.c, select = -c(new_tumor_event_dx_indicator))
+  
+  #Merge: this part has problems, the intersection between the two datasets eliminate many good patients of our sampel
+  bd = merge(bd.c,bd.m, by = 'bcr_patient_barcode' , all=F)
+  bd$bcr_patient_barcode = as.character(bd$bcr_patient_barcode)
+  bd$abr = as.character(bd$abr)
+  head(bd[,c(1:10)])
+  table(bd$y,bd$abr)
+  prop.table(table(bd$y))
+  
+  write.table(bd,paste(theRootDir,'tcga_train.txt',sep=''), row.names = F, sep = ';')
 }
-bd.m = bd.m[-1,]
-names(bd.m)[1] = 'bcr_patient_barcode'
-bd.m$bcr_patient_barcode = as.character(bd.m$bcr_patient_barcode)
-bd.m$bcr_patient_barcode = gsub(pattern = '.', replacement = '-',bd.m$bcr_patient_barcode, fixed = T)
-head(bd.m[,c(1:10)])
 
-
-#Creating a variable indicator with the prediction value in the 0/1 format
-bd.c$y = as.character(bd.c$new_tumor_event_dx_indicator)
-bd.c$y[bd.c$y=="NO"] = 0
-bd.c$y[bd.c$y=="YES"] = 1
-bd.c = subset(bd.c, select = -c(new_tumor_event_dx_indicator))
-
-#Merge: this part has problems, the intersection between the two datasets eliminate many good patients of our sampel
-bd = merge(bd.c,bd.m, by = 'bcr_patient_barcode' , all=F)
-bd$bcr_patient_barcode = as.character(bd$bcr_patient_barcode)
-bd$abr = as.character(bd$abr)
-head(bd[,c(1:10)])
-table(bd$y,bd$abr)
-prop.table(table(bd$y))
-
-write.table(bd,paste(theRootDir,'tcga_train.txt',sep=''), row.names = F, sep = ';')
-
-#------------------------ GENES SELECTION
-bd = read.table(paste(theRootDir,'tcga_train.txt',sep=''), header=T, sep = ';')
-head(bd[,c(1:10)])
-dim(bd)
-
-#1) Eliminating genes mutated less than 15 times among all patients
-el1 = colSums(bd[,-c(1,2,3)])
-el1 = names(el1[el1<=15])
-col1 = which(names(bd) %in% el1)
-bd = bd[,-col1]
-dim(bd)
-write.table(bd,paste(theRootDir,'tcga_train_filted.txt',sep=''), row.names = F, sep = ';')
-
-
-#2) Eliminating genes mutated less than 15 times among all patients
-bd[,-c(1,2,3)][bd[,-c(1,2,3)]>=1]=1
-el1 = colSums(bd[,-c(1,2,3)])
-summary(el1)
-el1 = names(el1[el1<=30])
-col1 = which(names(bd) %in% el1)
-bd = bd[,-col1]
-dim(bd)
-write.table(bd,paste(theRootDir,'tcga_train_binary.txt',sep=''), row.names = F, sep = ';')
-
+#------------------------ GENES SELECTION - mutation 
+if(genes_mutation_selection){
+  bd = read.table(paste(theRootDir,'tcga_train.txt',sep=''), header=T, sep = ';')
+  head(bd[,c(1:10)])
+  dim(bd)
+  
+  #1) Eliminating genes mutated less than 15 times among all patients
+  el1 = colSums(bd[,-c(1,2,3)])
+  el1 = names(el1[el1<=15])
+  col1 = which(names(bd) %in% el1)
+  bd = bd[,-col1]
+  dim(bd)
+  write.table(bd,paste(theRootDir,'tcga_train_filted.txt',sep=''), row.names = F, sep = ';')
+  
+  
+  #2) Eliminating genes mutated less than 15 times among all patients
+  bd[,-c(1,2,3)][bd[,-c(1,2,3)]>=1]=1
+  el1 = colSums(bd[,-c(1,2,3)])
+  summary(el1)
+  el1 = names(el1[el1<=30])
+  col1 = which(names(bd) %in% el1)
+  bd = bd[,-col1]
+  dim(bd)
+  write.table(bd,paste(theRootDir,'tcga_train_binary.txt',sep=''), row.names = F, sep = ';')
+}
 
 #-------------------------- GENE EXPRESSION GENE SELECTION - keeping the driver genes
-bd = read.table(paste(theRootDir,'tcga_rna_old.txt',sep=''), header=T, sep = ';')
-bd = subset(bd, select = -c(patients2))
-head(bd[,1:10])
-dim(bd)
+if(genes_selection){
+  bd = read.table(paste(theRootDir,'tcga_rna_old.txt',sep=''), header=T, sep = ';')
+  bd = subset(bd, select = -c(patients2))
+  head(bd[,1:10])
+  dim(bd)
 
-cl = read.table(paste(theRootDir,'tcga_cli_old.txt',sep=''), header=T, sep = ';')
-cl = subset(cl, select = c(patients, new_tumor_event_dx_indicator))
-names(cl)[2] = 'y'
-cl$y = as.character(cl$y)
-cl$y[cl$y=='NO'] = 0
-cl$y[cl$y=='YES'] = 1
+  cl = read.table(paste(theRootDir,'tcga_cli_old.txt',sep=''), header=T, sep = ';')
+  cl = subset(cl, select = c(patients, new_tumor_event_dx_indicator,abr))
+  names(cl)[2] = 'y'
+  cl$y = as.character(cl$y)
+  cl$y[cl$y=='NO'] = 0
+  cl$y[cl$y=='YES'] = 1
 
-bd1 = merge(cl,bd,by.x = 'patients',by.y = 'patients', all = F)
-head(bd1[,1:10])
+  bd1 = merge(cl,bd,by.x = 'patients',by.y = 'patients', all = F)
+  head(bd1[,1:10])
 
-cgc = read.table(paste(theRootDir,'cancer_gene_census.csv',sep = ''),header=T, sep=',')[,c(1,5)]
+  cgc = read.table(paste(theRootDir,'cancer_gene_census.csv',sep = ''),header=T, sep=',')[,c(1,5)]
 
-#eliminate the ones with low variance
-require(resample)
-var = colVars(bd1[,-c(1,2)])
-var[is.na(var)]=0
-datavar = data.frame(col = 1:dim(bd1)[2], colname = names(bd1), var = c(100000,100000,var))
+  #eliminate the ones with low variance
+  require(resample)
+  exception = c(1,2,3)
+  var = colVars(bd1[,-exception])
+  var[is.na(var)]=0
+  datavar = data.frame(col = 1:dim(bd1)[2], colname = names(bd1), var = c(rep(100000,length(exception)),var))
 
-#adding driver gene info 
-#42 are not found
-datavar = merge(datavar, cgc, by.x='colname','Gene.Symbol',all.x=T)
-rows_eliminate = rownames(datavar)[datavar$var<26604.77 & is.na(datavar$Tier)]
-datavar = datavar[-as.numeric(as.character(rows_eliminate)),]
+  #adding driver gene info 
+  #42 are not found
+  datavar = merge(datavar, cgc, by.x='colname','Gene.Symbol',all.x=T)
+  rows_eliminate = rownames(datavar)[datavar$var<2 & is.na(datavar$Tier)]#26604.77
+  datavar = datavar[-as.numeric(as.character(rows_eliminate)),]
 
-bd1 = bd1[,c(datavar$col)]
-head(bd1[,1:10])
-dim(bd1)
-
-order = c('patients','y',names(bd1))
-order = unique(order)
-bd1 = bd1[,order]
-
-#eliminate the ones wich vales between 0 and 1 are not signnificantly different
+  bd1 = bd1[,c(datavar$col)]
+  order = c('patients','y','abr',names(bd1))
+  order = unique(order)
+  bd1 = bd1[,order]
+  head(bd1[,1:10])
+  
+#eliminate the ones with vales between 0 and 1 are not signnificantly different
 bdy0 = subset(bd1, y==0)
 bdy1 = subset(bd1, y==1)
 pvalues = rep(0,dim(bd1)[2])
-for(i in 3:dim(bd1)[2]){
+for(i in (length(exception)+1):dim(bd1)[2]){
   #pvalues[i] =  t.test(bdy0[,i],bdy1[,i])$p.value
   bd1[,i] = log(bd1[,i]+1)
   pvalues[i] = wilcox.test(bdy0[,i],bdy1[,i])$p.value
 }
 
-datap = data.frame(col = 1:dim(bd1)[2], colname = names(bd1), pvalues = pvalues)
-datap = merge(datap, cgc, by.x='colname','Gene.Symbol',all.x=T)
-rows_eliminate = rownames(datap)[datap$pvalues>0.00000002 & is.na(datap$Tier)]
-datap = datap[-as.numeric(as.character(rows_eliminate)),]
+#plot
+#if(!require(ggplot2)){install.packages("ggplot2")}
+#require(ggplot2)
+#names(bd1)
+#ggplot(bd1, aes(AACS,fill=y))+geom_density(alpha=0.2)
+
 
 #t.test:
 #H0: y = x
 #H1: y dif x
 #to reject the null H0 the pvalue must be <0.5
-#i want to keep on my data the genes with y dif x, this
-#i want to filter small p values.
+#i want to keep on my data the genes with y dif x/small p values.
+datap = data.frame(col = 1:dim(bd1)[2], colname = names(bd1), pvalues = pvalues)
+datap = merge(datap, cgc, by.x='colname','Gene.Symbol',all.x=T)
+rows_eliminate = rownames(datap)[datap$pvalues>0.05 & is.na(datap$Tier)]
+datap = datap[-as.numeric(as.character(rows_eliminate)),]
+
 bd1 = bd1[,c(datap$col)]
+order = c('patients','y','exception',names(bd1))
+order = unique(order)
+bd1 = bd1[,order]
 head(bd1[,1:10])
 dim(bd1)
 
-order = c('patients','y',names(bd1))
-order = unique(order)
-bd1 = bd1[,order]
-
 
 write.table(bd1,paste(theRootDir,'tcga_train_gexpression_cgc.txt',sep=''), row.names = F, sep = ';')
+}
 
-#balancing the dataset
-bd = read.table(paste(theRootDir,'tcga_train_gexpression.txt',sep=''), header = T, sep = ';')
-rows = c(1:dim(bd)[1])
-rows_selc1 = rows[bd$y==1]
-rows_selc2 = sample(rows[bd$y==0],size = length(rows[bd$y==1]), replace = F)
-bd1 = bd[c(rows_selc1,rows_selc2),]
-bd1 = bd1[order(bd1$patients),]
 
-write.table(bd1,paste(theRootDir,'tcga_train_ge_balanced.txt',sep=''), row.names = F, sep = ';')
+
+#-------------------------- GENE EXPRESSION GENE SELECTION - keeping the driver genes +++ balancing the dataset
+if(dataset_balancing){
+  bd = read.table(paste(theRootDir,'tcga_train_gexpression.txt',sep=''), header = T, sep = ';')
+  rows = c(1:dim(bd)[1])
+  rows_selc1 = rows[bd$y==1]
+  rows_selc2 = sample(rows[bd$y==0],size = length(rows[bd$y==1]), replace = F)
+  bd1 = bd[c(rows_selc1,rows_selc2),]
+  bd1 = bd1[order(bd1$patients),]
+  
+  write.table(bd1,paste(theRootDir,'tcga_train_ge_balanced.txt',sep=''), row.names = F, sep = ';')
+}

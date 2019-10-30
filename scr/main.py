@@ -7,7 +7,7 @@ path = 'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019'
 sys.path.append(path+'\\scr')
 import functions as fc
 os.chdir(path)
-from sklearn.metrics import confusion_matrix
+from sklearn.metrics import confusion_matrix, f1_score
 pd.set_option('display.max_columns', 500)
 
 
@@ -35,11 +35,11 @@ Note:
 '''
 
 '''Hyperparameters'''
-k = 30 #Latents Dimension 
+k = 18 #Latents Dimension 
 sim = 1000 #Simulations 
 bach_size = 200 #Batch size for memory purposes 
 step1 = 10 #Saving chain every step1 steps 
-id = '14' #identification of simulation 
+id = '15' #identification of simulation 
 
 '''Loading dataset'''
 filename = "data\\tcga_train_gexpression_cgc.txt" #
@@ -61,15 +61,19 @@ data = pd.read_csv(filename, sep=';')
    
 for experiment in np.arange(0,simulations):  
     print('Experiment ', experiment, ' of 100')
-    train0, test, j, v, y01, y01_t = fc.mcmc(data,sim,bach_size,step1,k,id,RUN_MCMC)
+    train0, test, j, v, y01, y01_t, abr, abr_t = fc.mcmc(data,sim,bach_size,step1,k,id,RUN_MCMC)
        
     '''Loading average values back for predictions'''
     la_sk,la_cj,lm_tht,lm_phi = fc.load_chain(id,sim,bach_size,j,v,k)
     y01_t_pred = fc.predictions_test(test,train0,y01_t,lm_tht,la_sk,la_cj,k,RUN_PREDICTIONS)
 
 #
-confusion_matrix(y01,fc.PGM_pred(lm_tht,la_sk,la_cj))  
-confusion_matrix(y01_t,y01_t_pred)  
+print('\nPGM: Metrics training set: \n'
+      ,confusion_matrix(y01,fc.PGM_pred(lm_tht,la_sk,la_cj)),'\n',
+      f1_score(y01,fc.PGM_pred(lm_tht,la_sk,la_cj) ))
+print('\nPGM: Metrics testing set: \n'
+      ,confusion_matrix(y01_t,y01_t_pred) ,'\n',
+      f1_score(y01_t,y01_t_pred))
 
 '''
 PLOTS: evaluating the convergency  
@@ -83,35 +87,35 @@ PLOTS: evaluating the convergency
 
 '''Outcome Model'''
 c,f,cm = fc.OutcomeModel('rf',train0,lm_tht,y01)
-print(c,'\n',f,'\n',cm)
+print('\n Metrics OutcomeModel: ','\n',f,'\n',cm,'\n')
 
-#c,f,cm = fc.OutcomeModel('lr',train0,lm_tht,y01)
-#print(c,'\n',f,'\n',cm)
+c,f,cm = fc.OutcomeModel('lr',train0,lm_tht,y01)
+print('\n Metrics OutcomeModel: ','\n',f,'\n',cm,'\n')
 
 
 '''Driver Genes'''
-cgc_list = fc.cgc()
+#cgc_list = fc.cgc()
 
 
 
 '''Exploring Outcome Model's results'''
-c_gene = data.drop(['patients','y'],axis=1).columns
-gene_coef = pd.DataFrame({'genes':c_gene,
-                          'coefs': c[0]})
+#c_gene = data.drop(['patients','y'],axis=1).columns
+#gene_coef = pd.DataFrame({'genes':c_gene,
+#                          'coefs': c[0]})
 
-gene_coef['coefs_abs'] = abs(gene_coef['coefs'] )    
-gene_coef.sort_values(['coefs_abs'], axis = 0, ascending=False,inplace=True)
-gene_coef.head()
+#gene_coef['coefs_abs'] = abs(gene_coef['coefs'] )    
+#gene_coef.sort_values(['coefs_abs'], axis = 0, ascending=False,inplace=True)
+#gene_coef.head()
 
 
 #Selecting top 10% (200 genes)
-gene_coef_sub = gene_coef.iloc[0:200,].reset_index( drop='True')
+#gene_coef_sub = gene_coef.iloc[0:200,].reset_index( drop='True')
 
 #merging
 
-gene_coef_sub = pd.merge(gene_coef_sub,cgc_list, left_on = 'genes',right_on='Gene Symbol')
+#gene_coef_sub = pd.merge(gene_coef_sub,cgc_list, left_on = 'genes',right_on='Gene Symbol')
 
-print(gene_coef_sub.shape)
+#print(gene_coef_sub.shape)#
 
 
 
