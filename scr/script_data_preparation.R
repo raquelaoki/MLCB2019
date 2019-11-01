@@ -234,42 +234,90 @@ if(genes_selection){
   bd1 = bd1[,order]
   head(bd1[,1:10])
   
-#eliminate the ones with vales between 0 and 1 are not signnificantly different
-bdy0 = subset(bd1, y==0)
-bdy1 = subset(bd1, y==1)
-pvalues = rep(0,dim(bd1)[2])
-for(i in (length(exception)+1):dim(bd1)[2]){
-  #pvalues[i] =  t.test(bdy0[,i],bdy1[,i])$p.value
-  bd1[,i] = log(bd1[,i]+1)
-  pvalues[i] = wilcox.test(bdy0[,i],bdy1[,i])$p.value
-}
+  #eliminate the ones with vales between 0 and 1 are not signnificantly different
+  bdy0 = subset(bd1, y==0)
+  bdy1 = subset(bd1, y==1)
+  pvalues = rep(0,dim(bd1)[2])
+  pvalues_ks = rep(0,dim(bd1)[2])
+  for(i in (length(exception)+1):dim(bd1)[2]){
+    #pvalues[i] =  t.test(bdy0[,i],bdy1[,i])$p.value
+    bd1[,i] = log(bd1[,i]+1)
+    pvalues[i] = wilcox.test(bdy0[,i],bdy1[,i])$p.value
+    pvalues_ks[i] = ks.test(bdy0[,i],bdy1[,i])$p.value
+  }
+  
+  #plot
+  #if(!require(ggplot2)){install.packages("ggplot2")}
+  #require(ggplot2)
+  #names(bd1)
+  #ggplot(bd1, aes(AACS,fill=y))+geom_density(alpha=0.2)
+  
+  
+  #t.test:
+  #H0: y = x
+  #H1: y dif x
+  #to reject the null H0 the pvalue must be <0.5
+  #i want to keep on my data the genes with y dif x/small p values.
+  datap = data.frame(col = 1:dim(bd1)[2], colname = names(bd1), pvalues = pvalues)
+  datap = merge(datap, cgc, by.x='colname','Gene.Symbol',all.x=T)
+  rows_eliminate = rownames(datap)[datap$pvalues>0.025 & is.na(datap$Tier)]
+  datap = datap[-as.numeric(as.character(rows_eliminate)),]
+  
+  bd1 = bd1[,c(datap$col)]
+  order = c('patients','y','abr',names(bd1))
+  order = unique(order)
+  bd1 = bd1[,order]
+  head(bd1[,1:10])
+  dim(bd1)
 
-#plot
-#if(!require(ggplot2)){install.packages("ggplot2")}
-#require(ggplot2)
-#names(bd1)
-#ggplot(bd1, aes(AACS,fill=y))+geom_density(alpha=0.2)
+  
+  #eliminate very correlated columns 
+  i_ = c()
+  j_ = c()
+  i1 = length(exception)+1
+  i2 = dim(bd1)[2]-1
+
+  for(i in i1:i2){
+    for(j in (i+1):(dim(bd1)[2])){
+      if (abs(cor(bd1[,i],bd1[,j])) >0.80){
+        i_ = c(i_,i)
+        j_ = c(j_,j)
+      }
+    }
+  }
+
+  pairs = data.frame(i=i_,j=j_)
+  write.table(pairs,paste(theRootDir,'correlation_pairs.txt',sep=''), row.names = F, sep = ';')
+  
+  
+  aux = rbind(data.frame(table(pairs$i)),data.frame(table(pairs$j)))
+  
+  aux0 = aux
+  
+  
+  a = 0
+  #while(dim(aux0)[1]>0){
+  while(a<10){
+    aux1 = rbind(data.frame(table(aux0$i)),data.frame(table(aux0$j)))
+    aux1 = aux1[order(aux1$Freq,decreasing = TRUE),]
+    
+    keep = c(keep, as.character(aux1[1,1]))
+    remove0 = c(subset(aux0, i == as.character(aux1[1,1]))$j,
+                subset(aux0, j == as.character(aux1[1,1]))$i)
+    remove = c(remove,remove0)
+    
+    aux0 = subset(aux0, i!= as.character(aux1[1,1]))
+    aux0 = subset(aux0, j!= as.character(aux1[1,1]))
+    #for is  wrong
+    #for(k in 1:length(remove0)){
+    #  aux0 = subset(aux0, i!= remove0[k])
+    #  aux0 = subset(aux0, j!= remove0[k])
+    #}
+    a = a+1
+  }
 
 
-#t.test:
-#H0: y = x
-#H1: y dif x
-#to reject the null H0 the pvalue must be <0.5
-#i want to keep on my data the genes with y dif x/small p values.
-datap = data.frame(col = 1:dim(bd1)[2], colname = names(bd1), pvalues = pvalues)
-datap = merge(datap, cgc, by.x='colname','Gene.Symbol',all.x=T)
-rows_eliminate = rownames(datap)[datap$pvalues>0.05 & is.na(datap$Tier)]
-datap = datap[-as.numeric(as.character(rows_eliminate)),]
-
-bd1 = bd1[,c(datap$col)]
-order = c('patients','y','exception',names(bd1))
-order = unique(order)
-bd1 = bd1[,order]
-head(bd1[,1:10])
-dim(bd1)
-
-
-write.table(bd1,paste(theRootDir,'tcga_train_gexpression_cgc.txt',sep=''), row.names = F, sep = ';')
+write.table(bd1,paste(theRootDir,'tcga_train_gexpression_cgc_2.txt',sep=''), row.names = F, sep = ';')
 }
 
 
