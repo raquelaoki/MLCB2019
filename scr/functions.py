@@ -41,7 +41,8 @@ def gibbs(current,train0,j,v,k,y01):
     lvjk = np.zeros((v,j,k))
 
     for ki in np.arange(k):
-        lvjk[:,:,ki] = np.dot(0.795*current.lm_phi[:,ki].reshape(v,1), current.lm_tht[:,ki].reshape(1,j))
+        lvjk[:,:,ki] = np.dot(0.8*current.lm_phi[:,ki].reshape(v,1), current.lm_tht[:,ki].reshape(1,j))
+        #0.795 previous value, it works
     lvk = np.random.poisson(lvjk.sum(axis=1))
     ljk = np.random.poisson(lvjk.sum(axis=0))
     #print(new.lm_tht.shape, ljk.shape,j,v,k )
@@ -106,7 +107,7 @@ def mcmc(data, sim, bach_size, step1,k,id,run):
     if run:
         '''Initial Values'''
         current = parameters(np.repeat(0.5,j), #la_cj 0.25
-                           np.repeat(150.5,k*2).reshape(2,k), #la_sk 62
+                           np.repeat(150.5,k*2).reshape(2,k), #la_sk
                            np.repeat(1.0004,v), #la_ev FIXED
                            np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k
                            np.repeat(150.5,j*k).reshape(j,k)) #lm_theta k x j

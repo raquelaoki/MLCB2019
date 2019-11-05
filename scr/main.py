@@ -39,10 +39,10 @@ k = 18 #Latents Dimension
 sim = 1000 #Simulations 
 bach_size = 200 #Batch size for memory purposes 
 step1 = 10 #Saving chain every step1 steps 
-id = '16' #identification of simulation 
+id = '18' #identification of simulation 
 
 '''Loading dataset'''
-filename = "data\\tcga_train_gexpression_cgc.txt" #
+filename = "data\\tcga_train_gexpression_cgc_2.txt" #_2
 
 '''Parameters'''
 class parameters:
