@@ -23,8 +23,9 @@ donwload_mutation = FALSE
 process_mutation = FALSE
 process_clinical = FALSE
 merge_clinical_mutation = FALSE
-genes_selection = TRUE
+genes_selection = FALSE
 dataset_balancing = FALSE
+genes_mutation_selection = TRUE
 
 
 theRootDir <- "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\data\\"
@@ -34,10 +35,11 @@ diseaseAbbrvs_l <- c("acc", 'BRCA' ,"blca", "chol","esca", "hnsc", "lgg", "lihc"
 
 
 #------------------------ DOWNLOAD CLINICAL INFORMATION
-clinicalFilesDir <- paste(theRootDir, "clinical/", sep="")
-dir.create(clinicalFilesDir, showWarnings = FALSE) # make this directory if it doesn't exist.
 
 if(donwload_clinical){
+  clinicalFilesDir <- paste(theRootDir, "clinical/", sep="")
+  dir.create(clinicalFilesDir, showWarnings = FALSE) # make this directory if it doesn't exist.
+  
   for(i in 1:length(diseaseAbbrvs)){
     fname <- paste("nationwidechildrens.org_clinical_patient_", allTcgaClinAbrvs[i], ".txt", sep="")
     theUrl <- paste("https://raw.github.com/paulgeeleher/tcgaData/master/nationwidechildrens.org_clinical_patient_", allTcgaClinAbrvs[i], ".txt", sep="")
@@ -47,9 +49,9 @@ if(donwload_clinical){
 
 
 #------------------------ DOWNLOAD SOMATIC MUTATION
-mutFilesDir <- paste(theRootDir, "\\mutation_data", sep="")
-dir.create(mutFilesDir, showWarnings = FALSE) # make this directory if it doesn't exist.
 if(donwload_mutation){
+  mutFilesDir <- paste(theRootDir, "\\mutation_data", sep="")
+  dir.create(mutFilesDir, showWarnings = FALSE) # make this directory if it doesn't exist.
   for(i in 1:length(diseaseAbbrvs)){
     mutationDataUrl <- paste("http://gdac.broadinstitute.org/runs/stddata__2016_01_28/data/", diseaseAbbrvsForMuts[i], "/20160128/gdac.broadinstitute.org_", diseaseAbbrvsForMuts[i],".Mutation_Packager_Calls.Level_3.2016012800.0.0.tar.gz", sep="")
     fname <- paste("gdac.broadinstitute.org_", diseaseAbbrvsForMuts[i],".Mutation_Packager_Calls.Level_3.2016012800.0.0.tar.gz", sep="")
@@ -87,17 +89,19 @@ if(process_clinical){
   write.table(bd.c,paste(theRootDir,'tcga_cli.txt',sep=''), row.names = F, sep = ';')
 }
 #------------------------  MAF FILES / MUTATION DATA PROCESSING (time consuming)
-#INSTALLING PACKAGES
-if (!require("BiocManager"))
-  install.packages("BiocManager")
-if (!require("maftools"))
-  BiocManager::install("maftools")
-library(maftools)
-
-exception = c("TCGA-P5-A5F6","TCGA-EJ-A7NG","TCGA-NA-A4QY") #codes with problems
 #rotine to load data, manifest, for each patient will calculate the total number of mutations and merge with the other patients info
 if(process_mutation){
-  for(i in 1:length(diseaseAbbrvs)){
+  #INSTALLING PACKAGES
+  if (!require("BiocManager"))
+    install.packages("BiocManager")
+  if (!require("maftools"))
+    BiocManager::install("maftools")
+  library(maftools)
+  
+  exception = c("TCGA-P5-A5F6","TCGA-EJ-A7NG","TCGA-NA-A4QY") #codes with problems
+  
+  
+    for(i in 1:length(diseaseAbbrvs)){
     mutationDataUrl <- paste(mutFilesDir,"\\gdac.broadinstitute.org_", diseaseAbbrvs[i],".Mutation_Packager_Calls.Level_3.2016012800.0.0", sep="")
     setwd(mutationDataUrl)
     manifest = read.table('MANIFEST.txt')
@@ -197,6 +201,8 @@ if(genes_mutation_selection){
 }
 
 #-------------------------- GENE EXPRESSION GENE SELECTION - keeping the driver genes
+
+
 if(genes_selection){
   bd = read.table(paste(theRootDir,'tcga_rna_old.txt',sep=''), header=T, sep = ';')
   bd = subset(bd, select = -c(patients2))
@@ -225,7 +231,7 @@ if(genes_selection){
   #adding driver gene info 
   #42 are not found
   datavar = merge(datavar, cgc, by.x='colname','Gene.Symbol',all.x=T)
-  rows_eliminate = rownames(datavar)[datavar$var<2 & is.na(datavar$Tier)]#26604.77
+  rows_eliminate = rownames(datavar)[datavar$var<500 & is.na(datavar$Tier)]#26604.77
   datavar = datavar[-as.numeric(as.character(rows_eliminate)),]
 
   bd1 = bd1[,c(datavar$col)]
@@ -243,7 +249,7 @@ if(genes_selection){
     #pvalues[i] =  t.test(bdy0[,i],bdy1[,i])$p.value
     bd1[,i] = log(bd1[,i]+1)
     pvalues[i] = wilcox.test(bdy0[,i],bdy1[,i])$p.value
-    pvalues_ks[i] = ks.test(bdy0[,i],bdy1[,i])$p.value
+    #pvalues_ks[i] = ks.test(bdy0[,i],bdy1[,i])$p.value
   }
   
   #plot
@@ -260,7 +266,9 @@ if(genes_selection){
   #i want to keep on my data the genes with y dif x/small p values.
   datap = data.frame(col = 1:dim(bd1)[2], colname = names(bd1), pvalues = pvalues)
   datap = merge(datap, cgc, by.x='colname','Gene.Symbol',all.x=T)
-  rows_eliminate = rownames(datap)[datap$pvalues>0.025 & is.na(datap$Tier)]
+  rows_eliminate =    rownames(datap)[datap$pvalues   >0.01 & is.na(datap$Tier)]
+  #rows_eliminate_ks = rownames(datap)[datap$pvalues_ks>0.01 & is.na(datap$Tier)]
+  #rows_eliminate = unique(rows_eliminate,rows_eliminate_ks)
   datap = datap[-as.numeric(as.character(rows_eliminate)),]
   
   bd1 = bd1[,c(datap$col)]
@@ -271,7 +279,9 @@ if(genes_selection){
   dim(bd1)
 
   
+  
   #eliminate very correlated columns 
+  if(!file.exists(paste(theRootDir,'correlation_pairs.txt',sep=''))){
   i_ = c()
   j_ = c()
   i1 = length(exception)+1
@@ -279,7 +289,7 @@ if(genes_selection){
 
   for(i in i1:i2){
     for(j in (i+1):(dim(bd1)[2])){
-      if (abs(cor(bd1[,i],bd1[,j])) >0.80){
+      if (abs(cor(bd1[,i],bd1[,j])) >0.70){
         i_ = c(i_,i)
         j_ = c(j_,j)
       }
@@ -288,36 +298,61 @@ if(genes_selection){
 
   pairs = data.frame(i=i_,j=j_)
   write.table(pairs,paste(theRootDir,'correlation_pairs.txt',sep=''), row.names = F, sep = ';')
+  }else{
+    pairs = read.table(paste(theRootDir,'correlation_pairs.txt',sep=''), header = T, sep = ';')
+  }
   
   
-  aux = rbind(data.frame(table(pairs$i)),data.frame(table(pairs$j)))
+  aux0 = pairs
+  keep = c()
+  remove = c()
   
-  aux0 = aux
-  
-  
-  a = 0
-  #while(dim(aux0)[1]>0){
-  while(a<10){
-    aux1 = rbind(data.frame(table(aux0$i)),data.frame(table(aux0$j)))
+  #16245
+  while(dim(aux0)[1]>0 ){
+    aux00 = c(aux0$i,aux0$j)
+    aux1 = data.frame(table(aux00))
+    #subset(aux1, aux00 == 16245)
     aux1 = aux1[order(aux1$Freq,decreasing = TRUE),]
     
-    keep = c(keep, as.character(aux1[1,1]))
-    remove0 = c(subset(aux0, i == as.character(aux1[1,1]))$j,
-                subset(aux0, j == as.character(aux1[1,1]))$i)
-    remove = c(remove,remove0)
+    keep = c(keep, as.numeric(as.character(aux1[1,1])))
+    re0 = c(subset(aux0, i == as.character(aux1[1,1]))$j, subset(aux0, j == as.character(aux1[1,1]))$i)
+    re0 = as.numeric(as.character(re0))
+    remove = c(remove,re0)
     
     aux0 = subset(aux0, i!= as.character(aux1[1,1]))
     aux0 = subset(aux0, j!= as.character(aux1[1,1]))
-    #for is  wrong
-    #for(k in 1:length(remove0)){
-    #  aux0 = subset(aux0, i!= remove0[k])
-    #  aux0 = subset(aux0, j!= remove0[k])
-    #}
-    a = a+1
+    
+    for(k in 1:length(re0)){
+      aux0 = subset(aux0, i!=re0[k])
+      aux0 = subset(aux0, j!=re0[k])
+    }
   }
+  
+  
+  datac = data.frame(col = 1:dim(bd1)[2], colname = names(bd1), rem = 0)
+  datac = merge(datac, cgc, by.x='colname','Gene.Symbol',all.x=T)
+  datac = datac[order(datac$col),]
+  
+  #rows_eliminate = rownames(datap)[datap$pvalues>0.025 & is.na(datap$Tier)]
+  #datap = datap[-as.numeric(as.character(rows_eliminate)),]
+  for(k in 1:length(remove)){
+    if(is.na(datac[remove[k],]$Tier)){
+      datac[remove[k],]$rem = 1
+    }
+    if(datac[remove[k],]$colname=='A1BG'){
+      cat(k,remove[k])
+    }
+  }
+  datac = subset(datac, rem==0)
+  bd1 = bd1[,c(datac$col)]
+  order = c('patients','y','abr',names(bd1))
+  order = unique(order)
+  bd1 = bd1[,order]
+  head(bd1[,1:10])
+  dim(bd1)
+  
 
-
-write.table(bd1,paste(theRootDir,'tcga_train_gexpression_cgc_2.txt',sep=''), row.names = F, sep = ';')
+  write.table(bd1,paste(theRootDir,'tcga_train_gexpression_cgc_2.txt',sep=''), row.names = F, sep = ';')
 }
 
 
@@ -333,3 +368,30 @@ if(dataset_balancing){
   
   write.table(bd1,paste(theRootDir,'tcga_train_ge_balanced.txt',sep=''), row.names = F, sep = ';')
 }
+
+
+#-------------------------- GENE MUTATION GENE SELECTION - BASED ON THE GENES FROM THE GENE EXPRESSION FILTER 
+
+#some genes from gene_expression are missing onthe gene mutation data. 
+#run the preprossing again and make sure im not missing any genes, even with i don't have good info about it
+
+if(genes_mutation_selection){
+  bd_mu = read.table(paste(theRootDir,'tcga_mu.txt',sep=''), header = T, sep = ',')
+  bd_ge_cgc = read.table(paste(theRootDir, 'tcga_train_gexpression_cgc_2.txt',sep = ''), header = T, sep=';')
+  bd_mu$aux = 0
+  flag_missing = c()
+  
+  #replace the for by a merge, it will be much faster
+  
+  for(i in 4:dim(bd_ge_cgc)[2]){
+    if(dim(bd_mu[bd_mu$Hugo_Symbol==names(bd_ge_cgc)[i],])[1]==1){
+      bd_mu[bd_mu$Hugo_Symbol==names(bd_ge_cgc)[i],]$aux = 1
+    }else{
+      flag_missing = c(flag_missing,names(bd_ge_cgc)[i])
+    }
+  }
+  cgc = read.table(paste(theRootDir,'cancer_gene_census.csv',sep = ''),header=T, sep=',')[,c(1,5)]
+}
+#"ABCC13"          "ACYP2"           "AG2"             "ALOX12P2"        "AMZ2P1"          "ANKHD1.EIF4EBP3"
+
+
