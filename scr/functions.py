@@ -41,7 +41,7 @@ def gibbs(current,train0,j,v,k,y01):
     lvjk = np.zeros((v,j,k))
 
     for ki in np.arange(k):
-        lvjk[:,:,ki] = np.dot(0.8*current.lm_phi[:,ki].reshape(v,1), current.lm_tht[:,ki].reshape(1,j))
+        lvjk[:,:,ki] = np.dot(0.801*current.lm_phi[:,ki].reshape(v,1), current.lm_tht[:,ki].reshape(1,j))
         #0.795 previous value, it works
     lvk = np.random.poisson(lvjk.sum(axis=1))
     ljk = np.random.poisson(lvjk.sum(axis=0))

@@ -25,21 +25,23 @@ else:
 
 '''
 Note: 
-    - model id = '12'
+    - model id = '12' on MLCB
     - outcome model: problem with the nb, how to get coefs and prefictiosn are really bad
     - explain how mcmc save values
     - add the help explaining how to use the function 
-    - outcome model should have train and testing set? check with the baseline paper 
-    - updating training set to force the presence of known driver genes
+    - k18 and 18, the latent variables on the NB classify everyone on 1 
+ -k17,16 and 17,16, perfect prediction on training set 
+ - k15 all 1 
+ - k 14
     
 '''
 
 '''Hyperparameters'''
-k = 18 #Latents Dimension 
+k = 14 #Latents Dimension 
 sim = 1000 #Simulations 
 bach_size = 200 #Batch size for memory purposes 
 step1 = 10 #Saving chain every step1 steps 
-id = '18' #identification of simulation 
+id = '14' #identification of simulation 
 
 '''Loading dataset'''
 filename = "data\\tcga_train_gexpression_cgc_2.txt" #_2
