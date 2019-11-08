@@ -32,19 +32,20 @@ Note:
     - k18 and 18, the latent variables on the NB classify everyone on 1 
  -k17,16 and 17,16, perfect prediction on training set 
  - k15 all 1 
- - k 14
+ - k 14 perfect prediction on traning, worse on testing 
+ - k 13 
     
 '''
 
 '''Hyperparameters'''
-k = 14 #Latents Dimension 
+k = 20 #Latents Dimension 
 sim = 1000 #Simulations 
 bach_size = 200 #Batch size for memory purposes 
 step1 = 10 #Saving chain every step1 steps 
-id = '14' #identification of simulation 
+id = '20' #identification of simulation 
 
 '''Loading dataset'''
-filename = "data\\tcga_train_gexpression_cgc_2.txt" #_2
+filename = "data\\tcga_train_gexpression_cgc_15k.txt" #_2
 
 '''Parameters'''
 class parameters:
