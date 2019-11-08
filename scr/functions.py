@@ -14,6 +14,7 @@ from scipy.stats import gamma
 import copy
 from sklearn.metrics.pairwise import cosine_similarity
 import os
+from scipy import sparse
 
 '''Parameters'''
 class parameters:
@@ -25,6 +26,46 @@ class parameters:
         self.lm_phi = latent_phi #string of matrix (kv) in array format
         self.lm_tht = latent_tht #string of matrix  (jk) in array format
 
+
+'''
+Holdout: keep a few elementos from the factor model,
+used to verify the quality of the latent features
+parameters:
+    data: full dataset
+    alpha: proportion of elements to remove
+return:
+    train: training set withouht these elements
+    train_validation: validation/true values holdout
+source code: decofounder tutorial
+'''
+def holdout(data, alpha):
+    data = data.reset_index(drop=True)
+    '''Organizing columns names'''
+    remove = data.columns[[0,1,2]]
+    y = data.columns[1]
+    y01 = np.array(data[y])
+    abr = np.array(data[data.columns[2]])
+    train = data.drop(remove, axis = 1)
+    train = np.matrix(train)
+
+    # randomly holdout some entries of data
+    j, v = train.shape
+    n_holdout = int(alpha * j * v)
+
+    holdout_row = np.random.randint(j, size=n_holdout)
+    holdout_col = np.random.randint(v, size=n_holdout)
+    #it shold be only ones
+    holdout_mask = (sparse.coo_matrix((np.ones(n_holdout), \
+                                (holdout_row, holdout_col)), \
+                                shape = train.shape)).toarray()
+
+
+    print(' hold mask: ',holdout_mask.shape)
+    print(' before: ',train.min())
+    train = np.multiply(1-holdout_mask, train)
+    print(' after: ',train.min())
+    train_val = np.multiply(holdout_mask, train)
+    return train, train_val, j, v, y01,  abr
 
 '''
 Gibbs Sampling: the math, proposal of values
@@ -49,11 +90,6 @@ def gibbs(current,train0,j,v,k,y01):
     #print('\nphi:',new.lm_phi.shape)
     for ki in np.arange(k):
         new.lm_phi[:,ki] = np.random.dirichlet(alpha = (lvk[:,ki]+current.la_ev),size = 1)
-        #print('done')
-        #print(y01)
-        #print(ki)
-        #print(current.la_sk[y01,ki].shape)
-        #print(ljk[:,ki].shape)
         new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]).reshape(j),
                   scale=np.repeat(0.5,j).reshape(j))
 
@@ -86,24 +122,9 @@ Return
     y01, y01_t: true labels on training and testing set (np.array)
 '''
 def mcmc(data, sim, bach_size, step1,k,id,run):
-    '''Splitting Dataset'''
-    train, test = train_test_split(data, test_size=0.3,random_state=22) #random_state=22
-    train = train.reset_index(drop=True)
-    test = test.reset_index(drop=True)
-    '''Organizing columns names'''
-    remove = train.columns[[0,1,2]]
-    y = train.columns[1]
-    y01 = np.array(train[y])
-    abr = np.array(train[train.columns[2]])
-    train = train.drop(remove, axis = 1)
-    y01_t = np.array(test[y])
-    abr_t = np.array(test[test.columns[2]])
-    test = test.drop(remove, axis = 1)
-    train0 = np.matrix(train)
 
     '''Defining variables'''
-    v = train.shape[1] #genes
-    j = train.shape[0] #patients
+    v, j  = train.shape #genes x patients
     if run:
         '''Initial Values'''
         current = parameters(np.repeat(0.5,j), #la_cj 0.25
@@ -111,8 +132,7 @@ def mcmc(data, sim, bach_size, step1,k,id,run):
                            np.repeat(1.0004,v), #la_ev FIXED
                            np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k
                            np.repeat(150.5,j*k).reshape(j,k)) #lm_theta k x j
-                           #np.repeat(0.5, j), #la_pj
-                           #np.repeat(0.5,k)) #la_qk
+
 
 
         '''Creating the chains'''
@@ -195,6 +215,7 @@ def load_chain(id,sim,bach_size,j,v,k):
 
 
 '''
+DELETE ?
 Label Predictions
 Parameters:
     theta: current or average value (np.matrix)
@@ -214,6 +235,7 @@ def PGM_pred(theta,sk1,cj):
     return y3
 
 '''
+CHANGE TO PREDICTIVE CHECK
 Testing set predictions: this function will find similar patients on the traning set
 and use the average of the lm_tht in the top 6 to make predictions.
 Matrix multiplication didn't work because negative values
