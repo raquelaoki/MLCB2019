@@ -14,7 +14,7 @@ from scipy.stats import gamma
 import copy
 from sklearn.metrics.pairwise import cosine_similarity
 import os
-from scipy import sparse
+from scipy import sparse, stats
 
 '''Parameters'''
 class parameters:
@@ -26,19 +26,18 @@ class parameters:
         self.lm_phi = latent_phi #string of matrix (kv) in array format
         self.lm_tht = latent_tht #string of matrix  (jk) in array format
 
-
-'''
-Holdout: keep a few elementos from the factor model,
-used to verify the quality of the latent features
-parameters:
-    data: full dataset
-    alpha: proportion of elements to remove
-return:
-    train: training set withouht these elements
-    train_validation: validation/true values holdout
-source code: decofounder tutorial
-'''
 def holdout(data, alpha):
+    '''
+    Holdout: keep a few elementos from the factor model,
+    used to verify the quality of the latent features
+    parameters:
+        data: full dataset
+        alpha: proportion of elements to remove
+    return:
+        train: training set withouht these elements
+        train_validation: validation/true values holdout
+    source code: decofounder tutorial
+    '''
     data = data.reset_index(drop=True)
     '''Organizing columns names'''
     remove = data.columns[[0,1,2]]
@@ -55,29 +54,23 @@ def holdout(data, alpha):
     holdout_row = np.random.randint(j, size=n_holdout)
     holdout_col = np.random.randint(v, size=n_holdout)
     #it shold be only ones
-    holdout_mask = (sparse.coo_matrix((np.ones(n_holdout), \
-                                (holdout_row, holdout_col)), \
-                                shape = train.shape)).toarray()
-
-
-    print(' hold mask: ',holdout_mask.shape)
-    print(' before: ',train.min())
-    train = np.multiply(1-holdout_mask, train)
-    print(' after: ',train.min())
+    holdout_mask = (sparse.coo_matrix((np.ones(n_holdout), (holdout_row, holdout_col)),shape = train.shape)).toarray()
+    holdout_mask[holdout_mask>1]=1
     train_val = np.multiply(holdout_mask, train)
-    return train, train_val, j, v, y01,  abr
+    train = np.multiply(1-holdout_mask, train)
+    return train, train_val, j, v, y01,  abr, holdout_mask
 
-'''
-Gibbs Sampling: the math, proposal of values
-Parameters:
-    current: class (parameters)
-    train0: traning set (np.matrix)
-    j patients, v genes, k latent features (int)
-    y01: array true label (np.array)
-Return:
-    new: class (parameters)
-'''
 def gibbs(current,train0,j,v,k,y01):
+    '''
+    Gibbs Sampling: the math, proposal of values
+    Parameters:
+        current: class (parameters)
+        train0: traning set (np.matrix)
+        j patients, v genes, k latent features (int)
+        y01: array true label (np.array)
+    Return:
+        new: class (parameters)
+    '''
     new = copy.deepcopy(current)
     lvjk = np.zeros((v,j,k))
 
@@ -108,23 +101,20 @@ def gibbs(current,train0,j,v,k,y01):
     new.la_cj = np.repeat(0.5,j).reshape(j,1)
     return(new)
 
-'''
-MCMC: call gibbs function and save proposed parameters in a chain
-Parameters
-    data: full dataset before splitting (pd)
-    sim, bach_size, step1: simulations, bach size and step size (int)
-    k: latent variables size (int)
-    id: id of the simulation  (str)
+def mcmc(train,y01, sim, bach_size, step1,k,id,run):
+    '''
+    MCMC: call gibbs function and save proposed parameters in a chain
+    Parameters
+        data: full dataset before splitting (pd)
+        sim, bach_size, step1: simulations, bach size and step size (int)
+        k: latent variables size (int)
+        id: id of the simulation  (str)
 
-Return
-    train0 and test matrix (np.matrix)
-    j, v: j patients and v genes (int)
-    y01, y01_t: true labels on training and testing set (np.array)
-'''
-def mcmc(data, sim, bach_size, step1,k,id,run):
-
+    Return
+        save the chain on results folder
+    '''
     '''Defining variables'''
-    v, j  = train.shape #genes x patients
+    j, v  = train.shape #patients x genes
     if run:
         '''Initial Values'''
         current = parameters(np.repeat(0.5,j), #la_cj 0.25
@@ -153,7 +143,7 @@ def mcmc(data, sim, bach_size, step1,k,id,run):
             chain_lm_phi[:,count_s1]=current.lm_phi.reshape(1,-1)
             print('iteration--',ite,' of ',sim//bach_size)
             for i in np.arange(1,bach_size):
-                new  = gibbs(current,train0,j,v,k,y01)
+                new  = gibbs(current,train,j,v,k,y01)
                 '''Updating chain'''
                 if i%10==0:
                     #print('------------', i, ' of ',bach_size)
@@ -164,7 +154,7 @@ def mcmc(data, sim, bach_size, step1,k,id,run):
                     chain_lm_phi[:,count_s1]=new.lm_phi.reshape(1,-1)
                     if i%90 == 0:
                         test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
-                        print(test1.mean(), train0.mean())
+                        print(test1.mean(), train.mean())
 
 
                 current= copy.deepcopy(new )
@@ -176,41 +166,46 @@ def mcmc(data, sim, bach_size, step1,k,id,run):
 
         print("--- %s min ---" % int((time.time() - start_time)/60))
         print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
-    return train0,test, j, v, y01, y01_t, abr, abr_t
+    return
 
-'''
-Load chains of values after MCMC
-paramters:
-    id: id of the experiment (str)
-    sim, bach_size: simulations and bach size (int)
-    j,v,k: patients, genes, latent variables size (int)
-return:
-    average parameters predicted without the burn-in period
-    la_sk, la_cj, lm_tht, lm_phi: (np.matrix)
-'''
-def load_chain(id,sim,bach_size,j,v,k):
-    ite0 = 2
-    la_sk = np.loadtxt('results\\output_lask_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
-    la_cj = np.loadtxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
-    lm_phi = np.loadtxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
-    lm_tht = np.loadtxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
+def load_chain(id,sim,bach_size,j,v,k, run):
+    '''
+    Load chains of values after MCMC
+    paramters:
+        id: id of the experiment (str)
+        sim, bach_size: simulations and bach size (int)
+        j,v,k: patients, genes, latent variables size (int)
+    return:
+        average parameters predicted without the burn-in period
+        la_sk, la_cj, lm_tht, lm_phi: (np.matrix)
+    '''
+    if run:
+        ite0 = 2
+        la_sk = np.loadtxt('results\\output_lask_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
+        la_cj = np.loadtxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
+        lm_phi = np.loadtxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
+        lm_tht = np.loadtxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
 
-    for ite in np.arange(ite0+1,sim//bach_size):
-        la_sk = la_sk + np.loadtxt('results\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-        la_cj = la_cj + np.loadtxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-        lm_phi = lm_phi + np.loadtxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-        lm_tht = lm_tht + np.loadtxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+        for ite in np.arange(ite0+1,sim//bach_size):
+            la_sk = la_sk + np.loadtxt('results\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+            la_cj = la_cj + np.loadtxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+            lm_phi = lm_phi + np.loadtxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
+            lm_tht = lm_tht + np.loadtxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
 
-    la_sk = la_sk/((sim//bach_size)-1)
-    la_cj = la_cj/((sim//bach_size)-1)
-    lm_phi = lm_phi/((sim//bach_size)-1)
-    lm_tht = lm_tht/((sim//bach_size)-1)
+        la_sk = la_sk/((sim//bach_size)-1)
+        la_cj = la_cj/((sim//bach_size)-1)
+        lm_phi = lm_phi/((sim//bach_size)-1)
+        lm_tht = lm_tht/((sim//bach_size)-1)
 
-    la_sk = la_sk.reshape(2,k)
-    la_cj = la_cj.reshape(j,1)
-    lm_tht = lm_tht.reshape(j,k)
-    lm_phi = lm_phi.reshape(v,k)
-
+        la_sk = la_sk.reshape(2,k)
+        la_cj = la_cj.reshape(j,1)
+        lm_tht = lm_tht.reshape(j,k)
+        lm_phi = lm_phi.reshape(v,k)
+    else:
+        la_sk = []
+        la_cj = []
+        lm_tht = []
+        lm_phi = []
     return la_sk,la_cj,lm_tht,lm_phi
 
 
@@ -235,60 +230,55 @@ def PGM_pred(theta,sk1,cj):
     return y3
 
 '''
-CHANGE TO PREDICTIVE CHECK
 Testing set predictions: this function will find similar patients on the traning set
 and use the average of the lm_tht in the top 6 to make predictions.
 Matrix multiplication didn't work because negative values
 Paramters:
-    test set: (np.matrix)
-    train0 set (np.matrix)
-    y01_t true label on testing set (np.array)
-    lm_tht, la_sk, la_cj: parameter's predicted values (average from the chain) (np.matrix)
-    k: latente size (int)
+    train set (np.matrix)
+    train_val validation set
+    lm_tht, lm_phi: parameter's predicted values (average from the chain) (np.matrix)
 Return:
-    y01 [0,1] predictions for testing set and save two txt files
+
 '''
-def predictions_test(test, train0,y01_t,lm_tht,la_sk,la_cj,k,RUN):
-    #print(test.shape,train0.shape,len(y01_t),lm_tht.shape)
+def predictive_check_mcmc(train, train_val, lm_tht,lm_phi,la_sk,y01,mask, RUN):
     if RUN:
-        f1_sample = []
-        acc_sample = []
-        lm_tht_pred = np.repeat(0.5,test.shape[0]*k).reshape(test.shape[0],k)
-        test0 = np.matrix(test)
+        N = 100
+        j,v = train.shape
+        k = lm_tht.shape[1]
 
-        for j in np.arange(test.shape[0]):
-            # intialise data of lists.
-            sim_list = list(cosine_similarity(test0[j,:], train0)[0])
-            sim_list= pd.DataFrame({'sim':sim_list})
-            sim_list = sim_list.sort_values(by=['sim'],  ascending=False)
-            lm_tht_pred[j,:] = lm_tht[list(sim_list.index[0:6])].mean(axis=0)
 
-        y01_t_p = PGM_pred(lm_tht_pred,la_sk,la_cj)
-        ac = confusion_matrix(y01_t, y01_t_p)
-        acc_sample.append((ac[0,0]+ac[1,1])/ac.sum())
-        f1_sample.append(f1_score(y01_t, y01_t_p))
+        pval = []
+        for n in range(N):
+            for ki in range(k):
+                lm_tht[:,ki] = np.random.gamma(shape=(la_sk[y01,ki]).reshape(j),
+                      scale=np.repeat(0.5,j).reshape(j))
 
-        with open('results//test_set_f1.txt', 'w') as f:
-            for item in f1_sample:
-                f.write("%s\n" % item)
+            lambda1 = lm_tht.reshape(j,k).dot(np.transpose(lm_phi).reshape(k,v))
+            test_gen = np.multiply(lambda1,mask)
+            #there are an option of simulate theta using sk and cj
+            test_val = np.multiply(train_val, mask)
+            #using normal approximation
+            #test_val1 = stats.poisson(lm_tht.reshape(j,k).dot(np.transpose(lm_phi).reshape(k,v))).logpdf(test_val)
+            #test_gen1 = stats.poisson(lm_tht.reshape(j,k).dot(np.transpose(lm_phi).reshape(k,v))).logpdf(test_gen)
+            test_val1 = stats.norm(lambda1,np.sqrt(lambda1)).logpdf(test_val)
+            test_gen1 = stats.norm(lambda1,np.sqrt(lambda1)).logpdf(test_gen)
+            pvals = test_val1 < test_gen1
+            pval.append(np.mean(pvals[mask==1]))
+        return pval
 
-        with open('results//test_set_acc.txt', 'w') as f:
-            for item in acc_sample:
-                f.write("%s\n" % item)
-        print(f1_sample)
-        return y01_t_p
 
-'''
-Pre-Processing driver genes Intogen
-#This first dataset only has information about:
-#BLCA, BRCA ,ESCA,HNSC , LGG, LUSC,PAAD,PRAD
-#missing: ACC, CHOL, LIHC, SARC, SKCM, TCGT, UCS
-Parameters:
-    name: file name (str)
-Output:
-    csv file
-'''
 def preprocessing_dg1(name):
+    '''
+    Pre-Processing driver genes Intogen
+    #This first dataset only has information about:
+    #BLCA, BRCA ,ESCA,HNSC , LGG, LUSC,PAAD,PRAD
+    #missing: ACC, CHOL, LIHC, SARC, SKCM, TCGT, UCS
+    Parameters:
+        name: file name (str)
+    Output:
+        csv file
+    '''
+
     remove = ["known_match","chr","strand_orig",'info', 'region', 'strand', 'transcript', 'cdna','pos','ref',
           'alt', 'default_id', 'input','transcript_aminoacids', 'transcript_exons','protein_change',
           'exac_af', 'Pfam_domain', 'cadd_phred',"gdna","protein","consequence","protein_pos",
@@ -320,7 +310,6 @@ def preprocessing_dg1(name):
     dgenes = dgenes.loc[dgenes['cancer'].isin(cancer_list)]
     dgenes.to_csv('data\\'+name,index=False)
 
-
 def cgc():
     path = 'data\\cancer_gene_census.csv'
     dgenes = pd.read_csv('data\\cancer_gene_census.csv',sep=',')
@@ -341,10 +330,6 @@ def cgc():
     #ct_rawnames2 = list(set(ct_rawnames2))
 
     return dgenes#,ct_rawnames2
-
-
-
-
 
 
 
