@@ -1,5 +1,15 @@
 import numpy as np
 import pandas as pd
+import time
+import copy
+import os
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import confusion_matrix,f1_score
+from sklearn.decomposition import NMF
+from sklearn.metrics.pairwise import cosine_similarity
+from scipy.stats import gamma
+from scipy import sparse, stats
+
 #from scipy.stats import dirichlet, beta, nbinom, norm
 #from scipy.special import gamma
 #import gc
@@ -7,14 +17,6 @@ import pandas as pd
 #import random
 #import matplotlib.pyplot as plt
 #from sklearn import metrics
-import time
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix,f1_score
-from scipy.stats import gamma
-import copy
-from sklearn.metrics.pairwise import cosine_similarity
-import os
-from scipy import sparse, stats
 
 '''Parameters'''
 class parameters:
@@ -208,41 +210,17 @@ def load_chain(id,sim,bach_size,j,v,k, run):
         lm_phi = []
     return la_sk,la_cj,lm_tht,lm_phi
 
-
-'''
-DELETE ?
-Label Predictions
-Parameters:
-    theta: current or average value (np.matrix)
-    sk: current or average value (np.matrix)
-    cj: current or average value (np.array)
-    y: true label (np.array)
-Return:
-    y_pred: Predictions 0/1 (np.array)
- '''
-def PGM_pred(theta,sk1,cj):
-    y0 = gamma.logpdf(x=theta,a = sk1[0,:],scale = 1)
-    y1 = gamma.logpdf(x=theta,a = sk1[1,:],scale = 1)
-    y3 = y1-y0
-    y3 = y3.sum(axis=1)
-    y3[y3<=0] = 0
-    y3[y3>0] = 1
-    return y3
-
-'''
-Testing set predictions: this function will find similar patients on the traning set
-and use the average of the lm_tht in the top 6 to make predictions.
-Matrix multiplication didn't work because negative values
-Paramters:
-    train set (np.matrix)
-    train_val validation set
-    lm_tht, lm_phi: parameter's predicted values (average from the chain) (np.matrix)
-Return:
-
-'''
+#description missing
 def predictive_check_mcmc(train, train_val, lm_tht,lm_phi,la_sk,y01,mask, RUN):
+    '''
+    Paramters:
+        train set (np.matrix)
+        train_val validation set
+        lm_tht, lm_phi: parameter's predicted values (average from the chain) (np.matrix)
+    Return:
+    '''
     if RUN:
-        N = 100
+        N = 10 #100
         j,v = train.shape
         k = lm_tht.shape[1]
 
@@ -254,6 +232,8 @@ def predictive_check_mcmc(train, train_val, lm_tht,lm_phi,la_sk,y01,mask, RUN):
                       scale=np.repeat(0.5,j).reshape(j))
 
             lambda1 = lm_tht.reshape(j,k).dot(np.transpose(lm_phi).reshape(k,v))
+            print(lambda1[0:5,0:5],lambda1.mean())
+            print(train[0:5,0:5],train.mean())
             test_gen = np.multiply(lambda1,mask)
             #there are an option of simulate theta using sk and cj
             test_val = np.multiply(train_val, mask)
@@ -264,6 +244,43 @@ def predictive_check_mcmc(train, train_val, lm_tht,lm_phi,la_sk,y01,mask, RUN):
             test_gen1 = stats.norm(lambda1,np.sqrt(lambda1)).logpdf(test_gen)
             pvals = test_val1 < test_gen1
             pval.append(np.mean(pvals[mask==1]))
+        return pval
+
+def matrixfactorization(train,k,run):
+    '''
+    Matrix Factorization to extract latent features
+    Paramters:
+        train: dataset
+        k: latent Dimension
+        run: True/False
+    Return:
+        2 matrices
+    '''
+    if run:
+        model = NMF(n_components=k, init='random') #random_state=0
+        W = model.fit_transform(train)
+        H = model.components_
+    else:
+        W, H = []
+    return W, H
+
+def predictive_check_mf(train,train_val, M, F, mask, run):
+    '''
+    Paramters:
+        train set (np.matrix)
+        train_val validation set
+        lm_tht, lm_phi: parameter's predicted values (average from the chain) (np.matrix)
+    Return:
+    '''
+    if run:
+        pval = []
+        test_gen = np.multiply(M.dot(F), mask)
+        test_val = np.multiply(train_val, mask)
+        
+        test_val1 = stats.norm(lambda1,np.sqrt(lambda1)).logpdf(test_val)
+        test_gen1 = stats.norm(lambda1,np.sqrt(lambda1)).logpdf(test_gen)
+        pvals = test_val1 < test_gen1
+        pval.append(np.mean(pvals[mask==1]))
         return pval
 
 
@@ -330,6 +347,10 @@ def cgc():
     #ct_rawnames2 = list(set(ct_rawnames2))
 
     return dgenes#,ct_rawnames2
+
+
+
+
 
 
 

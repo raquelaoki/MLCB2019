@@ -14,29 +14,26 @@ pd.set_option('display.max_columns', 500)
 '''
 Flags
 '''
-RUN_MCMC = True
+RUN_MCMC = False
 RUN_OUTCOME = False
 RUN_PREDICTIONS = False
-RUN_LOAD_MCMC = True
-RUN_PREDICTIVE_CHECK = True
+RUN_LOAD_MCMC = False
+RUN_PREDICTIVE_CHECK = False
+RUN_MF = True
 '''
 Note:
     - model id = '12' on MLCB
     - outcome model: problem with the nb, how to get coefs and prefictiosn are really bad
     - explain how mcmc save values
-    - add the help explaining how to use the function
-    - k18 and 18, the latent variables on the NB classify everyone on 1
- -k17,16 and 17,16, perfect prediction on training set
- - k15 all 1
- - k 14 perfect prediction on traning, worse on testing
- - k 13
-- new tests with id 21
+    - k18 and 18, the latent variables on the NB classify everyone on 1, k17,16 and 17,16, perfect prediction on training set
+    - k15 all 1
+    - new tests with id 21, my model is bad. I need to fix to make sense, applying the outcome model to a well known model
 '''
 
 '''MCMC Hyperparameters'''
 k = 17 #Latents Dimension
-sim = 300 #Simulations
-bach_size = 100 #Batch size for memory purposes
+sim = 2000 #Simulations
+bach_size = 200 #Batch size for memory purposes
 step1 = 10 #Saving chain every step1 steps
 id = '21' #identification of simulation
 
@@ -66,6 +63,8 @@ def main():
         print('it shoul be 0.5: ')
         p = fc.predictive_check_mcmc(train, train_validation,lm_tht, lm_phi, la_sk, y01,hold_mask, RUN_PREDICTIVE_CHECK)
         print(np.mean(p))
+
+    W, F = fc.matrixfactorization(train,k,RUN_MF)
     #
     #print('\nPGM: Metrics training set: \n'
     #      ,confusion_matrix(y01,fc.PGM_pred(lm_tht,la_sk,la_cj)),'\n',
@@ -115,8 +114,8 @@ def main():
     #gene_coef_sub = pd.merge(gene_coef_sub,cgc_list, left_on = 'genes',right_on='Gene Symbol')
 
     #print(gene_coef_sub.shape)#
-
+    return W, F, train
 
 
 if __name__ == "__main__":
-    main()
+    w,f,t = main()
