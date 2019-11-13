@@ -276,12 +276,22 @@ def predictive_check_mf(train,train_val, M, F, mask, run):
         pval = []
         test_gen = np.multiply(M.dot(F), mask)
         test_val = np.multiply(train_val, mask)
-        
+
         test_val1 = stats.norm(lambda1,np.sqrt(lambda1)).logpdf(test_val)
         test_gen1 = stats.norm(lambda1,np.sqrt(lambda1)).logpdf(test_gen)
         pvals = test_val1 < test_gen1
         pval.append(np.mean(pvals[mask==1]))
         return pval
+
+def predictive_check_new(X, Z,run ):
+    '''
+    This function is agnostic to the method. 
+    Parameters:
+        X: orginal features
+        Z: latent (either the reconstruction of X or lower dimension)
+    Return:
+    '''
+
 
 
 def preprocessing_dg1(name):
@@ -348,23 +358,17 @@ def cgc():
 
     return dgenes#,ct_rawnames2
 
-
-
-
-
-
-
-'''
-Outcome Model
-type:lr (logistic regression), rf (random forest)
-missing:  nb (naive bayes) (lack of coef)
-return: coeficients
-'''
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.linear_model import LogisticRegression
-from sklearn.naive_bayes import GaussianNB
-
 def OutcomeModel(type, train, theta, y01):
+    '''
+    Outcome Model
+    type:lr (logistic regression), rf (random forest)
+    missing:  nb (naive bayes) (lack of coef)
+    return: coeficients
+    '''
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.naive_bayes import GaussianNB
+
     X = pd.DataFrame(train,theta)
     if type == 'rf':
         clf = RandomForestClassifier(n_estimators=100, max_depth=15, random_state=0)

@@ -28,6 +28,7 @@ Note:
     - k18 and 18, the latent variables on the NB classify everyone on 1, k17,16 and 17,16, perfect prediction on training set
     - k15 all 1
     - new tests with id 21, my model is bad. I need to fix to make sense, applying the outcome model to a well known model
+test
 '''
 
 '''MCMC Hyperparameters'''
