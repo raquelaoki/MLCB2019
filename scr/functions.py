@@ -286,7 +286,6 @@ def predictive_check_mf(train,train_val, M, F, mask, run):
 def predictive_check_new(X, Z,run ):
     from sklearn.linear_model import LinearRegression
     from sklearn.model_selection import train_test_split
-    #https://stackoverflow.com/questions/15033511/compute-a-confidence-interval-from-sample-data
     '''
     This function is agnostic to the method.
     Use a Linear Model X_m = f(Z), save the proportion
@@ -313,13 +312,16 @@ def predictive_check_new(X, Z,run ):
         model = LinearRegression().fit(Z_train, X_train)
         X_pred = model.predict(Z_test)
         v_obs.append(np.less(X_pred,X_test).sum()/len(X_test))
-        v_nul.append(np.less(X_pred,X_train.mean()).sum()/len(X_test))
+        #v_nul.append(np.less(X_pred,X_train.mean()).sum()/len(X_test))
 
 
-    n = len(v_nul)
-    m, se = np.mean(v_nul), stats.sem(v_nul)
+    n = len(v_obs)
+    m, se = np.mean(v_obs), np.std(v_obs)
     h = se * stats.t.ppf((1 + 0.95) / 2., n-1)
-    return v_obs, v_nul, m-h, m+h
+    if m-h<= 0.5 and 0.5 <= m+h:
+        return v_obs, True
+    else:
+        return v_obs, False
 
 
 def preprocessing_dg1(name):

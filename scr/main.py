@@ -29,10 +29,13 @@ Note:
     - k15 all 1
     - new tests with id 21, my model is bad. I need to fix to make sense, applying the outcome model to a well known model
 test
+#bart: it's important to standartize my variables 0-1
+
+
 '''
 
 '''MCMC Hyperparameters'''
-k = 50 #Latents Dimension
+k = 30 #Latents Dimension
 sim = 2000 #Simulations
 bach_size = 200 #Batch size for memory purposes
 step1 = 10 #Saving chain every step1 steps
@@ -68,8 +71,8 @@ la_sk,la_cj,lm_tht,lm_phi = fc.load_chain(id,sim,bach_size,j,v,k,RUN_LOAD_MCMC)
 W, F = fc.matrixfactorization(train,k,RUN_MF)
 if RUN_MF:
     #Time consuming
-    v_pred, v_null, v_null_l, v_null_u = fc.predictive_check_new(train,W.dot(F),RUN_MF)
-    if(v_null_l<np.mean(v_pred) and np.mean(v_pred)<v_null_u):
+    v_pred, test_result = fc.predictive_check_new(train,W.dot(F),RUN_MF)
+    if(test_result):
         print('Predictive Check test: PASS')
     else: 
         print('Predictive Check Test: FAIL')
