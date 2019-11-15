@@ -284,14 +284,42 @@ def predictive_check_mf(train,train_val, M, F, mask, run):
         return pval
 
 def predictive_check_new(X, Z,run ):
+    from sklearn.linear_model import LinearRegression
+    from sklearn.model_selection import train_test_split
+    #https://stackoverflow.com/questions/15033511/compute-a-confidence-interval-from-sample-data
     '''
-    This function is agnostic to the method. 
+    This function is agnostic to the method.
+    Use a Linear Model X_m = f(Z), save the proportion
+    of times that the pred(z_test)<X_m(test) for each feature m.
+    Compare with the proportion of the null model mean(x_m(train)))<X_m(test)
+    Create an Confidence interval for the null model, check if the average value
+    across the predicted values using LM is inside this interval
+
+    Sample a few columns (300 hundred?) to do this math
+
     Parameters:
         X: orginal features
         Z: latent (either the reconstruction of X or lower dimension)
     Return:
     '''
+    if X.shape[1]>300:
+        X = X[:,np.random.randint(0,X.shape[1],300)]
 
+
+    v_obs = []
+    v_nul = []
+    for i in range(X.shape[1]):
+        Z_train, Z_test, X_train, X_test = train_test_split(Z, X[:,i], test_size=0.2)
+        model = LinearRegression().fit(Z_train, X_train)
+        X_pred = model.predict(Z_test)
+        v_obs.append(np.less(X_pred,X_test).sum()/len(X_test))
+        v_nul.append(np.less(X_pred,X_train.mean()).sum()/len(X_test))
+
+
+    n = len(v_nul)
+    m, se = np.mean(v_nul), stats.sem(v_nul)
+    h = se * stats.t.ppf((1 + 0.95) / 2., n-1)
+    return v_obs, v_nul, m-h, m+h
 
 
 def preprocessing_dg1(name):
