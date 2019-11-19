@@ -9,6 +9,9 @@ from sklearn.decomposition import NMF
 from sklearn.metrics.pairwise import cosine_similarity
 from scipy.stats import gamma
 from scipy import sparse, stats
+#from sklearn.linear_model import LogisticRegression
+import statsmodels.discrete.discrete_model as sm
+
 
 #from scipy.stats import dirichlet, beta, nbinom, norm
 #from scipy.special import gamma
@@ -28,6 +31,7 @@ class parameters:
         self.lm_phi = latent_phi #string of matrix (kv) in array format
         self.lm_tht = latent_tht #string of matrix  (jk) in array format
 
+#Delete
 def holdout(data, alpha):
     '''
     Holdout: keep a few elementos from the factor model,
@@ -210,42 +214,7 @@ def load_chain(id,sim,bach_size,j,v,k, run):
         lm_phi = []
     return la_sk,la_cj,lm_tht,lm_phi
 
-#description missing
-def predictive_check_mcmc(train, train_val, lm_tht,lm_phi,la_sk,y01,mask, RUN):
-    '''
-    Paramters:
-        train set (np.matrix)
-        train_val validation set
-        lm_tht, lm_phi: parameter's predicted values (average from the chain) (np.matrix)
-    Return:
-    '''
-    if RUN:
-        N = 10 #100
-        j,v = train.shape
-        k = lm_tht.shape[1]
-
-
-        pval = []
-        for n in range(N):
-            for ki in range(k):
-                lm_tht[:,ki] = np.random.gamma(shape=(la_sk[y01,ki]).reshape(j),
-                      scale=np.repeat(0.5,j).reshape(j))
-
-            lambda1 = lm_tht.reshape(j,k).dot(np.transpose(lm_phi).reshape(k,v))
-            print(lambda1[0:5,0:5],lambda1.mean())
-            print(train[0:5,0:5],train.mean())
-            test_gen = np.multiply(lambda1,mask)
-            #there are an option of simulate theta using sk and cj
-            test_val = np.multiply(train_val, mask)
-            #using normal approximation
-            #test_val1 = stats.poisson(lm_tht.reshape(j,k).dot(np.transpose(lm_phi).reshape(k,v))).logpdf(test_val)
-            #test_gen1 = stats.poisson(lm_tht.reshape(j,k).dot(np.transpose(lm_phi).reshape(k,v))).logpdf(test_gen)
-            test_val1 = stats.norm(lambda1,np.sqrt(lambda1)).logpdf(test_val)
-            test_gen1 = stats.norm(lambda1,np.sqrt(lambda1)).logpdf(test_gen)
-            pvals = test_val1 < test_gen1
-            pval.append(np.mean(pvals[mask==1]))
-        return pval
-
+#Failed in run = False
 def matrixfactorization(train,k,run):
     '''
     Matrix Factorization to extract latent features
@@ -261,27 +230,8 @@ def matrixfactorization(train,k,run):
         W = model.fit_transform(train)
         H = model.components_
     else:
-        W, H = []
+        W, H = [], []
     return W, H
-
-def predictive_check_mf(train,train_val, M, F, mask, run):
-    '''
-    Paramters:
-        train set (np.matrix)
-        train_val validation set
-        lm_tht, lm_phi: parameter's predicted values (average from the chain) (np.matrix)
-    Return:
-    '''
-    if run:
-        pval = []
-        test_gen = np.multiply(M.dot(F), mask)
-        test_val = np.multiply(train_val, mask)
-
-        test_val1 = stats.norm(lambda1,np.sqrt(lambda1)).logpdf(test_val)
-        test_gen1 = stats.norm(lambda1,np.sqrt(lambda1)).logpdf(test_gen)
-        pvals = test_val1 < test_gen1
-        pval.append(np.mean(pvals[mask==1]))
-        return pval
 
 def predictive_check_new(X, Z,run ):
     from sklearn.linear_model import LinearRegression
@@ -322,7 +272,6 @@ def predictive_check_new(X, Z,run ):
         return v_obs, True
     else:
         return v_obs, False
-
 
 def preprocessing_dg1(name):
     '''
@@ -388,42 +337,32 @@ def cgc():
 
     return dgenes#,ct_rawnames2
 
-def OutcomeModel(type, train, theta, y01):
+def outcome_model(train, z, y01):
     '''
-    Outcome Model
-    type:lr (logistic regression), rf (random forest)
-    missing:  nb (naive bayes) (lack of coef)
-    return: coeficients
+    Outcome Model + logistic regression
+    I need to use less features for each model, so i can run several
+    batches of the model using the latent features. They should account
+    for all cofounders from the hole data
+    parameters:
+        train: dataset with original features jxv
+        z: latent features, jxk
+        y01: response, jx1
+
+    return: list of significant coefs
     '''
-    from sklearn.ensemble import RandomForestClassifier
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.naive_bayes import GaussianNB
+    if train.shape[1]>100:
+        np.random.seed(10)
+        columns_split = np.random.randint(0,train.shape[1]//100,train.shape[1] )
 
-    X = pd.DataFrame(train,theta)
-    if type == 'rf':
-        clf = RandomForestClassifier(n_estimators=100, max_depth=15, random_state=0)
-        output = clf.fit(X, y01)
-        coef = output.feature_importances_
-        f1 = f1_score(y01,output.predict(X))
-        #clf0 = RandomForestClassifier(n_estimators=100, max_depth=15, random_state=0)
-        #clf1 = RandomForestClassifier(n_estimators=100, max_depth=15, random_state=0)
+    for cs in range(0,train.shape[1]//100):
+        cols = np.arange(train.shape[1])[np.equal(columns_split,cs)]
+        X = pd.concat([pd.DataFrame(train[:,cols]),pd.DataFrame(z)], axis= 1)
+        output = sm.Logit(y01, X).fit()
 
-        #print('f1 training and lm ',f1)
-        #print("\nf1 just training set",f1_score(y01,clf0.fit(pd.DataFrame(train),y01).predict(pd.DataFrame(train))))
-        #print("\nf1 just theta set",f1_score(y01,clf1.fit(pd.DataFrame(theta),y01).predict(pd.DataFrame(theta))))
-    if type == 'lr':
-        clf = LogisticRegression(penalty='l1', solver='liblinear')
-        output = clf.fit(X, y01)
-        coef = clf.coef_
-        f1 = f1_score(y01,output.predict(X))
-        #clf0 = LogisticRegression(penalty='l1', solver='liblinear')
-        #clf1 = LogisticRegression(penalty='l1', solver='liblinear')
-        #print('f1 training and lm ',f1)
-        #print("\nf1 just training set",f1_score(y01,clf0.fit(pd.DataFrame(train),y01).predict(pd.DataFrame(train))))
-        #print("\nf1 just theta set",f1_score(y01,clf1.fit(pd.DataFrame(theta),y01).predict(pd.DataFrame(theta))))
-    if type == 'nb':
-        clf = GaussianNB()
-        output = clf.fit(X, y01)
-        coef = ""
-        f1 = f1_score(y01,output.predict(X))
+    # sm
+    #output.fit().params
+    #output.summary()
+    #save names of coluns of significant genes
+
+
     return coef, f1 ,confusion_matrix(y01,output.predict(X))
