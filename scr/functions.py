@@ -66,6 +66,33 @@ def holdout(data, alpha):
     train = np.multiply(1-holdout_mask, train)
     return train, train_val, j, v, y01,  abr, holdout_mask
 
+def data_prep(data):
+    '''
+    Holdout: keep a few elementos from the factor model,
+    used to verify the quality of the latent features
+    parameters:
+        data: full dataset
+        alpha: proportion of elements to remove
+    return:
+        train: training set withouht these elements
+        train_validation: validation/true values holdout
+    source code: decofounder tutorial
+    '''
+    data = data.reset_index(drop=True)
+    '''Organizing columns names'''
+    remove = data.columns[[0,1,2]]
+    y = data.columns[1]
+    y01 = np.array(data[y])
+    abr = np.array(data[data.columns[2]])
+    train = data.drop(remove, axis = 1)
+    colnames = train.columns
+    train = np.matrix(train)
+
+    # randomly holdout some entries of data
+    j, v = train.shape
+
+    return train, j, v, y01,  abr, colnames
+
 def gibbs(current,train0,j,v,k,y01):
     '''
     Gibbs Sampling: the math, proposal of values
@@ -337,7 +364,7 @@ def cgc():
 
     return dgenes#,ct_rawnames2
 
-def outcome_model(train, z, y01):
+def outcome_model(train,colnames , z, y01):
     '''
     Outcome Model + logistic regression
     I need to use less features for each model, so i can run several
@@ -350,19 +377,27 @@ def outcome_model(train, z, y01):
 
     return: list of significant coefs
     '''
+    col_new_order = []
+    col_pvalue = []
+    col_coef = []
+
     if train.shape[1]>100:
         np.random.seed(10)
         columns_split = np.random.randint(0,train.shape[1]//100,train.shape[1] )
 
     for cs in range(0,train.shape[1]//100):
         cols = np.arange(train.shape[1])[np.equal(columns_split,cs)]
+        colnames_sub = colnames[np.equal(columns_split,cs)]
         X = pd.concat([pd.DataFrame(train[:,cols]),pd.DataFrame(z)], axis= 1)
+        X.columns = range(0,X.shape[1])
         output = sm.Logit(y01, X).fit()
+        col_new_order.extend(colnames_sub)
+        col_pvalue.extend(output.pvalues[0:(len(output.pvalues)-z.shape[1])])
+        col_coef.extend(output.params[0:(len(output.pvalues)-z.shape[1])])
+        if cs==0:
+            print('---colname:',colnames_sub[0], ' and pvalue ',output.pvalues[0],'---')
 
-    # sm
-    #output.fit().params
-    #output.summary()
-    #save names of coluns of significant genes
 
-
-    return coef, f1 ,confusion_matrix(y01,output.predict(X))
+    resul =  pd.concat([pd.DataFrame(col_new_order),pd.DataFrame(col_pvalue), pd.DataFrame(col_coef)], axis = 1)
+    resul.columns = ['genes','pvalue','coef']
+    return resul, output

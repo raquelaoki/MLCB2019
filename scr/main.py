@@ -14,11 +14,11 @@ pd.set_option('display.max_columns', 500)
 '''
 Flags
 '''
-RUN_MCMC = True
+RUN_MCMC = False
 RUN_OUTCOME = False
 RUN_PREDICTIONS = False
 RUN_LOAD_MCMC = False
-RUN_MF = False
+RUN_MF = True
 '''
 Note:
     - model id = '12' on MLCB
@@ -60,7 +60,8 @@ class parameters:
 
 data = pd.read_csv(filename, sep=';')
 #data = data.iloc[0:500, 0:100]
-train, train_validation, j, v, y01, abr, hold_mask = fc.holdout(data, 0.001)
+#train, train_validation, j, v, y01, abr, hold_mask = fc.holdout(data, 0.001)
+train, j, v, y01, abr, colnames = fc.data_prep(data)
 fc.mcmc(train,y01,sim,bach_size,step1,k_mcmc,id,RUN_MCMC)
 la_sk,la_cj,lm_tht,lm_phi = fc.load_chain(id,sim,bach_size,j,v,k_mcmc,RUN_LOAD_MCMC)
 if RUN_LOAD_MCMC:
@@ -79,6 +80,9 @@ if RUN_MF:
     v_pred, test_result = fc.predictive_check_new(train,W.dot(F),True)
     if(test_result):
         print('Predictive Check test: PASS')
+        resul, output = fc.outcome_model( train,colnames, W,y01)
+        #np.savetxt('results\\feature_mf_'+str(k_mf)+'_lr'+'_all'+'.txt', resul, delimiter=',',fmt='%5s') 
+        resul.to_csv('results\\feature_mf_'+str(k_mf)+'_lr'+'_all'+'.txt', sep=';', index = False)
     else:
         print('Predictive Check Test: FAIL')
 
@@ -86,6 +90,8 @@ if RUN_MF:
 #X = train
 #i = 0
 #Z_train, Z_test, X_train, X_test = train_test_split(Z, , test_size=0.2)
+
+
 
 
     #
