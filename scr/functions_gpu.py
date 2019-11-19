@@ -1,6 +1,6 @@
 #Code adapted from Deconfounder Tutorial
 
-import tensorflow as tf
+#import tensorflow as tf
 import numpy as np
 import numpy.random as npr
 import pandas as pd
@@ -8,6 +8,7 @@ import tensorflow as tf
 import tensorflow_probability as tfp
 import statsmodels.api as sm
 
+import tensorflow.compat.v2 as tf
 from tensorflow_probability import edward2 as ed
 from sklearn.datasets import load_breast_cancer
 from pandas.plotting import scatter_matrix
