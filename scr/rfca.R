@@ -41,7 +41,6 @@ normal.pag <- rfci(suffStat, indepTest, alpha = 0.9999, labels = V[-L],
 
 
 #questions: how to extract adjacent matrix
-# how to add input data
 
 
 data("gmL")
@@ -53,3 +52,13 @@ fci.gmL <- rfci(suffStat, indepTest=gaussCItest, alpha = 0.9999, labels = c("2",
 ########################## 
 #Real Code
 #Raquel AOki
+
+setwd("~/GitHub/project_spring2019")
+data = read.table('data/tcga_train_gexpression_cgc_7k.txt', sep = ';', header = T)
+extra = data[,c(1,2,3)]
+data = data[,-c(1,2,3)]
+suffStat <- list(C = cor(data), n = nrow(data))
+fci.gmL <- rfci(suffStat, indepTest=gaussCItest, alpha = 0.9, labels = names(data))
+
+
+
