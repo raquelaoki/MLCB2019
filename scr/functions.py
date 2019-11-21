@@ -21,6 +21,8 @@ import statsmodels.discrete.discrete_model as sm
 #import matplotlib.pyplot as plt
 #from sklearn import metrics
 
+'''PART 1: DECONFOUNDER ALGORITHM'''
+
 '''Parameters'''
 class parameters:
     __slots__ = ( 'la_cj','la_sk','la_ev','lm_phi','lm_tht')
@@ -366,3 +368,6 @@ def outcome_model(train, z, y01):
 
 
     return coef, f1 ,confusion_matrix(y01,output.predict(X))
+
+'''PART : BART'''
+def 
