@@ -59,6 +59,6 @@ extra = data[,c(1,2,3)]
 data = data[,-c(1,2,3)]
 suffStat <- list(C = cor(data), n = nrow(data))
 fci.gmL <- rfci(suffStat, indepTest=gaussCItest, alpha = 0.9, labels = names(data))
-
+  
 
 

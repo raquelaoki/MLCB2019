@@ -18,7 +18,7 @@ RUN_MCMC = False
 RUN_OUTCOME = False
 RUN_PREDICTIONS = False
 RUN_LOAD_MCMC = False
-RUN_MF = True
+RUN_MF = False
 '''
 Note:
     - model id = '12' on MLCB
@@ -92,7 +92,14 @@ if RUN_MF:
 #Z_train, Z_test, X_train, X_test = train_test_split(Z, , test_size=0.2)
 
 
-
+#Does not work 
+from bartpy.sklearnmodel import SklearnModel
+model = SklearnModel() # Use default parameters
+#cross_validate(model)
+#model = ResidualBART(base_estimator=LinearModel())
+#model.fit(X, y)
+model.fit(train, y01) # Fit the model
+predictions = model.predict() # Make predictions on the train set
 
     #
     #print('\nPGM: Metrics training set: \n'
