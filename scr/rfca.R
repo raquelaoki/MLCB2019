@@ -73,4 +73,10 @@ bart_machine = bartMachine(data, y, num_trees = 50, num_burn_in = 500, num_itera
 summary(bart_machine)
 
 
+pred1 = predict(bart_machine, data[data[,1]<=mean(data[,1]),])
+mndiffs1 = mean(as.numeric(as.character(bart_machine$y_hat_train[data[,1]<=mean(data[,1])]))-as.numeric(as.character(pred1)))
+mndiffs1 #catt or satt
 
+pred2 = predict(bart_machine, data[data[,1]>mean(data[,1]),])
+mndiffs2 = mean(as.numeric(as.character(bart_machine$y_hat_train[data[,1]>mean(data[,1])]))-as.numeric(as.character(pred2)))
+mndiffs2
