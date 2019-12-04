@@ -40,7 +40,7 @@ data = read.table('data/tcga_train_gexpression_cgc_7k.txt', sep = ';', header = 
 extra = data[,c(1,2,3)]
 data = data[,-c(1,2,3)]
 
-t = c(100, 400, 800, 1200, 2000, 3000, 5000, dim(data)[2])
+t = c(100, 400, 500, 600, 700,800)
 test = c()
 for(t0 in 1:length(t)){
 bd = data[,1:t[t0]]
