@@ -161,6 +161,7 @@ def elbo_func(qw,qz):
 #optimizer = tf.train.AdamOptimizer(learning_rate = 0.05)
 #optimizer = tf.optimizers.Adam(learning_rate = 0.05)
 train = tf.optimizers.Adam(learning_rate = 0.05).minimize(-elbo_func(qw,qz), var_list=[qw_mean,qz_mean,qw_stddv,qz_stddv])
+
 #https://stackoverflow.com/questions/58722591/typeerror-minimize-missing-1-required-positional-argument-var-list
 #train = optimizer.minimize(-elbo, var_list=[qw_mean,qz_mean,qw_stddv,qz_stddv])
 #https://github.com/tensorflow/probability/issues/524
