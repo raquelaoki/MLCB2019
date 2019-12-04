@@ -7,11 +7,11 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import confusion_matrix,f1_score
 from sklearn.decomposition import NMF
 from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
 from scipy.stats import gamma
 from scipy import sparse, stats
-#from sklearn.linear_model import LogisticRegression
 import statsmodels.discrete.discrete_model as sm
-
 
 #from scipy.stats import dirichlet, beta, nbinom, norm
 #from scipy.special import gamma
@@ -34,7 +34,7 @@ class parameters:
         self.lm_tht = latent_tht #string of matrix  (jk) in array format
 
 #Delete
-def holdout(data, alpha):
+def data_holdout(data, alpha):
     '''
     Holdout: keep a few elementos from the factor model,
     used to verify the quality of the latent features
@@ -136,7 +136,7 @@ def gibbs(current,train0,j,v,k,y01):
     new.la_cj = np.repeat(0.5,j).reshape(j,1)
     return(new)
 
-def mcmc(train,y01, sim, bach_size, step1,k,id,run):
+def fa_mcmc(train,y01, sim, bach_size, step1,k,id,run):
     '''
     MCMC: call gibbs function and save proposed parameters in a chain
     Parameters
@@ -244,10 +244,10 @@ def load_chain(id,sim,bach_size,j,v,k, run):
     return la_sk,la_cj,lm_tht,lm_phi
 
 #Failed in run = False
-def matrixfactorization(train,k,run):
+def fa_matrixfactorization(train,k,run):
     '''
     Matrix Factorization to extract latent features
-    Paramters:
+    Parameters:
         train: dataset
         k: latent Dimension
         run: True/False
@@ -261,6 +261,75 @@ def matrixfactorization(train,k,run):
     else:
         W, H = [], []
     return W, H
+
+def fa_pca(train,k,run):
+    '''
+    PCA to extrac latent features
+    Parameters:
+        train: dataset
+        k: latent Dimension
+        run: True/False
+    Return:
+        1 matrix
+    '''
+    if run:
+        # Standardizing the features
+        X = StandardScaler().fit_transform(train)
+        model = PCA(n_components=k)
+        principalComponents = model.fit_transform(X)
+        principalDf = pd.DataFrame(data = principalComponents)
+    else:
+        principalDf = []
+    return principalDf
+
+def fa_a(train,k,run):
+    from keras.layers import Input, Dense
+    from keras.models import Model
+    '''
+    Autoencoder to extrac latent features
+    Parameters:
+        train: dataset
+        k: latent Dimension
+        run: True/False
+    Return:
+        1 matrix
+    References
+    #https://www.guru99.com/autoencoder-deep-learning.html
+    #https://blog.keras.io/building-autoencoders-in-keras.html
+    '''
+    if run:
+        x_train, x_test = train_test_split(train, test_size = 0.3,random_state = 22)
+        print(x_train.shape, x_test.shape, train.shape)
+        ii = x_train.shape[1]
+        input_img = Input(shape=(ii,))
+        encoding_dim = 20
+        encoded = Dense(encoding_dim, activation='sigmoid')(input_img) #change relu
+        # "decoded" is the lossy reconstruction of the input
+        decoded = Dense(ii, activation='sigmoid')(encoded)
+
+        # this model maps an input to its reconstruction
+        autoencoder = Model(input_img, decoded)
+        encoder = Model(input_img, encoded)
+
+
+        autoencoder.compile(optimizer='sgd', loss='mean_squared_error')
+        autoencoder.fit(x_train, x_train, epochs=50, batch_size=256, shuffle=True, validation_data=(x_test, x_test))
+
+        encoded_imgs = encoder.predict(train)
+        return encoded_imgs
+
+
+def check_save(z,train,colnames,y01,name,k):
+    v_pred, test_result = predictive_check_new(train,z,True)
+    if(test_result):
+        print('Predictive Check test: PASS')
+        resul, output = outcome_model( train,colnames, z,y01)
+        #np.savetxt('results\\feature_mf_'+str(k_mf)+'_lr'+'_all'+'.txt', resul, delimiter=',',fmt='%5s')
+        resul.to_csv('results\\feature_'+name+'_'+str(k)+'_lr'+'_all'+'.txt', sep=';', index = False)
+    else:
+        print('Predictive Check Test: FAIL')
+        print('Results not saved')
+
 
 def predictive_check_new(X, Z,run ):
     from sklearn.linear_model import LinearRegression

@@ -5,10 +5,13 @@ DataNew/
 data_old/
 Files/
 DatadataIn/
+Probabilistic-Matrix-Factorization-master/
 __pycache__/
+your_cache_dir_goes_here/
 latent_variable_jason_work/
 build/
 data/
+bartpy/
 .ipynb_checkpoints/
 .Rhistory
 .RData

@@ -53,12 +53,30 @@ fci.gmL <- rfci(suffStat, indepTest=gaussCItest, alpha = 0.9999, labels = c("2",
 #Real Code
 #Raquel AOki
 
+suffStat <- list(C = cor(data), n = nrow(data))
+fci.gmL <- rfci(suffStat, indepTest=gaussCItest, alpha = 0.9, labels = names(data))
+  
+
+
+
+#BART 
+options(java.parameters = "-Xmx5g")
+library(bartMachine)
+
 setwd("~/GitHub/project_spring2019")
 data = read.table('data/tcga_train_gexpression_cgc_7k.txt', sep = ';', header = T)
 extra = data[,c(1,2,3)]
 data = data[,-c(1,2,3)]
-suffStat <- list(C = cor(data), n = nrow(data))
-fci.gmL <- rfci(suffStat, indepTest=gaussCItest, alpha = 0.9, labels = names(data))
+y = as.factor(extra$y)
+
+bart_machine = bartMachine(data, y, num_trees = 50, num_burn_in = 500, num_iterations_after_burn_in = 1500 )
+summary(bart_machine)
 
 
+pred1 = predict(bart_machine, data[data[,1]<=mean(data[,1]),])
+mndiffs1 = mean(as.numeric(as.character(bart_machine$y_hat_train[data[,1]<=mean(data[,1])]))-as.numeric(as.character(pred1)))
+mndiffs1 #catt or satt
 
+pred2 = predict(bart_machine, data[data[,1]>mean(data[,1]),])
+mndiffs2 = mean(as.numeric(as.character(bart_machine$y_hat_train[data[,1]>mean(data[,1])]))-as.numeric(as.character(pred2)))
+mndiffs2

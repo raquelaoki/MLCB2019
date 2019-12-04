@@ -18,7 +18,11 @@ RUN_MCMC = False
 RUN_OUTCOME = False
 RUN_PREDICTIONS = False
 RUN_LOAD_MCMC = False
-RUN_MF = True
+RUN_MF = False
+RUN_PMF = False #to implement 
+RUN_PCA = False 
+RUN_A = True # 
+
 '''
 Note:
     - model id = '12' on MLCB
@@ -36,6 +40,7 @@ test
 '''MCMC Hyperparameters'''
 k_mf = 20 #Latents Dimension
 k_mcmc = 10
+k_pca = k_ac = 20 
 sim = 2000 #Simulations
 bach_size = 200 #Batch size for memory purposes
 step1 = 10 #Saving chain every step1 steps
@@ -62,7 +67,7 @@ data = pd.read_csv(filename, sep=';')
 #data = data.iloc[0:500, 0:100]
 #train, train_validation, j, v, y01, abr, hold_mask = fc.holdout(data, 0.001)
 train, j, v, y01, abr, colnames = fc.data_prep(data)
-fc.mcmc(train,y01,sim,bach_size,step1,k_mcmc,id,RUN_MCMC)
+fc.fa_mcmc(train,y01,sim,bach_size,step1,k_mcmc,id,RUN_MCMC)
 la_sk,la_cj,lm_tht,lm_phi = fc.load_chain(id,sim,bach_size,j,v,k_mcmc,RUN_LOAD_MCMC)
 if RUN_LOAD_MCMC:
     Z = lm_tht.dot(np.transpose(lm_phi))
@@ -74,17 +79,18 @@ if RUN_LOAD_MCMC:
         print('Predictive Check Test: FAIL')
 
 
-W, F = fc.matrixfactorization(train,k_mf,RUN_MF)
 if RUN_MF:
-    #Time consuming
-    v_pred, test_result = fc.predictive_check_new(train,W.dot(F),True)
-    if(test_result):
-        print('Predictive Check test: PASS')
-        resul, output = fc.outcome_model( train,colnames, W,y01)
-        #np.savetxt('results\\feature_mf_'+str(k_mf)+'_lr'+'_all'+'.txt', resul, delimiter=',',fmt='%5s') 
-        resul.to_csv('results\\feature_mf_'+str(k_mf)+'_lr'+'_all'+'.txt', sep=';', index = False)
-    else:
-        print('Predictive Check Test: FAIL')
+    W, F = fc.fa_matrixfactorization(train,k_mf,RUN_MF)
+    fc.check_save(W,train,colnames, y01,'mf', k_mf)
+
+if RUN_PCA: 
+    pc = fc.fa_pca(train,k_pca,RUN_PCA)
+    fc.check_save(pc,train,colnames, y01,'pca', k_pca)
+
+if RUN_A: 
+    ac =  fc.fa_a(train,k_ac,RUN_A)
+    fc.check_save(ac,train,colnames, y01,'ac', k_ac)
+
 
 #Z = W.dot(F)
 #X = train
@@ -92,7 +98,14 @@ if RUN_MF:
 #Z_train, Z_test, X_train, X_test = train_test_split(Z, , test_size=0.2)
 
 
-
+#Does not work 
+#from bartpy.sklearnmodel import SklearnModel
+#model = SklearnModel() # Use default parameters
+#cross_validate(model)
+#model = ResidualBART(base_estimator=LinearModel())
+#model.fit(X, y)
+#model.fit(train, y01) # Fit the model
+#predictions = model.predict() # Make predictions on the train set
 
     #
     #print('\nPGM: Metrics training set: \n'
