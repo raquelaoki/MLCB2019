@@ -318,6 +318,11 @@ def fa_a(train,k,run):
         encoded_imgs = encoder.predict(train)
         return encoded_imgs
 
+def fa_pmc(train,k,run):
+    #https://stats.stackexchange.com/questions/146547/pymc3-implementation-of-probabilistic-matrix-factorization-pmf-map-produces-a
+    #https://gist.github.com/macks22/00a17b1d374dfc267a9a
+    return 0
+
 
 def check_save(z,train,colnames,y01,name,k):
     v_pred, test_result = predictive_check_new(train,z,True)
@@ -370,6 +375,7 @@ def predictive_check_new(X, Z,run ):
         return v_obs, True
     else:
         return v_obs, False
+
 
 def preprocessing_dg1(name):
     '''
