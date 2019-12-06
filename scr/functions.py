@@ -321,7 +321,44 @@ def fa_a(train,k,run):
 def fa_pmc(train,k,run):
     #https://stats.stackexchange.com/questions/146547/pymc3-implementation-of-probabilistic-matrix-factorization-pmf-map-produces-a
     #https://gist.github.com/macks22/00a17b1d374dfc267a9a
-    return 0
+    import pymc3 as pm
+    import theano
+    import theano.tensor as t
+
+    """Construct the Probabilistic Matrix Factorization model using pymc3.
+    Note that the `testval` param for U and V initialize the model away from
+    0 using a small amount of Gaussian noise.
+    :param np.ndarray train: Training data (observed) to learn the model on.
+    :param int alpha: Fixed precision to use for the rating likelihood function.
+    :param int dim: Dimensionality of the model; rank of low-rank approximation.
+    :param float std: Standard deviation for Gaussian noise in model initialization.
+    """
+    # Mean value imputation on training data.
+    train = train.copy()
+    nan_mask = np.isnan(train)
+    train[nan_mask] = train[~nan_mask].mean()
+
+    # Low precision reflects uncertainty; prevents overfitting.
+    # We use point estimates from the data to intialize.
+    # Set to mean variance across users and items.
+    alpha_u = 1 / train.var(axis=1).mean()
+    alpha_v = 1 / train.var(axis=0).mean()
+
+    logging.info('building the PMF model')
+    n, m = train.shape
+    with pm.Model() as pmf:
+        U = pm.MvNormal(
+            'U', mu=0, tau=alpha_u * np.eye(dim),
+            shape=(n, dim), testval=np.random.randn(n, dim) * std)
+        V = pm.MvNormal(
+            'V', mu=0, tau=alpha_v * np.eye(dim),
+            shape=(m, dim), testval=np.random.randn(m, dim) * std)
+        R = pm.Normal(
+            'R', mu=t.dot(U, V.T), tau=alpha * np.ones(train.shape),
+            observed=train)
+
+    logging.info('done building PMF model')
+    return pmf
 
 
 def check_save(z,train,colnames,y01,name,k):
