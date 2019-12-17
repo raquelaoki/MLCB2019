@@ -9,7 +9,9 @@ import functions as fc
 os.chdir(path)
 from sklearn.metrics import confusion_matrix, f1_score
 pd.set_option('display.max_columns', 500)
-
+#testing
+from bartpy.sklearnmodel import SklearnModel
+#from joblib import Parallel  
 
 '''
 Flags
@@ -21,7 +23,7 @@ RUN_LOAD_MCMC = False
 RUN_MF = False
 RUN_PMF = False #to implement 
 RUN_PCA = False 
-RUN_A = True # 
+RUN_A = False # 
 
 '''
 Note:
@@ -93,17 +95,15 @@ if RUN_A:
 
 
 #Z = W.dot(F)
-#X = train
+X = train
 #i = 0
 #Z_train, Z_test, X_train, X_test = train_test_split(Z, , test_size=0.2)
-
+y = np.matrix(y01)
 
 #Does not work 
-#from bartpy.sklearnmodel import SklearnModel
-#model = SklearnModel() # Use default parameters
+model = SklearnModel(n_trees=50,n_burn = 500, n_samples = 1500) # Use default parameters
 #cross_validate(model)
-#model = ResidualBART(base_estimator=LinearModel())
-#model.fit(X, y)
+model.fit(X, y)
 #model.fit(train, y01) # Fit the model
 #predictions = model.predict() # Make predictions on the train set
 

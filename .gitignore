@@ -13,6 +13,7 @@ latent_variable_jason_work/
 build/
 data/
 bartpy/
+bartpy_OLD/
 .ipynb_checkpoints/
 .Rhistory
 .RData
