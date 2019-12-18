@@ -15,6 +15,8 @@ rm(list=ls())
 
 options(java.parameters = "-Xmx5g")
 library(bartMachine)
+#https://cran.r-project.org/web/packages/bartMachine/vignettes/bartMachine.pdf
+#recommended package BayesTrees is not functional anymore 
 
 setwd("~/GitHub/project_spring2019")
 data = read.table('data/tcga_train_gexpression_cgc_7k.txt', sep = ';', header = T)
@@ -25,14 +27,21 @@ y = as.factor(extra$y)
 bart_machine = bartMachine(data, y, num_trees = 50, num_burn_in = 500, num_iterations_after_burn_in = 1400 )
 summary(bart_machine)
 
+#checking convergence 
+plot_convergence_diagnostics(bart_machine)
 
-pred1 = predict(bart_machine, data[data[,1]<=mean(data[,1]),])
-mndiffs1 = mean(as.numeric(as.character(bart_machine$y_hat_train[data[,1]<=mean(data[,1])]))-as.numeric(as.character(pred1)))
-mndiffs1 #catt or satt
 
-pred2 = predict(bart_machine, data[data[,1]>mean(data[,1]),])
-mndiffs2 = mean(as.numeric(as.character(bart_machine$y_hat_train[data[,1]>mean(data[,1])]))-as.numeric(as.character(pred2)))
-mndiffs2
+obs = predict(bart_machine, data)
+#making the interventional data, one for each gene 
+dif = data.frame(gene = names(data),mean=c(rep(999, dim(data)[2])), sd=c(rep(999, dim(data)[2])))
+for(v in 1:dim(data)[2]){
+  data_v = data
+  data_v[,v] = 0
+  fit = predict(bart_machine, data_v)
+  dif$mean[v] = mean(obs-fit)
+  dif$sd[v] = sd(obs-fit)
+}
+write.table(dif,'results\\bart.txt', sep = ";", row.names = FALSE)
 
 #----------#----------#----------#----------#----------#----------#----------#
 #GFCI 
