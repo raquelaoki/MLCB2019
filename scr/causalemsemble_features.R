@@ -22,7 +22,7 @@ extra = data[,c(1,2,3)]
 data = data[,-c(1,2,3)]
 y = as.factor(extra$y)
 
-bart_machine = bartMachine(data, y, num_trees = 50, num_burn_in = 500, num_iterations_after_burn_in = 1500 )
+bart_machine = bartMachine(data, y, num_trees = 50, num_burn_in = 500, num_iterations_after_burn_in = 1400 )
 summary(bart_machine)
 
 
