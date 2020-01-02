@@ -15,33 +15,78 @@ rm(list=ls())
 
 options(java.parameters = "-Xmx5g")
 library(bartMachine)
+library(ROCR)
 #https://cran.r-project.org/web/packages/bartMachine/vignettes/bartMachine.pdf
 #recommended package BayesTrees is not functional anymore 
 
 setwd("~/GitHub/project_spring2019")
 data = read.table('data/tcga_train_gexpression_cgc_7k.txt', sep = ';', header = T)
-extra = data[,c(1,2,3)]
-data = data[,-c(1,2,3)]
+data <- data[sample(nrow(data),replace=FALSE),]
+#testing set
+extra_test = data[1:round(dim(data)*0.3)[1],c(1,2,3)]
+data_test = data[1:round(dim(data)*0.3)[1],-c(1,2,3)]
+y_test = as.factor(extra_test$y)
+#training set 
+extra =  data[-c(1:round(dim(data)*0.3)[1]),c(1,2,3)]
+data = data[-c(1:round(dim(data)*0.3)[1]),-c(1,2,3)]
 y = as.factor(extra$y)
 
+#fitting the BART model 
 bart_machine = bartMachine(data, y, num_trees = 50, num_burn_in = 500, num_iterations_after_burn_in = 1400 )
 summary(bart_machine)
 
-#checking convergence 
+#checking BART convergence 
 plot_convergence_diagnostics(bart_machine)
 
+#making predictions
+pred_p = predict(bart_machine, data, type='prob') #returns the prob of being on label 1
 
-obs = predict(bart_machine, data)
+#ROC CURVE
+pred <- prediction(1-pred_p,y)
+roc.perf = performance(pred, measure = "tpr", x.measure = "fpr")
+plot(roc.perf, col = 'red',main='ROC')
+abline(a=0, b= 1)
+#is 0.5 the best? 
+
+#looking for a threshold 
+def_threshold <- function(obs,pred,th){
+  #Using 0 as "Positive" example
+  tp = 1-pred
+  tp[tp<=th] = 0 
+  tp[tp>th] = 1
+  #tp = factor(tp,levels = c('1','0'))
+  tp = as.factor(tp)
+  
+  tab = table(tp,obs)
+  cat('Results for :',th,'\nTrue Positive')
+  cat(tab[1,1]/(tab[1,1]+tab[1,2]))
+  cat('\nFalse Positive')
+  cat(tab[2,1]/(tab[2,1]+tab[2,2]))
+  cat('\n')
+  cat(tab[1,1],tab[1,2],tab[2,1],tab[2,2] ) 
+  cat('\n')
+  
+}
+
+
+def_threshold(y,pred_p,0.4)
+def_threshold(y,pred_p,0.5)
+def_threshold(y,pred_p,0.6)
+
 #making the interventional data, one for each gene 
-dif = data.frame(gene = names(data),mean=c(rep(999, dim(data)[2])), sd=c(rep(999, dim(data)[2])))
-for(v in 1:dim(data)[2]){
-  data_v = data
+fit_test =  predict(bart_machine, data_test, type='prob')
+dif = data.frame(gene = names(data),mean=c(rep(999, dim(data)[2])), 
+                 sd=c(rep(999, dim(data)[2])), se = c(rep(999, dim(data)[2])))
+#dif = read.table('results\\bart.txt', sep = ';', header=T)
+for(v in 1:dim(data_test)[2]){
+  data_v = data_test
   data_v[,v] = 0
   fit = predict(bart_machine, data_v)
-  dif$mean[v] = mean(obs-fit)
-  dif$sd[v] = sd(obs-fit)
+  dif$mean[v] = mean(fit_test-fit)
+  dif$sd[v] = sd(fit_test-fit)
+  dif$se[v] = mean((fit_test-fit)^2)
 }
-write.table(dif,'results\\bart.txt', sep = ";", row.names = FALSE)
+write.table(dif,'results\\feature_bart_all.txt', sep = ";", row.names = FALSE)
 
 #----------#----------#----------#----------#----------#----------#----------#
 #GFCI - work here

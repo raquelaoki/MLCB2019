@@ -94,18 +94,33 @@ if RUN_A:
     fc.check_save(ac,train,colnames, y01,'ac', k_ac)
 
 
-#Z = W.dot(F)
-X = train
-#i = 0
-#Z_train, Z_test, X_train, X_test = train_test_split(Z, , test_size=0.2)
-y = np.matrix(y01)
+import pydot
+#from pycausal import search as s
+from pycausal.pycausal import pycausal as pc
+from pycausal import prior as p
+#https://github.com/bd2kccd/py-causal/blob/development/example/py-causal%20-%20GFCI%20Continuous%20in%20Action.ipynb 
+pc = pc()
+pc.start_vm()
+#forbid = [['TangibilityCondition','Impact']]
+#require =[['Sympathy','TangibilityCondition']]
+#tempForbid = p.ForbiddenWithin(['TangibilityCondition','Imaginability'])
+#temporal = [tempForbid,['Sympathy','AmountDonated'],['Impact']]
+#prior = p.knowledge(forbiddirect = forbid, requiredirect = require, addtemporal = temporal)
+#prior
 
-#Does not work 
-model = SklearnModel(n_trees=50,n_burn = 500, n_samples = 1500) # Use default parameters
-#cross_validate(model)
-model.fit(X, y)
-#model.fit(train, y01) # Fit the model
-#predictions = model.predict() # Make predictions on the train set
+tetrad = s.tetradrunner()
+
+#what are the best options? 
+#tetrad.listIndTests()
+#tetrad.listScores()
+tetrad.getAlgorithmParameters(algoId = 'gfci', testId = 'fisher-z-test', scoreId = 'sem-bic')
+tetrad.run(algoId = 'gfci', dfs = train, testId = 'fisher-z-test', scoreId = 'sem-bic', 
+           maxDegree = -1, maxPathLength = -1, 
+           completeRuleSetUsed = False, faithfulnessAssumed = True, verbose = True)
+#tetrad.getEdges()
+#tetrad.getNodes()
+#pc.stop_vm()
+
 
     #
     #print('\nPGM: Metrics training set: \n'
