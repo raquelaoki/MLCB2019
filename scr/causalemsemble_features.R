@@ -41,7 +41,36 @@ plot_convergence_diagnostics(bart_machine)
 #making predictions
 pred_p = predict(bart_machine, data, type='prob') #returns the prob of being on label 1
 
-#ROC CURVE
+
+#ROC saving some points 
+def_roc <- function(pred_p,obs,prob){
+  tp = 1-pred_p
+  tp[tp<=prob] = 0 
+  tp[tp>prob] = 1
+  tp = factor(tp, levels=c(0,1))
+  obs = factor(obs,levels = c(0,1))
+  #Option 1
+  #TP: 0,0/(0,0+0,1)
+  #FP: 1,0/(1,0+1,1)
+  #Option 2
+  #TP: 1,1/(1,1+1,0)
+  #FP: 0,1/(0,1+0,0)
+  tab = table(tp,obs)
+  #Prob, opt1_tp,opt1_fp,opt2_tp,opt2_fp
+  output = c(prob,tab[1,1]/(tab[1,1]+tab[1,2]),tab[2,1]/(tab[2,1]+tab[2,2]),
+                  tab[2,2]/(tab[2,2]+tab[2,1]), tab[1,2]/(tab[1,2]+tab[1,1]))
+  return(output)
+}
+roc_data = rbind(def_roc(pred_p,y,0.01),def_roc(pred_p,y,0.02))
+values = seq(0.03,1,by=0.01)
+for(i in 1:length(values)){
+  roc_data = rbind(roc_data,def_roc(pred_p,y,values[i]))
+}
+roc_data = data.frame(roc_data)
+names(roc_data) = c('prob','tp1','fp1','tp2','fp2')
+write.table(roc_data,'results\\roc_bart_all.txt', row.names = FALSE,sep=';')
+
+#ROC CURVE PLOT
 pred <- prediction(1-pred_p,y)
 roc.perf = performance(pred, measure = "tpr", x.measure = "fpr")
 plot(roc.perf, col = 'red',main='ROC')
