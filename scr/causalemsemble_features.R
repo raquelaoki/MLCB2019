@@ -118,15 +118,12 @@ for(v in 1:dim(data_test)[2]){
 write.table(dif,'results\\feature_bart_all.txt', sep = ";", row.names = FALSE)
 
 #----------#----------#----------#----------#----------#----------#----------#
-#GFCI - work here
+#GFCI - works on my laptop only because the java dependences
 #----------#----------#----------#----------#----------#----------#----------#
 rm(list = ls())
 
-Sys.setenv(JAVA_HOME='C:/Program Files (x86)/Java/jre1.8.0_231/')
-Sys.setenv(JAVA_HOME='C:/Program Files/Java/jre1.8.0_231/')
-#install.packages("rJava")
-#install.packages("stringr")
-#install_github("bd2kccd/r-causal")
+Sys.setenv(JAVA_HOME='C:/Program Files (x86)/Java/jre1.8.0_231')
+Sys.setenv(JAVA_HOME='C:/Program Files/Java/jre1.8.0_231')
 
 require(rJava)
 require(stringr)
