@@ -193,6 +193,9 @@ y = as.factor(extra$y)
 df = data.frame(tetradrunner$edges)
 
 df[,1] = as.character(df[,1])
+
+
+
 write.table(df, file = 'results/example_edges.txt', row.names = FALSE, sep = ';')
 
 #plot
@@ -200,4 +203,33 @@ library(DOT)
 graph_dot <- tetradrunner.tetradGraphToDot(tetradrunner$graph)
 dot(graph_dot)
 
+
+#trying pcalc again 
+#https://cran.r-project.org/web/packages/pcalg/vignettes/pcalgDoc.pdf
+#https://cran.r-project.org/web/packages/pcalg/pcalg.pdf
+library(pcalg)
+
+setwd("~/GitHub/project_spring2019")
+data = read.table('data/tcga_train_gexpression_cgc_7k.txt', sep = ';', header = T)
+data <- data[sample(nrow(data),replace=FALSE),]
+#testing set
+extra_test = data[1:round(dim(data)*0.3)[1],c(1,2,3)]
+data_test = data[1:round(dim(data)*0.3)[1],-c(1,2,3)]
+y_test = as.factor(extra_test$y)
+#training set 
+extra =  data[-c(1:round(dim(data)*0.3)[1]),c(1,2,3)]
+data = data[-c(1:round(dim(data)*0.3)[1]),-c(1,2,3)]
+y = as.factor(extra$y)
+
+int = seq(80,250,by=10)
+times = c()
+for(i in 1:length(int)){
+  ptm <- proc.time()
+  bd = data[,c(1:int[i])]
+  suffStat = list(C = cor(bd), n = nrow(bd))
+  model = rfci(suffStat, indepTest = gaussCItest, alpha = 0.01, m.max = 10, numCores = 3, skel.method = "stable.fast",
+               conservative = FALSE, labels = names(bd))  
+  aux = proc.time() - ptm
+  times = c(times, aux[1])
+}
 

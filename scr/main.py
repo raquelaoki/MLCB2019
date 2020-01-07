@@ -11,7 +11,7 @@ from sklearn.metrics import confusion_matrix, f1_score
 pd.set_option('display.max_columns', 500)
 #testing
 from bartpy.sklearnmodel import SklearnModel
-#from joblib import Parallel  
+#from joblib import Parallel
 
 '''
 Flags
@@ -19,10 +19,17 @@ Flags
 RUN_MCMC = False
 RUN_LOAD_MCMC = False
 
+RUN_ALL = False
+RUN_ = True
+
 RUN_MF = False
-RUN_PMF = False #to implement 
-RUN_PCA = False 
-RUN_A = False 
+RUN_PMF = False #to implement
+RUN_PCA = False
+RUN_A = False
+
+RUN_FCI = False
+
+
 
 '''
 Note:
@@ -41,7 +48,7 @@ test
 '''MCMC Hyperparameters'''
 k_mf = 20 #Latents Dimension
 k_mcmc = 10
-k_pca = k_ac = 20 
+k_pca = k_ac = 20
 sim = 2000 #Simulations
 bach_size = 200 #Batch size for memory purposes
 step1 = 10 #Saving chain every step1 steps
@@ -63,62 +70,88 @@ class parameters:
         self.lm_tht = latent_tht #string of matrix  (jk) in array format
 '''
 
+#Running Factor Analysis Models + Predictive Check + outcome model in all
+if RUN_ALL:
+    data = pd.read_csv(filename, sep=';')
+    #data = data.iloc[0:500, 0:100]
+    train, j, v, y01, abr, colnames = fc.data_prep(data)
 
-data = pd.read_csv(filename, sep=';')
-#data = data.iloc[0:500, 0:100]
-#train, train_validation, j, v, y01, abr, hold_mask = fc.holdout(data, 0.001)
-train, j, v, y01, abr, colnames = fc.data_prep(data)
-fc.fa_mcmc(train,y01,sim,bach_size,step1,k_mcmc,id,RUN_MCMC)
-la_sk,la_cj,lm_tht,lm_phi = fc.load_chain(id,sim,bach_size,j,v,k_mcmc,RUN_LOAD_MCMC)
-if RUN_LOAD_MCMC:
-    Z = lm_tht.dot(np.transpose(lm_phi))
-    v_pred, test_result = fc.predictive_check_new(train,Z,True)
-    if(test_result):
-        print('Predictive Check test: PASS')
-        fc.outcome_model(train,lm_tht,y01)
-    else:
-        print('Predictive Check Test: FAIL')
+    #Old factor model combined with the classification model
+    fc.fa_mcmc(train,y01,sim,bach_size,step1,k_mcmc,id,RUN_MCMC)
+    la_sk,la_cj,lm_tht,lm_phi = fc.load_chain(id,sim,bach_size,j,v,k_mcmc,RUN_LOAD_MCMC)
+    if RUN_LOAD_MCMC:
+        Z = lm_tht.dot(np.transpose(lm_phi))
+        v_pred, test_result = fc.predictive_check_new(train,Z,True)
+        if(test_result):
+            print('Predictive Check test: PASS')
+            fc.outcome_model(train,lm_tht,y01)
+        else:
+            print('Predictive Check Test: FAIL')
+
+    if RUN_MF:
+        W, F = fc.fa_matrixfactorization(train,k_mf,RUN_MF)
+        fc.check_save(W,train,colnames, y01,'mf','all', k_mf)
+
+    if RUN_PCA:
+        pc = fc.fa_pca(train,k_pca,RUN_PCA)
+        fc.check_save(pc,train,colnames, y01,'pca', 'all',k_pca)
+
+    if RUN_A:
+        ac =  fc.fa_a(train,k_ac,RUN_A)
+        fc.check_save(ac,train,colnames, y01,'ac','all', k_ac)
+
+#Running Factor Analysis + Predictive Check + outcome model
+if RUN_:
+    files = pd.read_csv('data\\files_names.txt',sep=';')
+    for f in files:
+        data_ = pd.read_csv(f,sep=';')
+        train, j, v, y01, abr, colnames = fc.data_prep(data_)
+
+        if RUN_MF:
+            W, F = fc.fa_matrixfactorization(train,k_mf,RUN_MF)
+            fc.check_save(W,train,colnames, y01,'mf','all', k_mf)
+
+        if RUN_PCA:
+            pc = fc.fa_pca(train,k_pca,RUN_PCA)
+            fc.check_save(pc,train,colnames, y01,'pca', 'all',k_pca)
+
+        if RUN_A:
+            ac =  fc.fa_a(train,k_ac,RUN_A)
+            fc.check_save(ac,train,colnames, y01,'ac','all', k_ac)
 
 
-if RUN_MF:
-    W, F = fc.fa_matrixfactorization(train,k_mf,RUN_MF)
-    fc.check_save(W,train,colnames, y01,'mf', k_mf)
-
-if RUN_PCA: 
-    pc = fc.fa_pca(train,k_pca,RUN_PCA)
-    fc.check_save(pc,train,colnames, y01,'pca', k_pca)
-
-if RUN_A: 
-    ac =  fc.fa_a(train,k_ac,RUN_A)
-    fc.check_save(ac,train,colnames, y01,'ac', k_ac)
 
 
-from pycausal import search as s
-from pycausal.pycausal import pycausal as pc
-from pycausal import prior as p
-#https://github.com/bd2kccd/py-causal/blob/development/example/py-causal%20-%20GFCI%20Continuous%20in%20Action.ipynb 
-pc = pc()
-pc.start_vm()
-#forbid = [['TangibilityCondition','Impact']]
-#require =[['Sympathy','TangibilityCondition']]
-#tempForbid = p.ForbiddenWithin(['TangibilityCondition','Imaginability'])
-#temporal = [tempForbid,['Sympathy','AmountDonated'],['Impact']]
-#prior = p.knowledge(forbiddirect = forbid, requiredirect = require, addtemporal = temporal)
-#prior
-#https://rawgit.com/cmu-phil/tetrad/development/tetrad-gui/src/main/resources/resources/javahelp/manual/tetrad_tutorial.html
-tetrad = s.tetradrunner()
 
-#what are the best options? 
-#tetrad.listIndTests()
-#tetrad.listScores()
-train_p = pd.DataFrame(train[:,0:2000])
-tetrad.getAlgorithmParameters(algoId = 'gfci', testId = 'fisher-z-test', scoreId = 'sem-bic')
-tetrad.run(algoId = 'gfci', dfs = train_p, testId = 'fisher-z-test', scoreId = 'sem-bic', 
-           maxDegree = 5, maxPathLength = 10, 
-           completeRuleSetUsed = False, faithfulnessAssumed = True, verbose = True)
-#tetrad.getEdges()
-#tetrad.getNodes()
-#pc.stop_vm()
+
+
+if RUN_FCI:
+    from pycausal import search as s
+    from pycausal.pycausal import pycausal as pc
+    from pycausal import prior as p
+    #https://github.com/bd2kccd/py-causal/blob/development/example/py-causal%20-%20GFCI%20Continuous%20in%20Action.ipynb
+    pc = pc()
+    pc.start_vm()
+    #forbid = [['TangibilityCondition','Impact']]
+    #require =[['Sympathy','TangibilityCondition']]
+    #tempForbid = p.ForbiddenWithin(['TangibilityCondition','Imaginability'])
+    #temporal = [tempForbid,['Sympathy','AmountDonated'],['Impact']]
+    #prior = p.knowledge(forbiddirect = forbid, requiredirect = require, addtemporal = temporal)
+    #prior
+    #https://rawgit.com/cmu-phil/tetrad/development/tetrad-gui/src/main/resources/resources/javahelp/manual/tetrad_tutorial.html
+    tetrad = s.tetradrunner()
+
+    #what are the best options?
+    #tetrad.listIndTests()
+    #tetrad.listScores()
+    train_p = pd.DataFrame(train[:,0:2000])
+    tetrad.getAlgorithmParameters(algoId = 'gfci', testId = 'fisher-z-test', scoreId = 'sem-bic')
+    tetrad.run(algoId = 'gfci', dfs = train_p, testId = 'fisher-z-test', scoreId = 'sem-bic',
+               maxDegree = 5, maxPathLength = 10,
+               completeRuleSetUsed = False, faithfulnessAssumed = True, verbose = True)
+    #tetrad.getEdges()
+    #tetrad.getNodes()
+    #pc.stop_vm()
 
 
     #

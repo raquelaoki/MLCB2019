@@ -70,15 +70,14 @@ def data_holdout(data, alpha):
 
 def data_prep(data):
     '''
-    Holdout: keep a few elementos from the factor model,
-    used to verify the quality of the latent features
     parameters:
         data: full dataset
-        alpha: proportion of elements to remove
     return:
         train: training set withouht these elements
-        train_validation: validation/true values holdout
-    source code: decofounder tutorial
+        j,v: dimensions
+        y01: classifications
+        abr: cancer types
+        colnames: gene names
     '''
     data = data.reset_index(drop=True)
     '''Organizing columns names'''
@@ -360,18 +359,29 @@ def fa_pmc(train,k,run):
     logging.info('done building PMF model')
     return pmf
 
+def check_save(z,train,colnames,y01,name1,name2,k):
+    '''
+    Run predictive check function and print results
+    input:
+        z: latent features
+        train: training set
+        colnames: genes names
+        y01: binary classification
+        name: name for the file
+        k: size of the latent features (repetitive)
+    output:
+        prints
 
-def check_save(z,train,colnames,y01,name,k):
+    '''
     v_pred, test_result = predictive_check_new(train,z,True)
     if(test_result):
         print('Predictive Check test: PASS')
         resul, output = outcome_model( train,colnames, z,y01)
         #np.savetxt('results\\feature_mf_'+str(k_mf)+'_lr'+'_all'+'.txt', resul, delimiter=',',fmt='%5s')
-        resul.to_csv('results\\feature_'+name+'_'+str(k)+'_lr'+'_all'+'.txt', sep=';', index = False)
+        resul.to_csv('results\\feature_'+name1+'_'+str(k)+'_lr_'+name2+'.txt', sep=';', index = False)
     else:
         print('Predictive Check Test: FAIL')
         print('Results not saved')
-
 
 def predictive_check_new(X, Z,run ):
     from sklearn.linear_model import LinearRegression
@@ -412,7 +422,6 @@ def predictive_check_new(X, Z,run ):
         return v_obs, True
     else:
         return v_obs, False
-
 
 def preprocessing_dg1(name):
     '''

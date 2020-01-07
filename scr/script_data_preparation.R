@@ -558,11 +558,13 @@ if(clin_dataset_split){
   bd_cli = read.table(paste(theRootDir,'tcga_cli_old.txt',sep=''), header = T, sep = ';')
   bd_all = read.table(paste(theRootDir,'tcga_train_gexpression_cgc_7k.txt',sep=''), header = T, sep = ';')
   col = c('gender','abr')
+  files = c()
+  files1 = c()
+  files2 = c()
   for(i in 1:length(col)){
     bd_sub = subset(bd_cli, select = c('patients', col[i]))
     bd_sub = merge(bd_sub, bd_all,by='patients')
     options = as.character(unique(bd_sub[,2]))
-    files = c()
     for(j in 1:length(options)){
       bd_sub2 = bd_sub[bd_sub[,2]==options[j],]
       bd_sub2 = bd_sub2[,-2]
@@ -572,7 +574,12 @@ if(clin_dataset_split){
       }
       write.table(bd_sub2,paste(theRootDir,f,sep=''), row.names = F, sep = ';')
       files = c(files,f)
+      files1 = c(files1, col[i])
+      files2 = c(files2, options[j])
     }
   }
-  write.table(files,paste(theRootDir,'files_names.txt',sep=''),sep=';',row.names = FALSE)
+  files_ = data.frame(files = files, ci = files1, class = files2)
+  
+  
+  write.table(files_,paste(theRootDir,'files_names.txt',sep=''),sep=';',row.names = FALSE)
 }
