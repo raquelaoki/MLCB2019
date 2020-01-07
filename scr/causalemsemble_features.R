@@ -148,7 +148,7 @@ library(rcausal)
 
 #Source
 #https://bd2kccd.github.io/docs/r-causal/
-
+#https://arxiv.org/ftp/arxiv/papers/1507/1507.07749.pdf
 ########################## 
 #Real Code
 #Raquel AOki
@@ -156,30 +156,39 @@ library(rcausal)
 
 setwd("~/GitHub/project_spring2019")
 data = read.table('data/tcga_train_gexpression_cgc_7k.txt', sep = ';', header = T)
-extra = data[,c(1,2,3)]
-data = data[,-c(1,2,3)]
+data <- data[sample(nrow(data),replace=FALSE),]
+#testing set
+extra_test = data[1:round(dim(data)*0.3)[1],c(1,2,3)]
+data_test = data[1:round(dim(data)*0.3)[1],-c(1,2,3)]
+y_test = as.factor(extra_test$y)
+#training set 
+extra =  data[-c(1:round(dim(data)*0.3)[1]),c(1,2,3)]
+data = data[-c(1:round(dim(data)*0.3)[1]),-c(1,2,3)]
+y = as.factor(extra$y)
 
-t = c(100, 400, 500, 600, 700,800)
-test = c()
-for(t0 in 1:length(t)){
-  bd = data[,1:t[t0]]
+
+#t = c(3000)
+#test = c()
+#for(t0 in 1:length(t)){
+  bd = data[,1:1000]
   #tetradrunner.getAlgorithmDescription(algoId = 'gfci ')
   #tetradrunner.getAlgorithmParameters(algoId = 'gfci',scoreId = 'fisher-z', testID = "correlation-t")
   #Compute FGES search
   tetradrunner <- tetradrunner(algoId = 'gfci',df = bd,scoreId = 'fisher-z',
                                testID = 'fisher-z',
-                               dataType = 'continuous',alpha=0.001,
-                               faithfulnessAssumed=TRUE,maxDegree=5,verbose=FALSE)
-  
+                               dataType = 'continuous',alpha=0.05,
+                               faithfulnessAssumed=TRUE,maxDegree=30,verbose=TRUE)
+  length(tetradrunner$edges)
   #testID tetradrunner.listIndTests()
   #algoID = tetradrunner.listAlgorithms()
   #scoreId tetradrunner.listScores()
   
-  
+ # fgs <- fgs(df = charity, penaltydiscount = 2, depth = -1, ignoreLinearDependence = TRUE, 
+  #           heuristicSpeedup = TRUE, numOfThreads = 2, verbose = TRUE, priorKnowledge = prior)
   #head(tetradrunner$nodes) #Show the result's nodes
   #head(tetradrunner$edges) #Show the result's edges
-  test[t0] = length(tetradrunner$edges)
-}
+  #test[t0] = length(tetradrunner$edges)
+#}
 
 df = data.frame(tetradrunner$edges)
 
