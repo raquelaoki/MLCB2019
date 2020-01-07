@@ -190,3 +190,5 @@ write.table(df, file = 'results/example_edges.txt', row.names = FALSE, sep = ';'
 library(DOT)
 graph_dot <- tetradrunner.tetradGraphToDot(tetradrunner$graph)
 dot(graph_dot)
+
+

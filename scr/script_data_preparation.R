@@ -24,9 +24,11 @@ process_mutation = FALSE
 process_clinical = FALSE
 merge_clinical_mutation = FALSE
 genes_selection = FALSE
-genes_selection_15k = TRUE
+genes_selection_15k = FALSE
 dataset_balancing = FALSE
 genes_mutation_selection = FALSE
+clin_dataset_split = TRUE
+
 
 
 theRootDir <- "C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019\\data\\"
@@ -551,3 +553,26 @@ if(genes_mutation_selection){
 #"ABCC13"          "ACYP2"           "AG2"             "ALOX12P2"        "AMZ2P1"          "ANKHD1.EIF4EBP3"
 
 
+#-------------------------- Split dataset according with clinical information  gender and cancer type
+if(clin_dataset_split){
+  bd_cli = read.table(paste(theRootDir,'tcga_cli_old.txt',sep=''), header = T, sep = ';')
+  bd_all = read.table(paste(theRootDir,'tcga_train_gexpression_cgc_7k.txt',sep=''), header = T, sep = ';')
+  col = c('gender','abr')
+  for(i in 1:length(col)){
+    bd_sub = subset(bd_cli, select = c('patients', col[i]))
+    bd_sub = merge(bd_sub, bd_all,by='patients')
+    options = as.character(unique(bd_sub[,2]))
+    files = c()
+    for(j in 1:length(options)){
+      bd_sub2 = bd_sub[bd_sub[,2]==options[j],]
+      bd_sub2 = bd_sub2[,-2]
+      f = paste('tcga_train_gexpression_cgc_7k','_',col[i],'_',options[j],'.txt',sep='')
+      if(col[i]=='abr'){
+        names(bd_sub2)[3] = 'abr'
+      }
+      write.table(bd_sub2,paste(theRootDir,f,sep=''), row.names = F, sep = ';')
+      files = c(files,f)
+    }
+  }
+  write.table(files,paste(theRootDir,'files_names.txt',sep=''),sep=';',row.names = FALSE)
+}

@@ -17,13 +17,12 @@ from bartpy.sklearnmodel import SklearnModel
 Flags
 '''
 RUN_MCMC = False
-RUN_OUTCOME = False
-RUN_PREDICTIONS = False
 RUN_LOAD_MCMC = False
+
 RUN_MF = False
 RUN_PMF = False #to implement 
 RUN_PCA = False 
-RUN_A = False # 
+RUN_A = False 
 
 '''
 Note:
@@ -94,8 +93,7 @@ if RUN_A:
     fc.check_save(ac,train,colnames, y01,'ac', k_ac)
 
 
-import pydot
-#from pycausal import search as s
+from pycausal import search as s
 from pycausal.pycausal import pycausal as pc
 from pycausal import prior as p
 #https://github.com/bd2kccd/py-causal/blob/development/example/py-causal%20-%20GFCI%20Continuous%20in%20Action.ipynb 
@@ -107,15 +105,16 @@ pc.start_vm()
 #temporal = [tempForbid,['Sympathy','AmountDonated'],['Impact']]
 #prior = p.knowledge(forbiddirect = forbid, requiredirect = require, addtemporal = temporal)
 #prior
-
+#https://rawgit.com/cmu-phil/tetrad/development/tetrad-gui/src/main/resources/resources/javahelp/manual/tetrad_tutorial.html
 tetrad = s.tetradrunner()
 
 #what are the best options? 
 #tetrad.listIndTests()
 #tetrad.listScores()
+train_p = pd.DataFrame(train[:,0:2000])
 tetrad.getAlgorithmParameters(algoId = 'gfci', testId = 'fisher-z-test', scoreId = 'sem-bic')
-tetrad.run(algoId = 'gfci', dfs = train, testId = 'fisher-z-test', scoreId = 'sem-bic', 
-           maxDegree = -1, maxPathLength = -1, 
+tetrad.run(algoId = 'gfci', dfs = train_p, testId = 'fisher-z-test', scoreId = 'sem-bic', 
+           maxDegree = 5, maxPathLength = 10, 
            completeRuleSetUsed = False, faithfulnessAssumed = True, verbose = True)
 #tetrad.getEdges()
 #tetrad.getNodes()
