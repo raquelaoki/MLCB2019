@@ -12,7 +12,7 @@ from sklearn.decomposition import PCA
 from scipy.stats import gamma
 from scipy import sparse, stats
 import statsmodels.discrete.discrete_model as sm
-
+import warnings
 #from scipy.stats import dirichlet, beta, nbinom, norm
 #from scipy.special import gamma
 #import gc
@@ -376,12 +376,13 @@ def check_save(z,train,colnames,y01,name1,name2,k):
     v_pred, test_result = predictive_check_new(train,z,True)
     if(test_result):
         print('Predictive Check test: PASS')
-        resul, output = outcome_model( train,colnames, z,y01)
+        resul, output, pred = outcome_model( train,colnames, z,y01,name2)
         #np.savetxt('results\\feature_mf_'+str(k_mf)+'_lr'+'_all'+'.txt', resul, delimiter=',',fmt='%5s')
         resul.to_csv('results\\feature_'+name1+'_'+str(k)+'_lr_'+name2+'.txt', sep=';', index = False)
     else:
         print('Predictive Check Test: FAIL')
         print('Results not saved')
+    return pred
 
 def predictive_check_new(X, Z,run ):
     from sklearn.linear_model import LinearRegression
@@ -487,12 +488,15 @@ def cgc():
 
     return dgenes#,ct_rawnames2
 
-def outcome_model(train,colnames , z, y01):
+def outcome_model(train,colnames , z, y01,name2):
     '''
     Outcome Model + logistic regression
     I need to use less features for each model, so i can run several
     batches of the model using the latent features. They should account
     for all cofounders from the hole data
+
+    pred: is the average value thought all the models
+
     parameters:
         train: dataset with original features jxv
         z: latent features, jxk
@@ -500,27 +504,98 @@ def outcome_model(train,colnames , z, y01):
 
     return: list of significant coefs
     '''
+    if train.shape[0]>=200:
+        aux = 100
+    else:
+        aux = 30
+
+    flag = 0
     col_new_order = []
     col_pvalue = []
     col_coef = []
 
-    if train.shape[1]>100:
-        np.random.seed(10)
-        columns_split = np.random.randint(0,train.shape[1]//100,train.shape[1] )
+    pred = []
+    warnings.filterwarnings("ignore")
 
-    for cs in range(0,train.shape[1]//100):
-        cols = np.arange(train.shape[1])[np.equal(columns_split,cs)]
-        colnames_sub = colnames[np.equal(columns_split,cs)]
-        X = pd.concat([pd.DataFrame(train[:,cols]),pd.DataFrame(z)], axis= 1)
-        X.columns = range(0,X.shape[1])
-        output = sm.Logit(y01, X).fit()
-        col_new_order.extend(colnames_sub)
-        col_pvalue.extend(output.pvalues[0:(len(output.pvalues)-z.shape[1])])
-        col_coef.extend(output.params[0:(len(output.pvalues)-z.shape[1])])
-        if cs==0:
-            print('---colname:',colnames_sub[0], ' and pvalue ',output.pvalues[0],'---')
+    while flag == 0:
+        if train.shape[1]>aux and flag == 0 :
+            columns_split = np.random.randint(0,train.shape[1]//aux,train.shape[1] )
 
+        #print('Aux value: ',aux)
+        for cs in range(0,train.shape[1]//aux):
+            if aux ==20:
+                print(cs)
+            cols = np.arange(train.shape[1])[np.equal(columns_split,cs)]
+            colnames_sub = colnames[np.equal(columns_split,cs)]
+            X = pd.concat([pd.DataFrame(train[:,cols]),pd.DataFrame(z)], axis= 1)
+            X.columns = range(0,X.shape[1])
+            try:
+                output = sm.Logit(y01, X).fit(disp=0)
+                col_new_order.extend(colnames_sub)
+                col_pvalue.extend(output.pvalues[0:(len(output.pvalues)-z.shape[1])])
+                col_coef.extend(output.params[0:(len(output.pvalues)-z.shape[1])])
+                #if cs==0:
+                #    print('---colname:',colnames_sub[0], ' and pvalue ',output.pvalues[0],'---')
+                #Predictions
+                pred.append(output.predict(X))
+                flag = 1
+            except:
+                flag = 0
+                print('--------- Trying again----------- ',name2, aux)
+    warnings.filterwarnings("default")
 
+    pred1 =  np.mean(pred,axis = 0)
     resul =  pd.concat([pd.DataFrame(col_new_order),pd.DataFrame(col_pvalue), pd.DataFrame(col_coef)], axis = 1)
     resul.columns = ['genes','pvalue','coef']
-    return resul, output
+    return resul, output, pred1
+
+#todo: change outcome functions to return pred values
+def roc_curve_points(pred,y01,name):
+    '''
+    Saving points to create a roc curve
+    Input:
+        pred: predictive values (from outcome model, probability to belong a class)
+        y01: true binary value (observed)
+        name: for saving Values
+    Output: dataframe on results folder
+        prob: threshold
+        tp1:  0,0/(0,0+0,1)
+        fp1:  1,0/(1,0+1,1)
+        tp2:  1,1/(1,1+1,0)
+        fp2: 0,1/(0,1+0,0)
+
+
+      tab = table(tp,obs)
+      #Prob, opt1_tp,opt1_fp,opt2_tp,opt2_fp
+      output = c(prob,tab[1,1]/(tab[1,1]+tab[1,2]),tab[2,1]/(tab[2,1]+tab[2,2]),
+                      tab[2,2]/(tab[2,2]+tab[2,1]), tab[1,2]/(tab[1,2]+tab[1,1]))
+      return(output)
+    }
+    roc_data = rbind(def_roc(pred_p,y,0.01),def_roc(pred_p,y,0.02))
+    values = seq(0.03,1,by=0.01)
+    for(i in 1:length(values)){
+      roc_data = rbind(roc_data,def_roc(pred_p,y,values[i]))
+    }
+    roc_data = data.frame(roc_data)
+    names(roc_data) = c('prob','tp1','fp1','tp2','fp2')
+    write.table(roc_data,'results\\roc_bart_all.txt', row.names = FALSE,sep=';')
+    '''
+    warnings.filterwarnings("ignore")
+
+    seq = np.arange(0.01,1,step = 0.01)
+    tp1 , tp2, fp1 , fp2 = [],[],[],[]
+    for s in seq:
+        tp = copy.deepcopy(pred)  #1-pred
+        tp[tp<=s] = 0
+        tp[tp>s] = 1
+
+        tn,fp,fn,tp = confusion_matrix(y01,tp).ravel()
+        tp1.append(tn/(tn+fn))
+        fp1.append(fp/(fp+tp))
+        tp2.append(tp/(tp+fp))
+        fp2.append(fn/(tn+fn))
+    roc_data = pd.DataFrame({'prob':seq, 'tp1':tp1,'fp1':fp1 ,'tp2':tp2,'fp2':fp2})
+    roc_data.to_csv('results\\roc_'+name+'.txt', sep=';', index = False)
+    warnings.filterwarnings("default")
+
+    return

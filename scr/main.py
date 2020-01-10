@@ -22,7 +22,7 @@ RUN_LOAD_MCMC = False
 RUN_ALL = False
 RUN_ = True
 
-RUN_MF = False
+RUN_MF = True
 RUN_PMF = False #to implement
 RUN_PCA = False
 RUN_A = False
@@ -90,38 +90,45 @@ if RUN_ALL:
 
     if RUN_MF:
         W, F = fc.fa_matrixfactorization(train,k_mf,RUN_MF)
-        fc.check_save(W,train,colnames, y01,'mf','all', k_mf)
+        pred = fc.check_save(W,train,colnames, y01,'mf','all', k_mf)
 
     if RUN_PCA:
         pc = fc.fa_pca(train,k_pca,RUN_PCA)
-        fc.check_save(pc,train,colnames, y01,'pca', 'all',k_pca)
+        pred = fc.check_save(pc,train,colnames, y01,'pca', 'all',k_pca)
 
     if RUN_A:
         ac =  fc.fa_a(train,k_ac,RUN_A)
-        fc.check_save(ac,train,colnames, y01,'ac','all', k_ac)
+        pred = fc.check_save(ac,train,colnames, y01,'ac','all', k_ac)
 
 #Running Factor Analysis + Predictive Check + outcome model
 if RUN_:
     files = pd.read_csv('data\\files_names.txt',sep=';')
-    for f in files:
-        data_ = pd.read_csv(f,sep=';')
+    # row = files.iloc[0,:]
+    for i,row in files.iterrows():
+        data_ = pd.read_csv('data\\'+row[0],sep=';')
         train, j, v, y01, abr, colnames = fc.data_prep(data_)
+        print("TRAIN INFO: \nshape: ",train.shape, '\nclinical info: ', row[1],row[2])
 
         if RUN_MF:
             W, F = fc.fa_matrixfactorization(train,k_mf,RUN_MF)
-            fc.check_save(W,train,colnames, y01,'mf','all', k_mf)
+            name = str(row[1])+'_'+str(row[2])
+            pred = fc.check_save(W,train,colnames, y01,'mf',name, k_mf)
+            name = 'mf_'+str(k_mf)+'_lr_'+name
+            fc.roc_curve_points(pred, y01, name)            
 
         if RUN_PCA:
             pc = fc.fa_pca(train,k_pca,RUN_PCA)
-            fc.check_save(pc,train,colnames, y01,'pca', 'all',k_pca)
+            name = str(row[1])+'_'+str(row[2])
+            pred = fc.check_save(pc,train,colnames, y01,'pca', name,k_pca)
+            name = 'pca_'+str(k_mf)+'_lr_'+name
+            fc.roc_curve_points(pred, y01, name)            
 
         if RUN_A:
             ac =  fc.fa_a(train,k_ac,RUN_A)
-            fc.check_save(ac,train,colnames, y01,'ac','all', k_ac)
-
-
-
-
+            name = str(row[1])+'_'+str(row[2])
+            pred = fc.check_save(ac,train,colnames, y01,'ac',name, k_ac)
+            name = 'ac_'+str(k_mf)+'_lr_'+name
+            fc.roc_curve_points(pred, y01, name)            
 
 
 
