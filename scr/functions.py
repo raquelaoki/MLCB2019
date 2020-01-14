@@ -507,12 +507,8 @@ def outcome_model(train,colnames , z, y01,name2):
 
     return: list of significant coefs
     '''
-    aux = train.shape[0]//28
+    aux = train.shape[0]//25
     
-    #if train.shape[0]>=200:
-    #    aux = 100
-    #else:
-    #    aux = 30
 
     lim = 0
     col_new_order = []
@@ -526,8 +522,9 @@ def outcome_model(train,colnames , z, y01,name2):
     #while flag == 0 and lim<=50:
     if train.shape[1]>aux:
         columns_split = np.random.randint(0,train.shape[1]//aux,train.shape[1] )
-
+    
     #print('Aux value: ',aux)
+    flag1 = 0
     for cs in range(0,train.shape[1]//aux):
         
         cols = np.arange(train.shape[1])[np.equal(columns_split,cs)]
@@ -536,6 +533,7 @@ def outcome_model(train,colnames , z, y01,name2):
         X = pd.concat([pd.DataFrame(train[:,cols]),pd.DataFrame(z)], axis= 1)
         X.columns = range(0,X.shape[1])
         flag = 0 
+        lim = 0 
         while flag==0 and lim <= 50:
             try:
                 output = sm.Logit(y01, X).fit(disp=0)
@@ -544,10 +542,11 @@ def outcome_model(train,colnames , z, y01,name2):
                 #Predictions
                 pred.append(output.predict(X))
                 flag = 1
+                flag1 = 1
             except:
                 flag = 0
                 lim = lim+1
-                print('--------- Trying again----------- ',name2, aux)
+                print('--------- Trying again----------- ',name2, aux,cs)
 
         if flag == 1: 
             col_pvalue.extend(output.pvalues[0:(len(output.pvalues)-z.shape[1])])
@@ -557,13 +556,15 @@ def outcome_model(train,colnames , z, y01,name2):
             col_coef.extend(np.repeat(0,len(colnames_sub))) 
 
     warnings.filterwarnings("default")
-    if flag==1:
-        pred1 =  np.mean(pred,axis = 0)
-        resul =  pd.concat([pd.DataFrame(col_new_order),pd.DataFrame(col_pvalue), pd.DataFrame(col_coef)], axis = 1)
-        resul.columns = ['genes','pvalue','coef']
-        return resul, output, pred1
-    else:
-        return [],[],[]
+    #prediction only for the ones with models that converge
+    pred1 =  np.mean(pred,axis = 0)
+    resul =  pd.concat([pd.DataFrame(col_new_order),pd.DataFrame(col_pvalue), pd.DataFrame(col_coef)], axis = 1)
+    resul.columns = ['genes','pvalue','coef']
+    if flag1 == 0: 
+        output = []
+        pred1 = []
+    return resul, output, pred1
+
 
 
 #todo: change outcome functions to return pred values
@@ -597,16 +598,17 @@ def roc_curve_points(pred,y01,name):
     names(roc_data) = c('prob','tp1','fp1','tp2','fp2')
     write.table(roc_data,'results\\roc_bart_all.txt', row.names = FALSE,sep=';')
     '''
-    if(len(pred)!=0):
-        warnings.filterwarnings("ignore")
-
+   
+    
+    warnings.filterwarnings("ignore")
+    if len(pred)>0:
         seq = np.arange(0.01,1,step = 0.01)
         tp1 , tp2, fp1 , fp2 = [],[],[],[]
         for s in seq:
             tp = copy.deepcopy(pred)  #1-pred
             tp[tp<=s] = 0
             tp[tp>s] = 1
-
+    
             tn,fp,fn,tp = confusion_matrix(y01,tp).ravel()
             tp1.append(tn/(tn+fn))
             fp1.append(fp/(fp+tp))

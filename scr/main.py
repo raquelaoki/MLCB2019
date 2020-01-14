@@ -22,10 +22,10 @@ RUN_LOAD_MCMC = False
 RUN_ALL = False
 RUN_ = True
 
-RUN_MF = True
+RUN_MF = False
 RUN_PMF = False #to implement
-RUN_PCA = True
-RUN_A = False #lab computer outside anaconda
+RUN_PCA = False
+RUN_A = True #lab computer outside anaconda
 
 RUN_FCI = False
 
