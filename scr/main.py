@@ -24,11 +24,12 @@ RUN_ = True
 
 RUN_MF = True
 RUN_PMF = False #to implement
-RUN_PCA = False
-RUN_A = False
+RUN_PCA = True
+RUN_A = False #lab computer outside anaconda
 
 RUN_FCI = False
 
+RUN_CREATE_FEATURE_DATASET = False
 
 
 '''
@@ -109,26 +110,26 @@ if RUN_:
         train, j, v, y01, abr, colnames = fc.data_prep(data_)
         print("TRAIN INFO: \nshape: ",train.shape, '\nclinical info: ', row[1],row[2])
 
-        if RUN_MF:
+        if RUN_MF and data_.shape[0]>=100:
             W, F = fc.fa_matrixfactorization(train,k_mf,RUN_MF)
             name = str(row[1])+'_'+str(row[2])
             pred = fc.check_save(W,train,colnames, y01,'mf',name, k_mf)
             name = 'mf_'+str(k_mf)+'_lr_'+name
-            fc.roc_curve_points(pred, y01, name)            
+            fc.roc_curve_points(pred, y01, name)
 
-        if RUN_PCA:
+        if RUN_PCA and data_.shape[0]>=100:
             pc = fc.fa_pca(train,k_pca,RUN_PCA)
             name = str(row[1])+'_'+str(row[2])
             pred = fc.check_save(pc,train,colnames, y01,'pca', name,k_pca)
             name = 'pca_'+str(k_mf)+'_lr_'+name
-            fc.roc_curve_points(pred, y01, name)            
+            fc.roc_curve_points(pred, y01, name)
 
-        if RUN_A:
+        if RUN_A and data_.shape[0]>=100:
             ac =  fc.fa_a(train,k_ac,RUN_A)
             name = str(row[1])+'_'+str(row[2])
             pred = fc.check_save(ac,train,colnames, y01,'ac',name, k_ac)
             name = 'ac_'+str(k_mf)+'_lr_'+name
-            fc.roc_curve_points(pred, y01, name)            
+            fc.roc_curve_points(pred, y01, name)
 
 
 
@@ -161,58 +162,19 @@ if RUN_FCI:
     #pc.stop_vm()
 
 
-    #
-    #print('\nPGM: Metrics training set: \n'
-    #      ,confusion_matrix(y01,fc.PGM_pred(lm_tht,la_sk,la_cj)),'\n',
-    #      f1_score(y01,fc.PGM_pred(lm_tht,la_sk,la_cj) ))
-    #print('\nPGM: Metrics testing set: \n'
-    #      ,confusion_matrix(y01_t,y01_t_pred) ,'\n',
-    #      f1_score(y01_t,y01_t_pred))
 
-    #'''
-    #PLOTS: evaluating the convergency
-    #'''
-    #pl.plot_chain_sk('results\\output_lask_id',sim//bach_size, 15,id)
-    #pl.plot_chain_cj('results\\output_lacj_id',sim//bach_size, 15)
-    #pl.plot_chain_tht('results\\output_lmtht_id',sim//bach_size, 15)
-    #pl.plot_chain_phi('results\\output_lmphi_id',sim//bach_size, 15)
+#merge is weird, the sizes are not compatible
+#check the indivicual run for subgroup. Any reason to have different dimension for cancer type? Problem on dataset creation?
+if RUN_CREATE_FEATURE_DATASET:
+    f_bart, f_mf,f_mf_bin , f_ac,f_ac_bin, f_pca,f_pca_bin = fc.data_features_construction(path) 
+    print(f_bart.shape, f_mf.shape,f_mf_bin.shape,f_ac.shape,f_ac_bin.shape,f_pca.shape,f_pca_bin.shape)
+    
+
+#'''Driver Genes'''
+ #cgc_list = fc.cgc()
 
 
 
-    #'''Outcome Model'''
-    #c,f,cm = fc.outcome_model('rf',train0,lm_tht,y01)
-    #print('\n Metrics outcome_model: ','\n',f,'\n',cm,'\n')
-
-    #c,f,cm = fc.outcome_model('lr',train0,lm_tht,y01)
-    #print('\n Metrics outcome_model: ','\n',f,'\n',cm,'\n')
-
-
-    #'''Driver Genes'''
-    #cgc_list = fc.cgc()
-
-
-
-    #'''Exploring Outcome Model's results'''
-    #c_gene = data.drop(['patients','y'],axis=1).columns
-    #gene_coef = pd.DataFrame({'genes':c_gene,
-    #                          'coefs': c[0]})
-
-    #gene_coef['coefs_abs'] = abs(gene_coef['coefs'] )
-    #gene_coef.sort_values(['coefs_abs'], axis = 0, ascending=False,inplace=True)
-    #gene_coef.head()
-
-
-    #Selecting top 10% (200 genes)
-    #gene_coef_sub = gene_coef.iloc[0:200,].reset_index( drop='True')
-
-    #merging
-
-    #gene_coef_sub = pd.merge(gene_coef_sub,cgc_list, left_on = 'genes',right_on='Gene Symbol')
-
-    #print(gene_coef_sub.shape)#
-
-
-    #   return v1,v2
 
 
 #if __name__ == "__main__":
