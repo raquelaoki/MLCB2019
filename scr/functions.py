@@ -15,6 +15,7 @@ import statsmodels.discrete.discrete_model as sm
 import warnings
 from os import listdir
 from os.path import isfile, join
+
 #from scipy.stats import dirichlet, beta, nbinom, norm
 #from scipy.special import gamma
 #import gc
@@ -507,6 +508,7 @@ def outcome_model(train,colnames , z, y01,name2):
 
     return: list of significant coefs
     '''
+    #if ac, change 25 to 9
     aux = train.shape[0]//25
     
 
@@ -625,6 +627,11 @@ def data_features_da_create(data,files):
     data['aux'] = np.where(data['pvalue']<0.05,1,0)
     features_data_bin = data.iloc[:,[0,-1]]
     features_data_bin.rename(columns={ 'aux':files[-1].split('.')[0]}, inplace = True)
+    
+    features_data = data.iloc[:,[0,2]]
+    features_data.rename(columns={ 'coef':files[-1].split('.')[0]}, inplace = True)
+    
+    return features_data,features_data_bin 
  
     features_data = data.iloc[:,[0,2]]
     features_data.rename(columns={ 'coef':files[-1].split('.')[0]}, inplace = True)

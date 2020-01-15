@@ -9,6 +9,8 @@ Probabilistic-Matrix-Factorization-master/
 __pycache__/
 your_cache_dir_goes_here/
 latent_variable_jason_work/
+pu-learning-master/
+puLearning/
 build/
 data/
 bartpy/
