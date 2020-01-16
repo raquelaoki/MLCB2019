@@ -1,28 +1,31 @@
-import numpy as np
-import pandas as pd
+import os
 import time
 import copy
-import os
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import confusion_matrix,f1_score
-from sklearn.decomposition import NMF
-from sklearn.metrics.pairwise import cosine_similarity
-from sklearn.preprocessing import StandardScaler
-from sklearn.decomposition import PCA
-from scipy.stats import gamma
-from scipy import sparse, stats
-import statsmodels.discrete.discrete_model as sm
+import numpy as np
+import pandas as pd
 import warnings
+
 from os import listdir
 from os.path import isfile, join
 
-#from scipy.stats import dirichlet, beta, nbinom, norm
-#from scipy.special import gamma
-#import gc
-#import json
-#import random
-#import matplotlib.pyplot as plt
-#from sklearn import metrics
+from sklearn import svm
+from sklearn.decomposition import NMF, PCA
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.model_selection import train_test_split,  GridSearchCV, StratifiedKFold
+from sklearn.metrics import confusion_matrix,f1_score
+from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.preprocessing import StandardScaler
+from sklearn.svm import SVC
+from sklearn.utils.estimator_checks import check_estimator
+
+from scipy.stats import gamma
+from scipy import sparse, stats
+import statsmodels.discrete.discrete_model as sm
+
+from puLearning.puAdapter import PUAdapter
+from pywsl.pul import pumil_mr, pu_mr
+from pywsl.utils.syndata import gen_twonorm_pumil
+from pywsl.utils.comcalc import bin_clf_err
 
 '''PART 1: DECONFOUNDER ALGORITHM'''
 
@@ -510,7 +513,7 @@ def outcome_model(train,colnames , z, y01,name2):
     '''
     #if ac, change 25 to 9
     aux = train.shape[0]//25
-    
+
 
     lim = 0
     col_new_order = []
@@ -524,18 +527,18 @@ def outcome_model(train,colnames , z, y01,name2):
     #while flag == 0 and lim<=50:
     if train.shape[1]>aux:
         columns_split = np.random.randint(0,train.shape[1]//aux,train.shape[1] )
-    
+
     #print('Aux value: ',aux)
     flag1 = 0
     for cs in range(0,train.shape[1]//aux):
-        
+
         cols = np.arange(train.shape[1])[np.equal(columns_split,cs)]
         colnames_sub = colnames[np.equal(columns_split,cs)]
         col_new_order.extend(colnames_sub)
         X = pd.concat([pd.DataFrame(train[:,cols]),pd.DataFrame(z)], axis= 1)
         X.columns = range(0,X.shape[1])
-        flag = 0 
-        lim = 0 
+        flag = 0
+        lim = 0
         while flag==0 and lim <= 50:
             try:
                 output = sm.Logit(y01, X).fit(disp=0)
@@ -550,26 +553,23 @@ def outcome_model(train,colnames , z, y01,name2):
                 lim = lim+1
                 print('--------- Trying again----------- ',name2, aux,cs)
 
-        if flag == 1: 
+        if flag == 1:
             col_pvalue.extend(output.pvalues[0:(len(output.pvalues)-z.shape[1])])
-            col_coef.extend(output.params[0:(len(output.pvalues)-z.shape[1])]) 
-        else: 
+            col_coef.extend(output.params[0:(len(output.pvalues)-z.shape[1])])
+        else:
             col_pvalue.extend(np.repeat(0,len(colnames_sub)))
-            col_coef.extend(np.repeat(0,len(colnames_sub))) 
+            col_coef.extend(np.repeat(0,len(colnames_sub)))
 
     warnings.filterwarnings("default")
     #prediction only for the ones with models that converge
     pred1 =  np.mean(pred,axis = 0)
     resul =  pd.concat([pd.DataFrame(col_new_order),pd.DataFrame(col_pvalue), pd.DataFrame(col_coef)], axis = 1)
     resul.columns = ['genes','pvalue','coef']
-    if flag1 == 0: 
+    if flag1 == 0:
         output = []
         pred1 = []
     return resul, output, pred1
 
-
-
-#todo: change outcome functions to return pred values
 def roc_curve_points(pred,y01,name):
     '''
     Saving points to create a roc curve
@@ -600,8 +600,8 @@ def roc_curve_points(pred,y01,name):
     names(roc_data) = c('prob','tp1','fp1','tp2','fp2')
     write.table(roc_data,'results\\roc_bart_all.txt', row.names = FALSE,sep=';')
     '''
-   
-    
+
+
     warnings.filterwarnings("ignore")
     if len(pred)>0:
         seq = np.arange(0.01,1,step = 0.01)
@@ -610,7 +610,7 @@ def roc_curve_points(pred,y01,name):
             tp = copy.deepcopy(pred)  #1-pred
             tp[tp<=s] = 0
             tp[tp>s] = 1
-    
+
             tn,fp,fn,tp = confusion_matrix(y01,tp).ravel()
             tp1.append(tn/(tn+fn))
             fp1.append(fp/(fp+tp))
@@ -627,28 +627,27 @@ def data_features_da_create(data,files):
     data['aux'] = np.where(data['pvalue']<0.05,1,0)
     features_data_bin = data.iloc[:,[0,-1]]
     features_data_bin.rename(columns={ 'aux':files[-1].split('.')[0]}, inplace = True)
-    
+
     features_data = data.iloc[:,[0,2]]
     features_data.rename(columns={ 'coef':files[-1].split('.')[0]}, inplace = True)
-    
-    return features_data,features_data_bin 
- 
+
+    return features_data,features_data_bin
+
     features_data = data.iloc[:,[0,2]]
     features_data.rename(columns={ 'coef':files[-1].split('.')[0]}, inplace = True)
     if data.shape[0]!=features_data.shape[0] or data.shape[0]!=features_data_bin.shape[0]:
         print('Dimension Problem with ', files)
     return  features_data,features_data_bin
 
-                
 def data_features_da_merge(features_data, features_data_bin, data, files):
-    #create binary variable 
+    #create binary variable
     data['aux'] = np.where(data['pvalue']<0.05,1,0)
     #merge data with current dataset with binary data
     features_data_bin = pd.merge(features_data_bin, data.iloc[:,[0,-1]],on='genes')
     features_data_bin.rename(columns={ 'aux':files[-1].split('.')[0]}, inplace = True)
     #merge data with current dataset with continuos data
     features_data= pd.merge(features_data, data.iloc[:,[0,2]],on='genes')
-    features_data.rename(columns={ 'coef':files[-1].split('.')[0]}, inplace = True)  
+    features_data.rename(columns={ 'coef':files[-1].split('.')[0]}, inplace = True)
 
     if data.shape[0]!=features_data.shape[0] or data.shape[0]!=features_data_bin.shape[0]:
         print('Dimension Problem with ', files, data.shape[0],features_data.shape[0])
@@ -664,17 +663,17 @@ def data_features_construction(path):
     pathfiles = path+'\\results'
     listfiles = [f for f in listdir(pathfiles) if isfile(join(pathfiles, f))]
     flags = {'pca': True, 'mf': True , 'ac':True,'bart':True ,'roc':True} #flags['pca']
-    
+
     for f in listfiles:
         data = pd.read_csv('results//'+f,sep=';')
         files = f.split("_")
         if files[0]=="feature":
-            
+
             if files[1]=='bart' and flags['bart']:
-                #Create dataset 
+                #Create dataset
                 features_bart =  data.iloc[:,0:2]
                 features_bart.rename(columns={ 'mean':files[-1].split('.')[0]}, inplace = True)
-                flags['bart'] = False   
+                flags['bart'] = False
             elif files[1]=='bart' and not flags['bart']:
                 #merge with dataset
                 features_bart = pd.merge(features_bart, data.iloc[:,0:2],on='gene')
@@ -682,43 +681,108 @@ def data_features_construction(path):
                 if data.shape[0]!=features_bart.shape[0]:
                     print('Dimension Problem with ', files)
 
-                
+
             elif files[1]=='mf' and flags['mf']:
                 features_mf,features_mf_binary = data_features_da_create(data,files)
-                flags['mf'] = False  
+                flags['mf'] = False
             elif files[1]=='mf' and not flags['mf']:
                 features_mf,features_mf_binary = data_features_da_merge(features_mf,features_mf_binary,data, files)
-                
+
             elif files[1]=='ac' and flags['ac']:
                 features_ac,features_ac_binary = data_features_da_create(data,files)
-                flags['ac'] = False  
+                flags['ac'] = False
             elif files[1]=='ac' and not flags['ac']:
                 features_ac,features_ac_binary = data_features_da_merge(features_ac,features_ac_binary,data,files)
 
             elif files[1]=='pca' and flags['pca']:
                 features_pca,features_pca_binary = data_features_da_create(data,files)
-                flags['pca'] = False  
+                flags['pca'] = False
             elif files[1]=='pca' and not flags['pca']:
                 features_pca,features_pca_binary = data_features_da_merge(features_pca,features_pca_binary,data,files)
-            else: 
+            else:
                 print('ERROR: ', f)
-            
+
         else:
             print('roc:', files[0])
             #add to previous roc dataset
-
+    features_bart.rename(columns={'gene':'genes'}, inplace = True)
     return features_bart, features_mf,features_mf_binary , features_ac,features_ac_binary , features_pca,features_pca_binary
 
+def pul(y,y_test,X,X_test,aux,name_model):
+    """
+    Input:
+        X,y,X_test, y_test: dataset to train the model
+        aux: output to save the roc curve (not currently implemented)
+    Return:
+        cm: confusion matrix for the testing set
+        cm_: confusion matrix for the full dataset
+        y_all_: prediction for the full dataset
+    """
+    X_all = np.concatenate((X,X_test), axis = 0 )
+    y_all = np.concatenate((y,y_test), axis = 0 )
 
 
+    if name_model == 'OneClassSVM':
+        #modify dataset to have only positive examples on testing set
+        X = X[y==1]
+        #X_train only has positive examples
+        model = svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.1)
+        model.fit(X)
+
+    elif name_model == 'svm':
+        model = svm.SVC(C=10,kernel='rbf',gamma='scale') #overfitting
+        model.fit(X,y)
+
+    elif name_model == 'adapter':
+        estimator = SVC(C=10, kernel='rbf',gamma=0.4,probability=True)
+        model = PUAdapter(estimator, hold_out_ratio=0.2)
+        X = np.matrix(X)
+        y = np.array(y)
+        model.fit(X, y)
+
+    elif name_model == 'upu':
+        '''
+        pul: nnpu (Non-negative PU Learning), pu_skc(PU Set Kernel Classifier),
+        pnu_mr:PNU classification and PNU-AUC optimization (the one tht works: also use negative data)
+        nnpu is more complicated (neural nets, other methos seems to be easier)
+        try https://github.com/t-sakai-kure/pywsl/blob/master/examples/pul/pu_skc/demo_pu_skc.py
+        and https://github.com/t-sakai-kure/pywsl/blob/master/examples/pul/upu/demo_upu.py
+         '''
+        #Implement these, packages only work on base anaconda (as autoenconder)
+        #https://github.com/t-sakai-kure/pywsl
+        prior = .5 #change for the proportion of 1 and 0
+        param_grid = {'prior': [prior],
+                          'lam': np.logspace(-3, 1, 5), #what are these values
+                          'basis': ['lm']}
+        lambda_list = np.logspace(-3, 1, 5)
+        #upu (Unbiased PU learning)
+        #https://github.com/t-sakai-kure/pywsl/blob/master/examples/pul/upu/demo_upu.py
+        model = GridSearchCV(estimator=pu_mr.PU_SL(),
+                               param_grid=param_grid, cv=5, n_jobs=-1)
+        X = np.matrix(X)
+        y = np.array(y)
+        model.fit(X, y)
+    elif name_model == 'lr':
+        model = sm.Logit(y,X).fit()
+    else:
+        model = RandomForestClassifier(max_depth=100, random_state=0)
+        model.fit(X, y)
+
+    y_ = model.predict(X_test)
+    y_all_ = model.predict(X_all)
+    if name_model == 'lr':
+        y_[y_<0.5] = 0
+        y_[y_>=0.5] = 1
+        y_all_[y_all_< 0.5] = 0
+        y_all_[y_all_>=0.5] = 1
 
 
+    y_ = np.where(y_==-1,0,y_)
+    y_all_ = np.where(y_all_==-1, 0,y_all_)
 
+    cm = confusion_matrix(y_test,y_)
+    cm_ = confusion_matrix(y_all, y_all_)
+    #ROC VALUES TO MAKE TOC PLOT
+    #roc_curve_points(y_, y_test, 'svm_oneclass'+str(aux))
 
-
-
-
-
-
-
-
+    return cm,cm_, y_all_

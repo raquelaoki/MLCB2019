@@ -14,7 +14,7 @@ pd.set_option('display.max_columns', 500)
 #from joblib import Parallel
 #https://github.com/aldro61/pu-learning
 
- 
+
 
 
 '''
@@ -104,13 +104,13 @@ if RUN_ALL:
         pred = fc.check_save(pc,train,colnames, y01,'pca', 'all',k_pca)
         name = 'pca_'+str(k_pca)+'_lr_all'
         fc.roc_curve_points(pred, y01, name)
-        
+
     if RUN_A:
         ac =  fc.fa_a(train,k_ac,RUN_A)
         pred = fc.check_save(ac,train,colnames, y01,'ac','all', k_ac)
         name = 'ac_'+str(k_ac)+'_lr_all'
         fc.roc_curve_points(pred, y01, name)
-        
+
 #Running Factor Analysis + Predictive Check + outcome model
 if RUN_:
     files = pd.read_csv('data\\files_names.txt',sep=';')
@@ -176,77 +176,34 @@ if RUN_FCI:
 #merge is weird, the sizes are not compatible
 #check the indivicual run for subgroup. Any reason to have different dimension for cancer type? Problem on dataset creation?
 if RUN_CREATE_FEATURE_DATASET:
-    f_bart, f_mf,f_mf_bin , f_ac,f_ac_bin, f_pca,f_pca_bin = fc.data_features_construction(path) 
+    f_bart, f_mf,f_mf_bin , f_ac,f_ac_bin, f_pca,f_pca_bin = fc.data_features_construction(path)
     print(f_bart.shape, f_mf.shape,f_mf_bin.shape,f_ac.shape,f_ac_bin.shape,f_pca.shape,f_pca_bin.shape)
-        
-    #'''Driver Genes'''
+
+    '''Driver Genes'''
     cgc_list = fc.cgc()
     cgc_list['y_out']=1
     cgc_list = cgc_list.iloc[:,[0,-1]]
     cgc_list.rename(columns = {'Gene Symbol':'genes'}, inplace = True)
-    
-    #naive classifier 
-    f_bart.rename(columns={'gene':'genes'}, inplace = True)
-    
-    #Here i need to add the method on the column names 
-    #Or before when im constructing the features set   
+
+    #MOFIFY HERE TO DIFERENT SETS COMBINATIONS
     data_out = pd.merge(f_bart, f_mf, on='genes') #7066 rows
     data_out = pd.merge(cgc_list,data_out,on='genes',how='right')
     data_out['y_out'].fillna(0,inplace = True)
-    
-    data_out['y_out'].value_counts()
     data_out.set_index('genes',inplace=True)
+    #data_out['y_out'].value_counts()
 
 
-from sklearn import svm
-from sklearn.model_selection import train_test_split
+RUN_PUL = False
+if RUN_PUL:
+    from sklearn.model_selection import train_test_split
 
-'''SVM'''
-y = data_out['y_out']
-X = data_out.iloc[:,1:data_out.shape[1]]
-y_train, y_test, X_train, X_test = train_test_split(y, X, test_size=0.3)
-#try other kernels
-clf = svm.SVC(C=10,kernel='rbf',gamma='scale') #overfitting 
-clf.fit(X_train, y_train)
-y_= clf.predict(X_test)
-confusion_matrix(y_test, y_)
-f1_score(y_test,y_)
+    y = data_out['y_out']
+    X = data_out.iloc[:,1:data_out.shape[1]]
+    y_train, y_test, X_train, X_test = train_test_split(y, X, test_size=0.3)
 
-'''Logistic Regression'''
-import statsmodels.discrete.discrete_model as sm
-clf1 = sm.Logit(y_train,X_train).fit()
-y_ = clf1.predict(X_test)
-y_[y_<0.5]=0
-y_[y_>=0.5] = 1
-confusion_matrix(y_test, y_)
-
-'''PU Adapter'''
-from puLearning.puAdapter import PUAdapter
-from sklearn.svm import SVC
-from sklearn.model_selection import train_test_split
-
-y = data_out['y_out']
-X = data_out.iloc[:,1:data_out.shape[1]]
-y_train, y_test, X_train, X_test = train_test_split(y, X, test_size=0.3)
-X_train = np.matrix(X_train)
-y_train = np.array(y_train)
-
-estimator = SVC(C=10, kernel='rbf',gamma=0.4,probability=True)
-pu_estimator = PUAdapter(estimator, hold_out_ratio=0.2)
-#X_train.reset_index(drop=True,inplace=True)    
-pu_estimator.fit(X_train, y_train)
-    
-print(pu_estimator)
-print("Comparison of estimator and PUAdapter(estimator):")
-print("Number of disagreements: ", len(np.where((pu_estimator.predict(X_test) == estimator.predict(X_test)) == False)[0]))
-print("Number of agreements: ", len(np.where((pu_estimator.predict(X_test) == estimator.predict(X_test)) == True)[0]))
-
-print("Number of disagreements: ", len(np.where((pu_estimator.predict(X_test) == y_test) == False)[0]))
-print("Number of agreements: ", len(np.where((pu_estimator.predict(X_test) == y_test) == True)[0]))
-
-#if __name__ == "__main__":
-#    v1,v2 = main()y_= clf.predict([[2., 2.]])
-
-#Implement these
-#https://github.com/t-sakai-kure/pywsl
-
+    cm1, cm1_, y1_ = fc.pul(y_train, y_test, X_train, X_test,'name','OneClassSVM')
+    cm2, cm2_, y2_ = fc.pul(y_train, y_test, X_train, X_test,'name','svm')
+    cm3, cm3_, y3_ = fc.pul(y_train, y_test, X_train, X_test,'name','adapter')
+    cm4, cm4_, y4_ = fc.pul(y_train, y_test, X_train, X_test,'name','upu')
+    cm5, cm5_, y5_ = fc.pul(y_train, y_test, X_train, X_test,'name','lr')
+    cm6, cm6_, y6_ = fc.pul(y_train, y_test, X_train, X_test,'name','randomforest')
