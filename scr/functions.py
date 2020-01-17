@@ -4,6 +4,7 @@ import copy
 import numpy as np
 import pandas as pd
 import warnings
+from itertools import compress
 
 from os import listdir
 from os.path import isfile, join
@@ -12,7 +13,7 @@ from sklearn import svm
 from sklearn.decomposition import NMF, PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split,  GridSearchCV, StratifiedKFold
-from sklearn.metrics import confusion_matrix,f1_score
+from sklearn.metrics import confusion_matrix,f1_score, accuracy_score
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
@@ -680,7 +681,7 @@ def data_features_construction(path):
                 features_bart.rename(columns={ 'mean':files[-1].split('.')[0]}, inplace = True)
                 if data.shape[0]!=features_bart.shape[0]:
                     print('Dimension Problem with ', files)
-
+                    
 
             elif files[1]=='mf' and flags['mf']:
                 features_mf,features_mf_binary = data_features_da_create(data,files)
@@ -718,9 +719,8 @@ def pul(y,y_test,X,X_test,aux,name_model):
         cm_: confusion matrix for the full dataset
         y_all_: prediction for the full dataset
     """
-    X_all = np.concatenate((X,X_test), axis = 0 )
-    y_all = np.concatenate((y,y_test), axis = 0 )
-
+    X_full = np.concatenate((X,X_test), axis = 0 )
+    y_full = np.concatenate((y,y_test), axis = 0 )
 
     if name_model == 'OneClassSVM':
         #modify dataset to have only positive examples on testing set
@@ -769,20 +769,177 @@ def pul(y,y_test,X,X_test,aux,name_model):
         model.fit(X, y)
 
     y_ = model.predict(X_test)
-    y_all_ = model.predict(X_all)
+    y_full_ = model.predict(X_full)
     if name_model == 'lr':
         y_[y_<0.5] = 0
         y_[y_>=0.5] = 1
-        y_all_[y_all_< 0.5] = 0
-        y_all_[y_all_>=0.5] = 1
+        y_full_[y_full_< 0.5] = 0
+        y_full_[y_full_>=0.5] = 1
 
 
     y_ = np.where(y_==-1,0,y_)
-    y_all_ = np.where(y_all_==-1, 0,y_all_)
+    y_full_ = np.where(y_full_==-1, 0,y_full_)
 
-    cm = confusion_matrix(y_test,y_)
-    cm_ = confusion_matrix(y_all, y_all_)
+    #cm = confusion_matrix(y_test,y_)
+    #cm_ = confusion_matrix(y_full, y_full_)
     #ROC VALUES TO MAKE TOC PLOT
     #roc_curve_points(y_, y_test, 'svm_oneclass'+str(aux))
 
-    return cm,cm_, y_all_
+    #return cm,cm_, y_all_
+    acc = accuracy_score(y_test,y_)
+    acc_f = accuracy_score(y_full, y_full_)
+    f1 = f1_score(y_test,y_)
+    f1_f = f1_score(y_full, y_full_)
+    tnfpfntp = confusion_matrix(y_test,y_).ravel()
+    tnfpfntp_= confusion_matrix(y_full, y_full_).ravel()
+    tp_genes = np.multiply(y_full, y_full_)
+    return [acc, acc_f, f1, f1_f], tnfpfntp, tnfpfntp_, tp_genes
+
+def data_subseting(data0, data1, data2, data3, data4, data5, data6, name_in, name_out):
+    '''
+    Select the features that I want to work with:
+    all: based on all cancer patients
+    gender: features from causal models on males and female
+    abr: features from causal models on subcancer types
+    '''
+    if len(name_out)>0:
+        data0 = data0.drop(columns=name_out)
+        data1 = data1.drop(columns=name_out)
+        data2 = data2.drop(columns=name_out)
+        data3 = data3.drop(columns=name_out)
+        data4 = data4.drop(columns=name_out)
+        data5 = data5.drop(columns=name_out)
+        data6 = data6.drop(columns=name_out)
+
+    if len(name_in)>0:
+        aux0, aux1, aux2, aux3, aux4, aux5, aux6 = [0],[0], [0], [0], [0], [0], [0]
+        for i in name_in:
+            aux0.append(data0.columns.get_loc(i))
+            aux1.append(data1.columns.get_loc(i))
+            aux2.append(data2.columns.get_loc(i))
+            aux3.append(data3.columns.get_loc(i))
+            aux4.append(data4.columns.get_loc(i))
+            aux5.append(data5.columns.get_loc(i))
+            aux6.append(data6.columns.get_loc(i))
+        data0.iloc[:,aux0]
+        data1.iloc[:,aux1]
+        data2.iloc[:,aux2]
+        data3.iloc[:,aux3]
+        data4.iloc[:,aux4]
+        data5.iloc[:,aux5]
+        data6.iloc[:,aux6]
+
+    return data0, data1, data2, data3, data4, data5, data6
+
+def data_merging(data0,data1,data2,data3, cgc, data_names):
+    '''
+    Merge different datasets and the cgc list
+    '''
+    #One datset with features only
+    d0 = pd.merge(cgc, data0, on='genes',how='right')
+    d1 = pd.merge(cgc, data1, on='genes',how='right')
+    d2 = pd.merge(cgc, data2, on='genes',how='right')
+    d3 = pd.merge(cgc, data3, on='genes',how='right')
+    data_names_list = data_names
+
+    #Two datsets with features
+    d4 = cgc.merge(data0, on='genes',how='right').merge(data1,on='genes')
+    d5 = cgc.merge(data0, on='genes',how='right').merge(data2,on='genes')
+    d6 = cgc.merge(data0, on='genes',how='right').merge(data3,on='genes')
+    d7 = cgc.merge(data1, on='genes',how='right').merge(data2,on='genes')
+    d8 = cgc.merge(data1, on='genes',how='right').merge(data3,on='genes')
+    d9 = cgc.merge(data2, on='genes',how='right').merge(data3,on='genes')
+    data_names_list.append(data_names[0]+'_'+data_names[1])
+    data_names_list.append(data_names[0]+'_'+data_names[2])
+    data_names_list.append(data_names[0]+'_'+data_names[3])
+    data_names_list.append(data_names[1]+'_'+data_names[2])
+    data_names_list.append(data_names[1]+'_'+data_names[3])
+    data_names_list.append(data_names[2]+'_'+data_names[3])
+
+    #Three datsets with features
+    d10 = pd.merge(d4, data2, on='genes')
+    d11 = pd.merge(d4, data3, on='genes')
+    d12 = pd.merge(d7, data3, on='genes')
+    data_names_list.append(data_names[0]+'_'+data_names[1]+'_'+data_names[2])
+    data_names_list.append(data_names[0]+'_'+data_names[1]+'_'+data_names[3])
+    data_names_list.append(data_names[1]+'_'+data_names[2]+'_'+data_names[3])    #Four datasets with features
+    d13 = pd.merge(d10,data3, on='genes')
+    data_names_list.append(data_names[0]+'_'+data_names[1]+'_'+data_names[2]+'_'+data_names[3])
+
+    d0.set_index('genes',inplace=True)
+    d1.set_index('genes',inplace=True)
+    d2.set_index('genes',inplace=True)
+    d3.set_index('genes',inplace=True)
+    d4.set_index('genes',inplace=True)
+    d5.set_index('genes',inplace=True)
+    d6.set_index('genes',inplace=True)
+    d7.set_index('genes',inplace=True)
+    d8.set_index('genes',inplace=True)
+    d9.set_index('genes',inplace=True)
+    d10.set_index('genes',inplace=True)
+    d11.set_index('genes',inplace=True)
+    d12.set_index('genes',inplace=True)
+    d13.set_index('genes',inplace=True)
+    #print('subsets size: \n')
+    #print(d0.shape,d1.shape,d2.shape,d3.shape,d4.shape,d5.shape,d6.shape,d7.shape,d8.shape,d9.shape,d10.shape,d11.shape,d12.shape,d13.shape)
+    return [d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13], data_names_list
+
+def data_running_models(data_list, names, name_in, name_out):
+    '''
+    Run all the pu models for the combination of datsets
+    input: list with combinations of features and the names of the datsets
+    outout:
+    '''
+    acc_ , acc = [] , []
+    f1_, f1 = [],[]
+    tnfpfntp,tnfpfntp_ = [],[] #confusion_matrix().ravel()
+    tp_genes = []
+    model_name, data_name = [],[]
+    nin, nout = [],[]
+    error = []
+    models = ['OneClassSVM','svm','adapter','upu','lr','randomforest']
+    for dt,dtn in zip(data_list,names):
+        if dt.shape[1]>2:
+            #dt['y_out'].fillna(0,inplace = True)
+            y = dt['y_out'].fillna(0)
+            X = dt.drop(['y_out'], axis=1)
+            y_train, y_test, X_train, X_test = train_test_split(y, X, test_size=0.3)
+            index_ = [list(X_train.index),list(X_test.index)]
+            flat_index = [item for sublist in index_ for item in sublist]
+            flat_index = np.array(flat_index)
+            #print('INDEX',len(flat_index),len(list(X_train.index)),len(list(X_test.index)))
+
+            for m in models:
+                try:
+                    scores, cm, cm_, tp_genes01 = pul(y_train, y_test, X_train, X_test,'name',m)
+                    acc.append(scores[0])
+                    acc_.append(scores[1])
+                    f1.append(scores[2])
+                    f1_.append(scores[3])
+                    tnfpfntp.append(cm)
+                    tnfpfntp_.append(cm_)
+                    tp_genes.append(flat_index[np.equal(tp_genes01,1)])
+                    model_name.append(m)
+                    data_name.append(dtn)
+                    nin.append(name_in)
+                    nout.append(name_out)
+                    error.append(False)
+                except:
+                    acc.append(np.nan)
+                    acc_.append(np.nan)
+                    f1.append(np.nan)
+                    f1_.append(np.nan)
+                    tnfpfntp.append([np.nan,np.nan,np.nan,np.nan])
+                    tnfpfntp_.append([np.nan,np.nan,np.nan,np.nan])
+                    tp_genes.append([])
+                    model_name.append(m)
+                    data_name.append(dtn)
+                    nin.append(name_in)
+                    nout.append(name_out)
+                    error.append(True)
+                    print('Error in PUL model',m,dtn)
+    dt_exp = pd.DataFrame({'acc':acc,'acc_':acc_, 'f1':f1, 'f1_':f1_,
+                               'tnfpfntp':tnfpfntp, 'tnfpfntp_':tnfpfntp_,
+                               'tp_genes':tp_genes,'model_name':model_name , 'data_name':data_name,
+                               'nin':nin, 'nout':nout, 'error':error})
+    return dt_exp

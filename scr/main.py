@@ -188,8 +188,7 @@ if RUN_CREATE_FEATURE_DATASET:
     #MOFIFY HERE TO DIFERENT SETS COMBINATIONS
     data_out = pd.merge(f_bart, f_mf, on='genes') #7066 rows
     data_out = pd.merge(cgc_list,data_out,on='genes',how='right')
-    data_out['y_out'].fillna(0,inplace = True)
-    data_out.set_index('genes',inplace=True)
+    #data_out.set_index('genes',inplace=True)
     #data_out['y_out'].value_counts()
 
 
@@ -198,12 +197,35 @@ if RUN_PUL:
     from sklearn.model_selection import train_test_split
 
     y = data_out['y_out']
-    X = data_out.iloc[:,1:data_out.shape[1]]
+    X = data_out.drop(['y_out'], axis = 1)
     y_train, y_test, X_train, X_test = train_test_split(y, X, test_size=0.3)
 
-    cm1, cm1_, y1_ = fc.pul(y_train, y_test, X_train, X_test,'name','OneClassSVM')
-    cm2, cm2_, y2_ = fc.pul(y_train, y_test, X_train, X_test,'name','svm')
-    cm3, cm3_, y3_ = fc.pul(y_train, y_test, X_train, X_test,'name','adapter')
-    cm4, cm4_, y4_ = fc.pul(y_train, y_test, X_train, X_test,'name','upu')
-    cm5, cm5_, y5_ = fc.pul(y_train, y_test, X_train, X_test,'name','lr')
-    cm6, cm6_, y6_ = fc.pul(y_train, y_test, X_train, X_test,'name','randomforest')
+    scores, tnfpfntp, tnfpfntp_, tp_genes = fc.pul(y_train, y_test, X_train, X_test,'name','OneClassSVM')
+    #cm2, cm2_, y2_ = fc.pul(y_train, y_test, X_train, X_test,'name','svm')
+    ##cm3, cm3_, y3_ = fc.pul(y_train, y_test, X_train, X_test,'name','adapter')
+    #cm4, cm4_, y4_ = fc.pul(y_train, y_test, X_train, X_test,'name','upu')
+    #cm5, cm5_, y5_ = fc.pul(y_train, y_test, X_train, X_test,'name','lr')
+    #cm6, cm6_, y6_ = fc.pul(y_train, y_test, X_train, X_test,'name','randomforest')
+
+RUN_EXPERIMENTS = True
+if RUN_EXPERIMENTS:
+    #Description:
+    #All, Gender, Cancer, all+gender, all+cancer, gender + cancer, all+cancer+gender
+    name_in = [['all'],['FEMALE','MALE'],[], ['all','FEMALE','MALE'],['all'],['FEMALE','MALE'],[]]
+    name_out = [[],[],['all','FEMALE','MALE'],[],['FEMALE','MALE'],['all'],[]]
+    aux = True
+    for nin, nout in zip(name_in, name_out):
+        print(aux,'\n',nin,'\n',nout)
+        dt0, dt1, dt2, dt3, dt4, dt5, dt6 = fc.data_subseting(f_bart, f_mf,f_mf_bin , f_ac,f_ac_bin, f_pca,f_pca_bin, nin, nout)
+
+        # do the same with bin
+        data_list, names = fc.data_merging(dt0,dt1,dt3, dt5, cgc_list, ['bart','mf','ac','pca'])
+        data_list_b, names_b = fc.data_merging(dt0,dt2,dt4, dt6, cgc_list, ['bart_b','mf_b','ac_b','pca_b'])
+        if aux:
+            dt_exp = fc.data_running_models(data_list, names,nin,nout)
+            dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list_b, names_b,nin,nout)], axis=0)
+            aux = False
+        else:
+            dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list, names,nin,nout)], axis=0)
+            dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list_b, names_b,nin,nout)], axis=0)
+    dt_exp.to_csv('results\\experiments.txt', sep=';', index = False)
