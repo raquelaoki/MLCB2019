@@ -1,4 +1,4 @@
-import plotnine as p9
+#import plotnine as p9
 import numpy as np
 import pandas as pd
 
@@ -19,8 +19,6 @@ def plot_chain_sk(location,size,i,id):
     fig = fig + p9.geom_line()+p9.scale_y_continuous(limits = (lim[0],lim[1]))
     return fig
 
-
-
 def plot_chain_cj(location,size,i):
     ite = 1
     la_array = np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=',')
@@ -39,7 +37,6 @@ def plot_chain_cj(location,size,i):
            p9.geom_line()+p9.scale_y_continuous(limits = (lim[0],lim[1]))
     )
     return fig
-
 
 def plot_chain_tht(location,size,i):
     ite = 1
@@ -60,7 +57,6 @@ def plot_chain_tht(location,size,i):
     )
     return fig
 
-
 def plot_chain_phi(location,size,i):
     ite = 1
     la_array = np.loadtxt(location+str(id)+'_bach'+str(ite)+'.txt', delimiter=',')
@@ -79,3 +75,11 @@ def plot_chain_phi(location,size,i):
            geom_line()+scale_y_continuous(limits = (lim[0],lim[1]))
     )
     return fig
+
+def violin_plot(data):
+    import seaborn as sns
+    sns.set(style="whitegrid")
+    ax = sns.violinplot(x='Model',y='acc',data=data)
+    bx = sns.violinplot(x='Model',y='f1',data=data)
+    cx = sns.violinplot(x='Model',y='acc',hue='Data',data=data, split=True)
+    dx = sns.violinplot(x='Model',y='acc',hue='Data',data=data, split=True)

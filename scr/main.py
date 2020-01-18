@@ -3,16 +3,13 @@ import pandas as pd
 import numpy as np
 import sys
 import os
+from sklearn.metrics import confusion_matrix, f1_score
 path = 'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019'
 sys.path.append(path+'\\scr')
 import functions as fc
+import plots as pl
 os.chdir(path)
-from sklearn.metrics import confusion_matrix, f1_score
 pd.set_option('display.max_columns', 500)
-#testing
-#from bartpy.sklearnmodel import SklearnModel
-#from joblib import Parallel
-#https://github.com/aldro61/pu-learning
 
 
 
@@ -33,7 +30,8 @@ RUN_A = False#lab computer outside anaconda
 
 RUN_FCI = False
 
-RUN_CREATE_FEATURE_DATASET = True
+RUN_CREATE_FEATURE_DATASET = False
+RUN_EXPERIMENTS = False
 
 
 '''
@@ -141,8 +139,6 @@ if RUN_:
             name = 'ac_'+str(k_mf)+'_lr_'+name
             fc.roc_curve_points(pred, y01, name)
 
-
-
 if RUN_FCI:
     from pycausal import search as s
     from pycausal.pycausal import pycausal as pc
@@ -171,8 +167,6 @@ if RUN_FCI:
     #tetrad.getNodes()
     #pc.stop_vm()
 
-
-
 #merge is weird, the sizes are not compatible
 #check the indivicual run for subgroup. Any reason to have different dimension for cancer type? Problem on dataset creation?
 if RUN_CREATE_FEATURE_DATASET:
@@ -185,29 +179,11 @@ if RUN_CREATE_FEATURE_DATASET:
     cgc_list = cgc_list.iloc[:,[0,-1]]
     cgc_list.rename(columns = {'Gene Symbol':'genes'}, inplace = True)
 
-    #MOFIFY HERE TO DIFERENT SETS COMBINATIONS
-    data_out = pd.merge(f_bart, f_mf, on='genes') #7066 rows
-    data_out = pd.merge(cgc_list,data_out,on='genes',how='right')
-    #data_out.set_index('genes',inplace=True)
-    #data_out['y_out'].value_counts()
+    #data_out = pd.merge(f_bart, f_mf, on='genes') #7066 rows
+    #data_out = pd.merge(cgc_list,data_out,on='genes',how='right')
 
 
-RUN_PUL = False
-if RUN_PUL:
-    from sklearn.model_selection import train_test_split
 
-    y = data_out['y_out']
-    X = data_out.drop(['y_out'], axis = 1)
-    y_train, y_test, X_train, X_test = train_test_split(y, X, test_size=0.3)
-
-    scores, tnfpfntp, tnfpfntp_, tp_genes = fc.pul(y_train, y_test, X_train, X_test,'name','OneClassSVM')
-    #cm2, cm2_, y2_ = fc.pul(y_train, y_test, X_train, X_test,'name','svm')
-    ##cm3, cm3_, y3_ = fc.pul(y_train, y_test, X_train, X_test,'name','adapter')
-    #cm4, cm4_, y4_ = fc.pul(y_train, y_test, X_train, X_test,'name','upu')
-    #cm5, cm5_, y5_ = fc.pul(y_train, y_test, X_train, X_test,'name','lr')
-    #cm6, cm6_, y6_ = fc.pul(y_train, y_test, X_train, X_test,'name','randomforest')
-
-RUN_EXPERIMENTS = True
 if RUN_EXPERIMENTS:
     #Description:
     #All, Gender, Cancer, all+gender, all+cancer, gender + cancer, all+cancer+gender
@@ -228,4 +204,42 @@ if RUN_EXPERIMENTS:
         else:
             dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list, names,nin,nout)], axis=0)
             dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list_b, names_b,nin,nout)], axis=0)
-    dt_exp.to_csv('results\\experiments.txt', sep=';', index = False)
+    #dt_exp.to_csv('results\\experiments.txt', sep=';', index = False)
+
+RUN_PLOTS = True
+if RUN_PLOTS:
+    dt_exp = pd.read_csv('results\\experiments.txt',sep=';')
+    dt_exp = dt_exp[dt_exp['error']==False]
+
+    #Comparing for all patients and testing set results for acc and f1
+    aux = []
+    aux_ = [] #saving columns positions
+    columns = ['acc','f1','model_name','data_name','nin','nout']
+    for c in columns:
+        if c=='acc' or c=='f1':
+            aux.append(dt_exp.columns.get_loc(c))
+            aux_.append(dt_exp.columns.get_loc(c+'_'))
+        else:
+            aux.append(dt_exp.columns.get_loc(c))
+            aux_.append(dt_exp.columns.get_loc(c))
+
+    dt_exp1 = dt_exp.iloc[:,aux]
+    dt_exp1_ = dt_exp.iloc[:,aux_]
+    dt_exp1 = dt_exp1.assign(Data='Testing Set')
+    dt_exp1_ = dt_exp1_.assign(Data='Full Set')
+    dt_exp1_.rename(columns={'acc_':'acc','f1_':'f1','model_name':'Model'},inplace = True)
+    dt = pd.concat([dt_exp1,dt_exp1_],axis = 0)
+    dt['Model'].replace({'OneClassSVM':'One Class \nSVM','svm':'SVM',
+                              'adapter':'PU-Adapter','upu':'Unbiased \nPU',
+                              'lr':'Logistic \nRegression','randomforest':'Random \nForest'}, inplace=True)
+    #pl.violin_plot(dt)
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    #plt.figure(figsize=(16, 6))
+    sns.set(rc={'figure.figsize':(13.7,8.27)},style="whitegrid",font_scale=2)
+    ax = sns.violinplot(x='Model',y='acc',data=dt)
+    plt.xlabel('Accuracy')
+    plt.show(ax)
+    bx = sns.violinplot(x='Model',y='f1',data=dt)
+    cx = sns.violinplot(x='Model',y='acc',hue='Data',data=dt, split=True)
+    dx = sns.violinplot(x='Model',y='acc',hue='Data',data=dt, split=True)
