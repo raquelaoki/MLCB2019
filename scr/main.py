@@ -30,8 +30,7 @@ RUN_A = False#lab computer outside anaconda
 
 RUN_FCI = False
 
-RUN_CREATE_FEATURE_DATASET = False
-RUN_EXPERIMENTS = False
+RUN_CREATE_FEATURE_DATASET = True
 
 
 '''
@@ -43,7 +42,7 @@ Note:
     - k15 all 1
     - new tests with id 21, my model is bad. I need to fix to make sense, applying the outcome model to a well known model
 test
-#bart: it's important to standartize my variables 0-1
+#bart: it's important to standartize my variables 0-1 (R)
 
 
 '''
@@ -183,7 +182,7 @@ if RUN_CREATE_FEATURE_DATASET:
     #data_out = pd.merge(cgc_list,data_out,on='genes',how='right')
 
 
-
+RUN_EXPERIMENTS = True
 if RUN_EXPERIMENTS:
     #Description:
     #All, Gender, Cancer, all+gender, all+cancer, gender + cancer, all+cancer+gender
@@ -196,25 +195,27 @@ if RUN_EXPERIMENTS:
 
         # do the same with bin
         data_list, names = fc.data_merging(dt0,dt1,dt3, dt5, cgc_list, ['bart','mf','ac','pca'])
-        data_list_b, names_b = fc.data_merging(dt0,dt2,dt4, dt6, cgc_list, ['bart_b','mf_b','ac_b','pca_b'])
+        #data_list_b, names_b = fc.data_merging(dt0,dt2,dt4, dt6, cgc_list, ['bart_b','mf_b','ac_b','pca_b'])
         if aux:
-            dt_exp = fc.data_running_models(data_list, names,nin,nout)
-            dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list_b, names_b,nin,nout)], axis=0)
+            dt_exp = fc.data_running_models(data_list, names,nin,nout,False)
+            #dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list_b, names_b,nin,nout,True)], axis=0)
             aux = False
         else:
-            dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list, names,nin,nout)], axis=0)
-            dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list_b, names_b,nin,nout)], axis=0)
-    #dt_exp.to_csv('results\\experiments.txt', sep=';', index = False)
+            dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list, names,nin,nout,False)], axis=0)
+ #           dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list_b, names_b,nin,nout,True)], axis=0)
+            dt_exp.to_csv('results\\experiments1.txt', sep=';', index = False)
 
 RUN_PLOTS = True
 if RUN_PLOTS:
-    dt_exp = pd.read_csv('results\\experiments.txt',sep=';')
+    dt_exp = pd.read_csv('results\\experiments1.txt',sep=';')
     dt_exp = dt_exp[dt_exp['error']==False]
 
     #Comparing for all patients and testing set results for acc and f1
     aux = []
     aux_ = [] #saving columns positions
-    columns = ['acc','f1','model_name','data_name','nin','nout']
+    columns = ['acc','f1','model_name','data_name','nin','nout','size']
+
+
     for c in columns:
         if c=='acc' or c=='f1':
             aux.append(dt_exp.columns.get_loc(c))
@@ -228,18 +229,32 @@ if RUN_PLOTS:
     dt_exp1 = dt_exp1.assign(Data='Testing Set')
     dt_exp1_ = dt_exp1_.assign(Data='Full Set')
     dt_exp1_.rename(columns={'acc_':'acc','f1_':'f1','model_name':'Model'},inplace = True)
+    dt_exp1.rename(columns={'model_name':'Model'},inplace = True)
     dt = pd.concat([dt_exp1,dt_exp1_],axis = 0)
     dt['Model'].replace({'OneClassSVM':'One Class \nSVM','svm':'SVM',
                               'adapter':'PU-Adapter','upu':'Unbiased \nPU',
                               'lr':'Logistic \nRegression','randomforest':'Random \nForest'}, inplace=True)
+    print('Mean: \n',dt.groupby('Model').mean())
+    #print('Min: \n',dt.groupby('Model')['f1'].min())
+    #print('Max: \n',dt.groupby('Model')['f1'].max())
     #pl.violin_plot(dt)
-    import seaborn as sns
-    import matplotlib.pyplot as plt
+    #import seaborn as sns
+    #import matplotlib.pyplot as plt
     #plt.figure(figsize=(16, 6))
-    sns.set(rc={'figure.figsize':(13.7,8.27)},style="whitegrid",font_scale=2)
-    ax = sns.violinplot(x='Model',y='acc',data=dt)
-    plt.xlabel('Accuracy')
-    plt.show(ax)
-    bx = sns.violinplot(x='Model',y='f1',data=dt)
-    cx = sns.violinplot(x='Model',y='acc',hue='Data',data=dt, split=True)
-    dx = sns.violinplot(x='Model',y='acc',hue='Data',data=dt, split=True)
+    #sns.set(rc={'figure.figsize':(13.7,8.27)},style="whitegrid",font_scale=2)
+    #ax = sns.violinplot(x='Model',y='acc',data=dt)
+    #this dont work
+    #plt.xlabel('Accuracy')
+    #plt.show(ax)
+    #bx = sns.violinplot(x='Model',y='f1',data=dt)
+    #cx = sns.violinplot(x='Model',y='acc',hue='Data',data=dt, split=True)
+    #dx = sns.violinplot(x='Model',y='f1',hue='Data',data=dt, split=True)
+    #sns.violinplot(x='Model',y='f1',hue='Data',data=dt_exp1, split=True)
+    #import matplotlib.pyplot as plt
+    import seaborn as sns
+    sns.boxplot(x = "Model", y = "f1",hue='Data',data = dt,palette="Set3")
+    #dt['g10']=False
+    #dt['g10'][dt['size']>10]=True
+    #sns.boxplot(x = "Model", y = "f1",hue='g10',data = dt,palette="Set3")
+    #sns.boxplot(x = "Model", y = "f1",hue='isbin',data = dt,palette="Set3")
+    #sns.boxplot(x = "Model", y = "f1",hue='isbin',data = dt,palette="Set3")

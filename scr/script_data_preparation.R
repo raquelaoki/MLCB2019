@@ -27,7 +27,7 @@ genes_selection = FALSE
 genes_selection_15k = FALSE
 dataset_balancing = FALSE
 genes_mutation_selection = FALSE
-clin_dataset_split = TRUE
+clin_dataset_split = FALSE
 
 
 
@@ -243,7 +243,7 @@ if(genes_selection){
   bd1 = bd1[,order]
   head(bd1[,1:10])
   
-  #eliminate the ones with vales between 0 and 1 are not signnificantly different
+  #eliminate the ones with values between 0 and 1 are not signnificantly different
   bdy0 = subset(bd1, y==0)
   bdy1 = subset(bd1, y==1)
   pvalues = rep(0,dim(bd1)[2])
@@ -300,7 +300,7 @@ if(genes_selection){
   }
 
   pairs = data.frame(i=i_,j=j_)
-  write.table(pairs,paste(theRootDir,'correlation_pairs.txt',sep=''), row.names = F, sep = ';')
+  #write.table(pairs,paste(theRootDir,'correlation_pairs.txt',sep=''), row.names = F, sep = ';')
   }else{
     pairs = read.table(paste(theRootDir,'correlation_pairs.txt',sep=''), header = T, sep = ';')
   }
@@ -355,7 +355,7 @@ if(genes_selection){
   dim(bd1)
   
 
-  write.table(bd1,paste(theRootDir,'tcga_train_gexpression_cgc_7k.txt',sep=''), row.names = F, sep = ';')
+  #write.table(bd1,paste(theRootDir,'tcga_train_gexpression_cgc_7k.txt',sep=''), row.names = F, sep = ';')
 }
 
 

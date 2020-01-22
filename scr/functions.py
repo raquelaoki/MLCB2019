@@ -632,10 +632,10 @@ def data_features_da_create(data,files):
     features_data = data.iloc[:,[0,2]]
     features_data.rename(columns={ 'coef':files[-1].split('.')[0]}, inplace = True)
 
-    return features_data,features_data_bin
+    #return features_data,features_data_bin
 
-    features_data = data.iloc[:,[0,2]]
-    features_data.rename(columns={ 'coef':files[-1].split('.')[0]}, inplace = True)
+    #features_data = data.iloc[:,[0,2]]
+    #features_data.rename(columns={ 'coef':files[-1].split('.')[0]}, inplace = True)
     if data.shape[0]!=features_data.shape[0] or data.shape[0]!=features_data_bin.shape[0]:
         print('Dimension Problem with ', files)
     return  features_data,features_data_bin
@@ -666,7 +666,7 @@ def data_features_construction(path):
     flags = {'pca': True, 'mf': True , 'ac':True,'bart':True ,'roc':True} #flags['pca']
 
     for f in listfiles:
-        data = pd.read_csv('results//'+f,sep=';')
+        data = pd.read_csv('results\\'+f,sep=';')
         files = f.split("_")
         if files[0]=="feature":
 
@@ -679,9 +679,6 @@ def data_features_construction(path):
                 #merge with dataset
                 features_bart = pd.merge(features_bart, data.iloc[:,0:2],on='gene')
                 features_bart.rename(columns={ 'mean':files[-1].split('.')[0]}, inplace = True)
-                if data.shape[0]!=features_bart.shape[0]:
-                    print('Dimension Problem with ', files)
-
 
             elif files[1]=='mf' and flags['mf']:
                 features_mf,features_mf_binary = data_features_da_create(data,files)
@@ -721,21 +718,32 @@ def pul(y,y_test,X,X_test,aux,name_model):
     """
     X_full = np.concatenate((X,X_test), axis = 0 )
     y_full = np.concatenate((y,y_test), axis = 0 )
-
+    warnings.filterwarnings("ignore")
     if name_model == 'OneClassSVM':
         #modify dataset to have only positive examples on testing set
         X = X[y==1]
         #X_train only has positive examples
-        model = svm.OneClassSVM(nu=0.1, kernel="rbf", gamma=0.1)
+        #remove C
+        print('OneClassSVM',X.shape[1])
+        model = svm.OneClassSVM(nu=0.2,kernel="rbf",gamma=0.5)# #0.5, 0.5
         model.fit(X)
 
     elif name_model == 'svm':
-        model = svm.SVC(C=10,kernel='rbf',gamma='scale') #overfitting
+        #https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html
+        #gamma: value, 'scale' or 'auto'
+        #kernel: poly, rbf, linear, sigmoid
+        #gamma=0.2 dones not work
+        #remove nu
+        print('svm',X.shape[1])
+        model = svm.SVC(C=0.5,kernel='rbf',gamma='scale') #overfitting
         model.fit(X,y)
 
     elif name_model == 'adapter':
-        estimator = SVC(C=10, kernel='rbf',gamma=0.4,probability=True)
-        model = PUAdapter(estimator, hold_out_ratio=0.2)
+        #keep prob
+        #csv don't have nu
+        print('adapter',X.shape[1])
+        estimator = SVC(C=0.5, kernel='rbf',gamma='scale',probability=True)
+        model = PUAdapter(estimator, hold_out_ratio=0.3)
         X = np.matrix(X)
         y = np.array(y)
         model.fit(X, y)
@@ -748,9 +756,10 @@ def pul(y,y_test,X,X_test,aux,name_model):
         try https://github.com/t-sakai-kure/pywsl/blob/master/examples/pul/pu_skc/demo_pu_skc.py
         and https://github.com/t-sakai-kure/pywsl/blob/master/examples/pul/upu/demo_upu.py
          '''
+        print('upu', X.shape[1])
         #Implement these, packages only work on base anaconda (as autoenconder)
         #https://github.com/t-sakai-kure/pywsl
-        prior = .5 #change for the proportion of 1 and 0
+        prior =.5 #change for the proportion of 1 and 0
         param_grid = {'prior': [prior],
                           'lam': np.logspace(-3, 1, 5), #what are these values
                           'basis': ['lm']}
@@ -763,19 +772,31 @@ def pul(y,y_test,X,X_test,aux,name_model):
         y = np.array(y)
         model.fit(X, y)
     elif name_model == 'lr':
-        model = sm.Logit(y,X).fit()
-    else:
-        model = RandomForestClassifier(max_depth=100, random_state=0)
+        print('lr',X.shape[1])
+        model = sm.Logit(y,X).fit_regularized(method='l1')
+    elif name_model=='randomforest':
+        print('rd',X.shape[1])
+        model = RandomForestClassifier(max_depth=10, random_state=0)
         model.fit(X, y)
+    else:
+        print('random',X.shape[1])
 
-    y_ = model.predict(X_test)
-    y_full_ = model.predict(X_full)
+
+    #I changed here
+    if name_model=='random':
+        y_ = np.random.binomial(n=1,p=y.sum()/len(y),size =X_test.shape[0])
+        y_full_ = np.random.binomial(n=1,p=y.sum()/len(y),size=X_full.shape[0])
+    else:
+        y_ = model.predict(X_test)
+        y_full_ = model.predict(X_full)
+
     if name_model == 'lr':
+        #y_ = 1- y_
+        #y_full_ = 1- y_full_
         y_[y_<0.5] = 0
         y_[y_>=0.5] = 1
         y_full_[y_full_< 0.5] = 0
         y_full_[y_full_>=0.5] = 1
-
 
     y_ = np.where(y_==-1,0,y_)
     y_full_ = np.where(y_full_==-1, 0,y_full_)
@@ -793,6 +814,7 @@ def pul(y,y_test,X,X_test,aux,name_model):
     tnfpfntp = confusion_matrix(y_test,y_).ravel()
     tnfpfntp_= confusion_matrix(y_full, y_full_).ravel()
     tp_genes = np.multiply(y_full, y_full_)
+    warnings.filterwarnings("default")
     return [acc, acc_f, f1, f1_f], tnfpfntp, tnfpfntp_, tp_genes
 
 def data_subseting(data0, data1, data2, data3, data4, data5, data6, name_in, name_out):
@@ -821,13 +843,13 @@ def data_subseting(data0, data1, data2, data3, data4, data5, data6, name_in, nam
             aux4.append(data4.columns.get_loc(i))
             aux5.append(data5.columns.get_loc(i))
             aux6.append(data6.columns.get_loc(i))
-        data0.iloc[:,aux0]
-        data1.iloc[:,aux1]
-        data2.iloc[:,aux2]
-        data3.iloc[:,aux3]
-        data4.iloc[:,aux4]
-        data5.iloc[:,aux5]
-        data6.iloc[:,aux6]
+        data0 = data0.iloc[:,aux0]
+        data1 = data1.iloc[:,aux1]
+        data2 = data2.iloc[:,aux2]
+        data3 = data3.iloc[:,aux3]
+        data4 = data4.iloc[:,aux4]
+        data5 = data5.iloc[:,aux5]
+        data6 = data6.iloc[:,aux6]
 
     return data0, data1, data2, data3, data4, data5, data6
 
@@ -884,7 +906,7 @@ def data_merging(data0,data1,data2,data3, cgc, data_names):
     #print(d0.shape,d1.shape,d2.shape,d3.shape,d4.shape,d5.shape,d6.shape,d7.shape,d8.shape,d9.shape,d10.shape,d11.shape,d12.shape,d13.shape)
     return [d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13], data_names_list
 
-def data_running_models(data_list, names, name_in, name_out):
+def data_running_models(data_list, names, name_in, name_out, is_bin):
     '''
     Run all the pu models for the combination of datsets
     input: list with combinations of features and the names of the datsets
@@ -897,9 +919,11 @@ def data_running_models(data_list, names, name_in, name_out):
     model_name, data_name = [],[]
     nin, nout = [],[]
     error = []
-    models = ['OneClassSVM','svm','adapter','upu','lr','randomforest']
+    size = []
+    models = ['OneClassSVM','adapter','upu','lr','randomforest','random']
     for dt,dtn in zip(data_list,names):
         if dt.shape[1]>2:
+            #print('type: ',dt,dtn,'shape:', dt.shape[1], dt.head())
             #dt['y_out'].fillna(0,inplace = True)
             y = dt['y_out'].fillna(0)
             X = dt.drop(['y_out'], axis=1)
@@ -938,8 +962,9 @@ def data_running_models(data_list, names, name_in, name_out):
                     nout.append(name_out)
                     error.append(True)
                     print('Error in PUL model',m,dtn)
+                size.append(X_train.shape[1])
     dt_exp = pd.DataFrame({'acc':acc,'acc_':acc_, 'f1':f1, 'f1_':f1_,
                                'tnfpfntp':tnfpfntp, 'tnfpfntp_':tnfpfntp_,
                                'tp_genes':tp_genes,'model_name':model_name , 'data_name':data_name,
-                               'nin':nin, 'nout':nout, 'error':error})
+                               'nin':nin, 'nout':nout, 'error':error, 'size': size})
     return dt_exp
