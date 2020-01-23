@@ -9,6 +9,7 @@
 rm(list=ls())
 
 RUN_BART = TRUE
+RUN_CATE = FALSE
 RUN_ALL = TRUE
 RUN_ = TRUE
 RUN_FCI = FALSE
@@ -97,16 +98,16 @@ if(RUN_BART&RUN_ALL){
   write.table(roc_data,'results\\roc_bart_all.txt', row.names = FALSE,sep=';')
   
   #ROC CURVE PLOT
-  pred <- prediction(1-pred_p,y)
-  roc.perf = performance(pred, measure = "tpr", x.measure = "fpr")
-  plot(roc.perf, col = 'red',main='ROC')
-  abline(a=0, b= 1)
+  #pred <- prediction(1-pred_p,y)
+  #roc.perf = performance(pred, measure = "tpr", x.measure = "fpr")
+  #plot(roc.perf, col = 'red',main='ROC')
+  #abline(a=0, b= 1)
   #is 0.5 the best? 
   
-  def_threshold(y,pred_p,0.4)
-  def_threshold(y,pred_p,0.5)
-  def_threshold(y,pred_p,0.6)
-  
+  #def_threshold(y,pred_p,0.4)
+  #def_threshold(y,pred_p,0.5)
+  #def_threshold(y,pred_p,0.6)
+  if(RUN_CATE){
   #making the interventional data, one for each gene 
   fit_test =  predict(bart_machine, data_test, type='prob')
   dif = data.frame(gene = names(data),mean=c(rep(999, dim(data)[2])), 
@@ -121,6 +122,7 @@ if(RUN_BART&RUN_ALL){
     dif$se[v] = mean((fit_test-fit)^2)
   }
   write.table(dif,'results\\feature_bart_all.txt', sep = ";", row.names = FALSE)
+  }
 }
 
 
