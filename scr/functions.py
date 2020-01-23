@@ -386,11 +386,16 @@ def check_save(Z,train,colnames,y01,name1,name2,k):
         resul, output, pred = outcome_model( train,colnames, Z,y01,name2)
         if(len(pred)!=0):
             resul.to_csv('results\\feature_'+name1+'_'+str(k)+'_lr_'+name2+'.txt', sep=';', index = False)
+            name = name1+str(k)+'_lr_'+name2
+            roc_curve_points(pred, y01, name)
         else:
             print('Outcome Model Does Not Coverge, results are not saved')
+            empty = []
+            np.savetxt('results\\FAIL_outcome_feature_'+name1+'_'+str(k)+'_lr_'+name2+'.txt',[], fmt='%s')
+
     else:
         print('Predictive Check Test: FAIL')
-        print('Results not saved')
+        np.savetxt('results\\FAIL_pcheck_feature_'+name1+'_'+str(k)+'_lr_'+name2+'.txt',[], fmt='%s')
     return pred
 
 def predictive_check_new(X, Z,run ):
@@ -571,7 +576,7 @@ def outcome_model(train,colnames , z, y01,name2):
         pred1 = []
     return resul, output, pred1
 
-def roc_curve_points(pred,y01,name):
+def roc_curve_points_old(pred,y01,name):
     '''
     Saving points to create a roc curve
     Input:
@@ -601,8 +606,6 @@ def roc_curve_points(pred,y01,name):
     names(roc_data) = c('prob','tp1','fp1','tp2','fp2')
     write.table(roc_data,'results\\roc_bart_all.txt', row.names = FALSE,sep=';')
     '''
-
-
     warnings.filterwarnings("ignore")
     if len(pred)>0:
         seq = np.arange(0.01,1,step = 0.01)
@@ -622,6 +625,10 @@ def roc_curve_points(pred,y01,name):
         warnings.filterwarnings("default")
 
     return
+
+def roc_curve_points(pred,y01,name):
+    roc_data = pd.DataFrame({'pred':pred,'y01':y01})
+    roc_data.to_csv('results\\roc_'+name+'.txt', sep=';', index = False)
 
 def data_features_da_create(data,files):
     #create 2 dataset
@@ -705,6 +712,75 @@ def data_features_construction(path):
             #add to previous roc dataset
     features_bart.rename(columns={'gene':'genes'}, inplace = True)
     return features_bart, features_mf,features_mf_binary , features_ac,features_ac_binary , features_pca,features_pca_binary
+
+def data_roc_construction(path):
+    '''
+    This function will read the features in results and
+    construct 2 datasets: one with the data for the ROC curve
+    and another one with the features for the data out/classification
+    '''
+    pathfiles = path+'\\results'
+    listfiles = [f for f in listdir(pathfiles) if isfile(join(pathfiles, f))]
+    flags =True
+
+    for f in listfiles:
+        data = pd.read_csv('results\\'+f,sep=';')
+        files = f.split("_")
+        if files[0]=="roc" and flags:
+            if files[2]=='20': #au
+                roc20tp = data[['prob', 'tp1']]
+                roc20fp = data[['prob', 'fp1']]
+                roc20tp.rename(columns={ 'tp1':files[1]+'_'+files[4]+'_'+files[-1].split('.')[0]}, inplace = True)
+                roc20fp.rename(columns={ 'fp1':files[1]+'_'+files[4]+'_'+files[-1].split('.')[0]}, inplace = True)
+            else:
+                print('under construction')
+            flags=False
+
+        elif files[0]=='roc' and not flags:
+            if files[2]=='20':
+                roc20tp = pd.merge(roc20tp, data[['prob', 'tp1']],on='prob')
+                roc20fp = pd.merge(roc20fp, data[['prob', 'fp1']],on='prob')
+                roc20tp.rename(columns={ 'tp1':files[1]+'_'+files[4]+'_'+files[-1].split('.')[0]}, inplace = True)
+                roc20fp.rename(columns={ 'fp1':files[1]+'_'+files[4]+'_'+files[-1].split('.')[0]}, inplace = True)
+            else:
+                print('under const4ruction')
+        else:
+            print('Not ROC')
+
+    ident = [0.0, 1.0]
+    from matplotlib import pyplot
+    for i in np.arange(roc20tp.shape[1]-1):
+        #Randoly choose a few to plot
+        pyplot.plot(roc20fp.iloc[:,[i+1]], roc20tp.iloc[:,[i+1]], linestyle='--', label=str(i))
+
+    # axis labels
+    pyplot.plot(ident,ident)
+    pyplot.xlabel('False Positive Rate')
+    pyplot.ylabel('True Positive Rate')
+    # show the legend
+   # pyplot.legend()
+    # show the plot
+    pyplot.show()
+    #import scikitplot as skplt
+    #plot = skplt.metrics.plot_roc(y_test, knn_y_proba)
+    #plt.title("ROC Curves - K-Nearest Neighbors")
+    return roc20tp
+
+
+'''
+from matplotlib import pyplot
+# plot the roc curve for the model
+pyplot.plot(roc1[['fp1']], roc1[['tp1']], linestyle='--', label='111')
+pyplot.plot(roc1[['fp2']], roc1[['tp2']], marker='.', label='222')
+# axis labels
+pyplot.xlabel('False Positive Rate')
+pyplot.ylabel('True Positive Rate')
+# show the legend
+pyplot.legend()
+# show the plot
+pyplot.show()
+'''
+
 
 def pul(y,y_test,X,X_test,aux,name_model):
     """

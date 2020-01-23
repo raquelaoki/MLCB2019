@@ -12,25 +12,26 @@ os.chdir(path)
 pd.set_option('display.max_columns', 500)
 
 
-
-
 '''
 Flags
 '''
 RUN_MCMC = False
 RUN_LOAD_MCMC = False
 
-RUN_ALL = False
-RUN_ = False
+RUN_ALL = True
+RUN_ = True
 
-RUN_MF = False
+RUN_MF = True
 RUN_PMF = False #to implement
-RUN_PCA = False
+RUN_PCA = True
 RUN_A = False#lab computer outside anaconda
 
 RUN_FCI = False
 
-RUN_CREATE_FEATURE_DATASET = True
+RUN_CREATE_FEATURE_DATASET = False
+RUN_CREATE_ROC_CAUSAL_DATASET = False
+RUN_EXPERIMENTS = False
+RUN_PLOTS = False
 
 
 '''
@@ -48,9 +49,9 @@ test
 '''
 
 '''MCMC Hyperparameters'''
-k_mf = 20 #Latents Dimension
+k_mf_ = [10,20,40,60] #Latents Dimension
 k_mcmc = 10
-k_pca = k_ac = 20
+k_pca_ = k_ac_ = [10,20,40,60]
 sim = 2000 #Simulations
 bach_size = 200 #Batch size for memory purposes
 step1 = 10 #Saving chain every step1 steps
@@ -91,22 +92,20 @@ if RUN_ALL:
             print('Predictive Check Test: FAIL')
 
     if RUN_MF:
-        W, F = fc.fa_matrixfactorization(train,k_mf,RUN_MF)
-        pred = fc.check_save(W,train,colnames, y01,'mf','all', k_mf)
-        name = 'mf_'+str(k_mf)+'_lr_all'
-        fc.roc_curve_points(pred, y01, name)
+        for k_mf in k_mf_:
+            W, F = fc.fa_matrixfactorization(train,k_mf,RUN_MF)
+            pred = fc.check_save(W,train,colnames, y01,'mf','all', k_mf)
+
 
     if RUN_PCA:
-        pc = fc.fa_pca(train,k_pca,RUN_PCA)
-        pred = fc.check_save(pc,train,colnames, y01,'pca', 'all',k_pca)
-        name = 'pca_'+str(k_pca)+'_lr_all'
-        fc.roc_curve_points(pred, y01, name)
+        for k_pca in k_pca_:
+            pc = fc.fa_pca(train,k_pca,RUN_PCA)
+            pred = fc.check_save(pc,train,colnames, y01,'pca', 'all',k_pca)
 
     if RUN_A:
-        ac =  fc.fa_a(train,k_ac,RUN_A)
-        pred = fc.check_save(ac,train,colnames, y01,'ac','all', k_ac)
-        name = 'ac_'+str(k_ac)+'_lr_all'
-        fc.roc_curve_points(pred, y01, name)
+        for k_ac in k_ac_:
+            ac =  fc.fa_a(train,k_ac,RUN_A)
+            pred = fc.check_save(ac,train,colnames, y01,'ac','all', k_ac)
 
 #Running Factor Analysis + Predictive Check + outcome model
 if RUN_:
@@ -118,25 +117,22 @@ if RUN_:
         print("TRAIN INFO: \nshape: ",train.shape, '\nclinical info: ', row[1],row[2])
 
         if RUN_MF and data_.shape[0]>=100:
-            W, F = fc.fa_matrixfactorization(train,k_mf,RUN_MF)
-            name = str(row[1])+'_'+str(row[2])
-            pred = fc.check_save(W,train,colnames, y01,'mf',name, k_mf)
-            name = 'mf_'+str(k_mf)+'_lr_'+name
-            fc.roc_curve_points(pred, y01, name)
+            for k_mf in k_mf_:
+                W, F = fc.fa_matrixfactorization(train,k_mf,RUN_MF)
+                name = str(row[1])+'_'+str(row[2])
+                pred = fc.check_save(W,train,colnames, y01,'mf',name, k_mf)
 
         if RUN_PCA and data_.shape[0]>=100:
-            pc = fc.fa_pca(train,k_pca,RUN_PCA)
-            name = str(row[1])+'_'+str(row[2])
-            pred = fc.check_save(pc,train,colnames, y01,'pca', name,k_pca)
-            name = 'pca_'+str(k_mf)+'_lr_'+name
-            fc.roc_curve_points(pred, y01, name)
+            for k_pca in k_pca_:
+                pc = fc.fa_pca(train,k_pca,RUN_PCA)
+                name = str(row[1])+'_'+str(row[2])
+                pred = fc.check_save(pc,train,colnames, y01,'pca', name,k_pca)
 
         if RUN_A and data_.shape[0]>=100:
-            ac =  fc.fa_a(train,k_ac,RUN_A)
-            name = str(row[1])+'_'+str(row[2])
-            pred = fc.check_save(ac,train,colnames, y01,'ac',name, k_ac)
-            name = 'ac_'+str(k_mf)+'_lr_'+name
-            fc.roc_curve_points(pred, y01, name)
+            for k_ac in k_ac_:
+                ac =  fc.fa_a(train,k_ac,RUN_A)
+                name = str(row[1])+'_'+str(row[2])
+                pred = fc.check_save(ac,train,colnames, y01,'ac',name, k_ac)
 
 if RUN_FCI:
     from pycausal import search as s
@@ -178,11 +174,11 @@ if RUN_CREATE_FEATURE_DATASET:
     cgc_list = cgc_list.iloc[:,[0,-1]]
     cgc_list.rename(columns = {'Gene Symbol':'genes'}, inplace = True)
 
-    #data_out = pd.merge(f_bart, f_mf, on='genes') #7066 rows
-    #data_out = pd.merge(cgc_list,data_out,on='genes',how='right')
+
+if RUN_CREATE_ROC_CAUSAL_DATASET:
+    roc = fc.data_roc_construction(path)
 
 
-RUN_EXPERIMENTS = True
 if RUN_EXPERIMENTS:
     #Description:
     #All, Gender, Cancer, all+gender, all+cancer, gender + cancer, all+cancer+gender
@@ -205,7 +201,6 @@ if RUN_EXPERIMENTS:
  #           dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list_b, names_b,nin,nout,True)], axis=0)
             dt_exp.to_csv('results\\experiments1.txt', sep=';', index = False)
 
-RUN_PLOTS = True
 if RUN_PLOTS:
     dt_exp = pd.read_csv('results\\experiments1.txt',sep=';')
     dt_exp = dt_exp[dt_exp['error']==False]
@@ -235,26 +230,5 @@ if RUN_PLOTS:
                               'adapter':'PU-Adapter','upu':'Unbiased \nPU',
                               'lr':'Logistic \nRegression','randomforest':'Random \nForest'}, inplace=True)
     print('Mean: \n',dt.groupby('Model').mean())
-    #print('Min: \n',dt.groupby('Model')['f1'].min())
-    #print('Max: \n',dt.groupby('Model')['f1'].max())
-    #pl.violin_plot(dt)
-    #import seaborn as sns
-    #import matplotlib.pyplot as plt
-    #plt.figure(figsize=(16, 6))
-    #sns.set(rc={'figure.figsize':(13.7,8.27)},style="whitegrid",font_scale=2)
-    #ax = sns.violinplot(x='Model',y='acc',data=dt)
-    #this dont work
-    #plt.xlabel('Accuracy')
-    #plt.show(ax)
-    #bx = sns.violinplot(x='Model',y='f1',data=dt)
-    #cx = sns.violinplot(x='Model',y='acc',hue='Data',data=dt, split=True)
-    #dx = sns.violinplot(x='Model',y='f1',hue='Data',data=dt, split=True)
-    #sns.violinplot(x='Model',y='f1',hue='Data',data=dt_exp1, split=True)
-    #import matplotlib.pyplot as plt
     import seaborn as sns
     sns.boxplot(x = "Model", y = "f1",hue='Data',data = dt,palette="Set3")
-    #dt['g10']=False
-    #dt['g10'][dt['size']>10]=True
-    #sns.boxplot(x = "Model", y = "f1",hue='g10',data = dt,palette="Set3")
-    #sns.boxplot(x = "Model", y = "f1",hue='isbin',data = dt,palette="Set3")
-    #sns.boxplot(x = "Model", y = "f1",hue='isbin',data = dt,palette="Set3")

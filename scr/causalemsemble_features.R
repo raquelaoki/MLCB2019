@@ -9,7 +9,7 @@
 rm(list=ls())
 
 RUN_BART = TRUE
-RUN_ALL = FALSE
+RUN_ALL = TRUE
 RUN_ = TRUE
 RUN_FCI = FALSE
 
@@ -85,14 +85,15 @@ if(RUN_BART&RUN_ALL){
   #making predictions
   pred_p = predict(bart_machine, data, type='prob') #returns the prob of being on label 1
   
-  
-  roc_data = rbind(def_roc(pred_p,y,0.01),def_roc(pred_p,y,0.02))
-  values = seq(0.03,1,by=0.01)
-  for(i in 1:length(values)){
-    roc_data = rbind(roc_data,def_roc(pred_p,y,values[i]))
-  }
-  roc_data = data.frame(roc_data)
-  names(roc_data) = c('prob','tp1','fp1','tp2','fp2')
+  roc_data = data.frame(pred_p, y)
+  names(roc_data) = c('pred','y01')
+  #roc_data = rbind(def_roc(pred_p,y,0.01),def_roc(pred_p,y,0.02))
+  #values = seq(0.03,1,by=0.01)
+  #for(i in 1:length(values)){
+  #  roc_data = rbind(roc_data,def_roc(pred_p,y,values[i]))
+  #}
+  #roc_data = data.frame(roc_data)
+  #names(roc_data) = c('prob','tp1','fp1','tp2','fp2')
   write.table(roc_data,'results\\roc_bart_all.txt', row.names = FALSE,sep=';')
   
   #ROC CURVE PLOT
@@ -162,15 +163,16 @@ if(RUN_BART&RUN_){
     pred_p = predict(bart_machine, data, type='prob') #returns the prob of being on label 1
     
     
-    roc_data = rbind(def_roc(pred_p,y,0.01),def_roc(pred_p,y,0.02))
-    values = seq(0.03,1,by=0.01)
-    for(i in 1:length(values)){
-      roc_data = rbind(roc_data,def_roc(pred_p,y,values[i]))
-    }
-    roc_data = data.frame(roc_data)
-    names(roc_data) = c('prob','tp1','fp1','tp2','fp2')
+#    roc_data = rbind(def_roc(pred_p,y,0.01),def_roc(pred_p,y,0.02))
+#    values = seq(0.03,1,by=0.01)
+#    for(i in 1:length(values)){
+#      roc_data = rbind(roc_data,def_roc(pred_p,y,values[i]))
+#    }
+#    roc_data = data.frame(roc_data)
+#    names(roc_data) = c('prob','tp1','fp1','tp2','fp2')
     
-    
+    roc_data = data.frame(roc_data, y)
+    names(roc_data) = c('pred','y01')   
     write.table(roc_data,paste('results\\roc_bart_',files$ci[f],'_',files$class[f],'.txt',sep=''), row.names = FALSE,sep=';')
     
     #ROC CURVE PLOT
