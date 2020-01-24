@@ -9,8 +9,8 @@
 
 rm(list=ls())
 
-RUN_F1_SCORE = FALSE
-RUN_CAUSAL_ROC = TRUE
+RUN_F1_SCORE = TRUE
+RUN_CAUSAL_ROC = FALSE
 
 if(RUN_F1_SCORE){
   #Comparing F1 score
@@ -24,8 +24,8 @@ if(RUN_F1_SCORE){
   table(dt$model_name)
   
   #increase size, work on the colors and dots
-  ggplot(data=dt, aes(x=f1, y=f1_, group=model_name, color=model_name)) + 
-    geom_line() + geom_point()+
+  ggplot(data=dt, aes(x=f1, y=f1_, group=model_name, color=model_name, shape = model_name)) + 
+    geom_point()+
     scale_color_brewer(palette="Paired")+
     theme_minimal()+
     xlab('F1-score Testing set')+ylab('F1-score Full Set')+
