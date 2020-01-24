@@ -10,7 +10,7 @@ rm(list=ls())
 
 RUN_BART = TRUE
 RUN_CATE = FALSE
-RUN_ALL = TRUE
+RUN_ALL = FALSE
 RUN_ = TRUE
 RUN_FCI = FALSE
 
@@ -173,7 +173,7 @@ if(RUN_BART&RUN_){
 #    roc_data = data.frame(roc_data)
 #    names(roc_data) = c('prob','tp1','fp1','tp2','fp2')
     
-    roc_data = data.frame(roc_data, y)
+    roc_data = data.frame(pred_p, y)
     names(roc_data) = c('pred','y01')   
     write.table(roc_data,paste('results\\roc_bart_',files$ci[f],'_',files$class[f],'.txt',sep=''), row.names = FALSE,sep=';')
     
@@ -189,6 +189,8 @@ if(RUN_BART&RUN_){
     #def_threshold(y,pred_p,0.6)
     
     #making the interventional data, one for each gene 
+    if(RUN_CATE){
+      
     fit_test =  predict(bart_machine, data_test, type='prob')
     dif = data.frame(gene = names(data),mean=c(rep(999, dim(data)[2])), 
                      sd=c(rep(999, dim(data)[2])), se = c(rep(999, dim(data)[2])))
@@ -203,9 +205,10 @@ if(RUN_BART&RUN_){
     }
     write.table(dif,paste('results\\feature_bart_',files$ci[f],'_',files$class[f],'.txt',sep=''), sep = ";", row.names = FALSE)
     }
+    
   }
 }
-
+}
 
 #----------#----------#----------#----------#----------#----------#----------#
 #GFCI - works on my laptop only because the java dependences

@@ -64,6 +64,7 @@ if(RUN_CAUSAL_ROC){
   require(readxl)
   require(ggplot2)
   require(plotROC)
+  require(gridExtra)
   #https://cran.r-project.org/web/packages/plotROC/vignettes/examples.html
   setwd("~/GitHub/project_spring2019/results")
   #create a list of the files from your target directory
@@ -102,7 +103,7 @@ if(RUN_CAUSAL_ROC){
         }
         if(ksize == 'bart'){
           data$pred = 1-data$pred
-          data$k = 0 
+          data$k = 30 
           data$method = ksize
           data$id = file
           
@@ -135,7 +136,7 @@ if(RUN_CAUSAL_ROC){
           }
           if(ksize == 'bart'){
             data0$pred = 1-data0$pred
-            data0$k = 0 
+            data0$k = 30 
             data0$method = ksize
             data0$id = file
           }
@@ -145,24 +146,36 @@ if(RUN_CAUSAL_ROC){
 
     }
   }
-  
-  data0 = subset(data, k == 0 )
-  data10 = subset(data, k == 10 )
-  data20 = subset(data, k == 20 )
-  data40 = subset(data, k == 40 )
-  data60 = subset(data, k == 60 )
-  g0 <- ggplot(data0, aes(d = y01, m = pred, color = id)) +  
-    geom_roc(show.legend = FALSE,n.cuts = 0) + style_roc() + ggtitle('BART')
-  g10 <- ggplot(data10, aes(d = y01, m = pred, color = id)) + 
-    geom_roc(show.legend = FALSE,n.cuts = 0) + style_roc()+ ggtitle('k=10')
-  g20 <- ggplot(data20, aes(d = y01, m = pred, color = id)) + 
-    geom_roc(show.legend = FALSE,n.cuts = 0) + style_roc()+ ggtitle('k=20')
-  g40 <- ggplot(data40, aes(d = y01, m = pred, color = id)) + 
-    geom_roc(show.legend = FALSE,n.cuts = 0) + style_roc()+ ggtitle('k=40')
-  g60 <- ggplot(data60, aes(d = y01, m = pred, color = id)) + 
-    geom_roc(show.legend = FALSE,n.cuts = 0) + style_roc()+ ggtitle('k=60')
+  require(wesanderson)
+  data$k = as.factor(data$k)
+  data0 = subset(data, method == 'bart' )
+  data1 = subset(data, method ==  'ac' )
+  data2 = subset(data, method ==  'mf' )
+  data3 = subset(data, method == 'pca' )
+  g0 <- ggplot(data0, aes(d = y01, m = pred, fill = id, color = k)) +  
+    geom_roc(show.legend = FALSE,n.cuts = 0) + style_roc() + ggtitle('BART')+
+    scale_color_brewer(palette = 'RdYlBu')
   
   
-  require(gridExtra)
-  grid.arrange(g0,g10,g20,g40,g60, ncol=3)
+  g1 <- ggplot(data1, aes(d = y01, m = pred, fill = id, color = k)) + 
+    geom_roc(show.legend = FALSE,n.cuts = 0) + style_roc()+ ggtitle('DA+Autoencoder')  +
+    scale_color_brewer(palette = 'Oranges')
+    #scale_color_manual(values=wes_palette(n=4, name="Zissou1"))
+  
+  g2 <- ggplot(data2, aes(d = y01, m = pred, fill = id, color = k)) + 
+    geom_roc(show.legend = FALSE,n.cuts = 0) + style_roc()+ ggtitle('DA+Matrix Factorization')  +
+    scale_color_brewer(palette = 'Oranges')
+  
+  
+  g3 <- ggplot(data3, aes(d = y01, m = pred, fill = id, color = k)) + 
+    geom_roc(show.legend = FALSE,n.cuts = 0) + style_roc()+ ggtitle('DA+PCA')  +
+    scale_color_brewer(palette = 'Oranges')
+  
+  #+
+  #  scale_color_manual(breaks = c("10", "20", "40",'60'),
+  #                     values=c("#fcba03", "#e89510", "#e87510",'#e83f10'))
+
+  
+  
+  grid.arrange(g0,g1,g2,g3, ncol=2)
 }
