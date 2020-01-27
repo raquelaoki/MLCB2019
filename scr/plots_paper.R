@@ -43,7 +43,7 @@ if(RUN_F1_SCORE){
   dt$ninnout[dt$nin=='[FEMALE, MALE]' & dt$nout=='[all]']='Gender and Cancer Type Data'
   dt$ninnout[dt$nin=='[]' & dt$nout=='[]']='Complete, Gender and Cancer Type Data'
   
-  random = max(dt$f1[dt$model_name=='Random'])
+  random = mean(dt$f1[dt$model_name=='Random'])
   best = subset(dt,f1>random)
   best = best[order(best$f1, decreasing = TRUE),]
   
