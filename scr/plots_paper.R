@@ -11,7 +11,8 @@ rm(list=ls())
 
 RUN_F1_PRECISION_RECALL_SCORE = TRUE
 RUN_CAUSAL_ROC = FALSE
-RUN_CGC_comparison = FAlSE
+RUN_CGC_comparison = FALSE
+CREATE_CGC_BASELINES = FALSE
 
 
 setwd("~/GitHub/project_spring2019/results")
@@ -19,7 +20,7 @@ setwd("~/GitHub/project_spring2019/results")
 if(RUN_F1_PRECISION_RECALL_SCORE){
   require(ggplot2)
   #Comparing F1 score
-  dt = read.table("experiments0.txt", header =T, sep = ';')[,-7]
+  dt = read.table("experiments1.txt", header =T, sep = ';')[,-7]
   old = c('adapter','lr','OneClassSVM','random','randomforest','upu')
   new = c('Adapter PU', 'Logistic Regression','One-class SVM','Random','Random Forest','Unbiased PU')
   dt$model_name = as.character(dt$model_name)
@@ -106,7 +107,31 @@ if(RUN_F1_PRECISION_RECALL_SCORE){
     theme(legend.position="bottom")+
     labs(color = "Model")
   
-}
+
+  #Random: PRecision and score around 0.2
+  
+  #Random Forest: 
+  #  The Precision increases on the training set, meaning that the number of 
+  #FP is low. However, Recall is very low, meaning that there are many 
+  #driver genes from CGC not being identified by the model. 
+  #The model is bad, overfitting. 
+  
+  #Adapter PU: The Recall is amazing, meaning that all the driver genes
+  #are being identified. However, the precision is not beter than random, 
+  #meaning that they are classififyng 5x the size of the driver genes 
+  #training set to have this quality of recall. Also overfitting. 
+  
+  #Logistic Regression: Precision is competitive with Random Model, but 
+  #it's precision is better. 
+
+#Unbiased SVM:Very similar to LR
+
+#One Class SVM: it has some interesting points on 
+#testins set, but its precision on traning set is really bad. 
+
+  
+  
+  }
 
 if(RUN_CAUSAL_ROC){
   require(readxl)
@@ -228,9 +253,7 @@ if(RUN_CAUSAL_ROC){
   grid.arrange(g0,g1,g2,g3, ncol=2)
 }
 
-
-#runs on my laptop only 
-if(RUN_CGC_comparison){
+if(CREATE_CGC_BASELINES){
   library("openxlsx")
   
   m_2020 = read.xlsx("C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\data\\driver_genes_baselines.xlsx",sheet = 1)
@@ -306,10 +329,20 @@ if(RUN_CGC_comparison){
   baselines$positives = c(dim(m_2020_q)[1],dim(m_tuson_q)[1],dim(m_mutsigcv_q)[1],
                           dim(m_oncodriveFM_q)[1],dim(m_oncodriveClust_q)[1],dim(m_oncodriveFML_q)[1],
                           dim(m_ActiveDriver_q)[1],dim(m_Music_q)[1])
-                          
+  
   baselines$precision = baselines$driver_genes/baselines$positives
   baselines$recall = baselines$driver_genes/dim(cgc)[1]
   baselines$f1_ = 2*baselines$precision*baselines$recall/ (baselines$precision+baselines$recall)                 
+  
+  write.table(baselines,'C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\results\\cgc_baselines.txt',
+              row.names = FALSE, sep = ';')
+  
+}
+
+#runs on my laptop only 
+if(RUN_CGC_comparison){
+  baselines = read.table('C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\results\\cgc_baselines.txt',
+              header = TRUE, sep=';')
   baselines = subset(baselines, select = c(method,driver_genes,f1_))
   
   top$driver_genes = c(494,480,483,498,505,398,376,373)
