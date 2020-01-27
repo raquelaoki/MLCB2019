@@ -9,10 +9,12 @@ from itertools import compress
 from os import listdir
 from os.path import isfile, join
 
+
 from sklearn import svm
 from sklearn.decomposition import NMF, PCA
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split,  GridSearchCV, StratifiedKFold
+from sklearn import metrics
 from sklearn.metrics import confusion_matrix,f1_score, accuracy_score
 from sklearn.metrics.pairwise import cosine_similarity
 from sklearn.preprocessing import StandardScaler
@@ -416,8 +418,8 @@ def predictive_check_new(X, Z,run ):
         Z: latent (either the reconstruction of X or lower dimension)
     Return:
     '''
-    if X.shape[1]>300:
-        X = X[:,np.random.randint(0,X.shape[1],300)]
+    if X.shape[1]>10000:
+        X = X[:,np.random.randint(0,X.shape[1],10000)]
 
 
     v_obs = []
@@ -429,10 +431,10 @@ def predictive_check_new(X, Z,run ):
         v_obs.append(np.less(X_test, X_pred).sum()/len(X_test))
         v_nul.append(np.less(X_test, X_train.mean(),).sum()/len(X_test))
 
-    n = len(v_obs)
-    m, se = np.mean(v_obs), np.std(v_obs)
+    n = len(v_nul)
+    m, se = np.mean(v_nul), np.std(v_nul)
     h = se * stats.t.ppf((1 + 0.95) / 2., n-1)
-    if m-h<= 0.5 and 0.5 <= m+h:
+    if m-h<= np.mean(v_obs) and np.mean(v_obs) <= m+h:
         return v_obs, True
     else:
         return v_obs, False
@@ -713,7 +715,7 @@ def data_features_construction(path):
     features_bart.rename(columns={'gene':'genes'}, inplace = True)
     return features_bart, features_mf,features_mf_binary , features_ac,features_ac_binary , features_pca,features_pca_binary
 
-def data_roc_construction(path):
+def roc_causal_plot(path):
     '''
     This function will read the features in results and
     construct 2 datasets: one with the data for the ROC curve
@@ -721,50 +723,31 @@ def data_roc_construction(path):
     '''
     pathfiles = path+'\\results'
     listfiles = [f for f in listdir(pathfiles) if isfile(join(pathfiles, f))]
-    flags =True
+    flags = [True,True,True, True]
 
     for f in listfiles:
         data = pd.read_csv('results\\'+f,sep=';')
         files = f.split("_")
-        if files[0]=="roc" and flags:
-            if files[2]=='20': #au
-                roc20tp = data[['prob', 'tp1']]
-                roc20fp = data[['prob', 'fp1']]
-                roc20tp.rename(columns={ 'tp1':files[1]+'_'+files[4]+'_'+files[-1].split('.')[0]}, inplace = True)
-                roc20fp.rename(columns={ 'fp1':files[1]+'_'+files[4]+'_'+files[-1].split('.')[0]}, inplace = True)
-            else:
+        if files[0]=="roc":
+            if files[1]=='mf20' or files[1]=='pca20' or files[1]=='a20': #au
+                if flags[1]:
+                    fpr, tpr, _ = metrics.roc_curve(data[['y01']], data[['pred']])
+                    df = pd.DataFrame(dict(fpr=fpr, tpr=tpr))
+                    k20 = ggplot(df, aes(x='fpr', y='tpr')) + geom_line() + geom_abline(linetype='dashed')
+                    flags[1] = False
+                else:
+                    fpr, tpr, _ = metrics.roc_curve(data[['y01']], data[['pred']])
+                    df = pd.DataFrame(dict(fpr=fpr, tpr=tpr))
+                    k20 = k20 + geom_line(aes(x='fpr', y='tpr'),data = df)
+            elif files[1]=='mf10' or files[1]=='pca10' or files[1]=='a10':
                 print('under construction')
-            flags=False
 
-        elif files[0]=='roc' and not flags:
-            if files[2]=='20':
-                roc20tp = pd.merge(roc20tp, data[['prob', 'tp1']],on='prob')
-                roc20fp = pd.merge(roc20fp, data[['prob', 'fp1']],on='prob')
-                roc20tp.rename(columns={ 'tp1':files[1]+'_'+files[4]+'_'+files[-1].split('.')[0]}, inplace = True)
-                roc20fp.rename(columns={ 'fp1':files[1]+'_'+files[4]+'_'+files[-1].split('.')[0]}, inplace = True)
             else:
                 print('under const4ruction')
         else:
             print('Not ROC')
 
-    ident = [0.0, 1.0]
-    from matplotlib import pyplot
-    for i in np.arange(roc20tp.shape[1]-1):
-        #Randoly choose a few to plot
-        pyplot.plot(roc20fp.iloc[:,[i+1]], roc20tp.iloc[:,[i+1]], linestyle='--', label=str(i))
-
-    # axis labels
-    pyplot.plot(ident,ident)
-    pyplot.xlabel('False Positive Rate')
-    pyplot.ylabel('True Positive Rate')
-    # show the legend
-   # pyplot.legend()
-    # show the plot
-    pyplot.show()
-    #import scikitplot as skplt
-    #plot = skplt.metrics.plot_roc(y_test, knn_y_proba)
-    #plt.title("ROC Curves - K-Nearest Neighbors")
-    return roc20tp
+    return
 
 
 '''

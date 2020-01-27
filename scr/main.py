@@ -21,10 +21,10 @@ RUN_LOAD_MCMC = False
 RUN_ALL = True
 RUN_ = True
 
-RUN_MF = True
+RUN_MF = False
 RUN_PMF = False #to implement
-RUN_PCA = True
-RUN_A = False#lab computer outside anaconda
+RUN_PCA = False
+RUN_A = True#lab computer outside anaconda
 
 RUN_FCI = False
 
@@ -49,9 +49,10 @@ test
 '''
 
 '''MCMC Hyperparameters'''
-k_mf_ = [10,20,40,60] #Latents Dimension
+k_mf_ = [40] #Latents Dimension
 k_mcmc = 10
-k_pca_ = k_ac_ = [10,20,40,60]
+k_pca_ = [40]
+k_ac_ = [10]
 sim = 2000 #Simulations
 bach_size = 200 #Batch size for memory purposes
 step1 = 10 #Saving chain every step1 steps
