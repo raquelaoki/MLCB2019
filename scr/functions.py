@@ -715,56 +715,6 @@ def data_features_construction(path):
     features_bart.rename(columns={'gene':'genes'}, inplace = True)
     return features_bart, features_mf,features_mf_binary , features_ac,features_ac_binary , features_pca,features_pca_binary
 
-def roc_causal_plot(path):
-    '''
-    This function will read the features in results and
-    construct 2 datasets: one with the data for the ROC curve
-    and another one with the features for the data out/classification
-    '''
-    pathfiles = path+'\\results'
-    listfiles = [f for f in listdir(pathfiles) if isfile(join(pathfiles, f))]
-    flags = [True,True,True, True]
-
-    for f in listfiles:
-        data = pd.read_csv('results\\'+f,sep=';')
-        files = f.split("_")
-        if files[0]=="roc":
-            if files[1]=='mf20' or files[1]=='pca20' or files[1]=='a20': #au
-                if flags[1]:
-                    fpr, tpr, _ = metrics.roc_curve(data[['y01']], data[['pred']])
-                    df = pd.DataFrame(dict(fpr=fpr, tpr=tpr))
-                    k20 = ggplot(df, aes(x='fpr', y='tpr')) + geom_line() + geom_abline(linetype='dashed')
-                    flags[1] = False
-                else:
-                    fpr, tpr, _ = metrics.roc_curve(data[['y01']], data[['pred']])
-                    df = pd.DataFrame(dict(fpr=fpr, tpr=tpr))
-                    k20 = k20 + geom_line(aes(x='fpr', y='tpr'),data = df)
-            elif files[1]=='mf10' or files[1]=='pca10' or files[1]=='a10':
-                print('under construction')
-
-            else:
-                print('under const4ruction')
-        else:
-            print('Not ROC')
-
-    return
-
-
-'''
-from matplotlib import pyplot
-# plot the roc curve for the model
-pyplot.plot(roc1[['fp1']], roc1[['tp1']], linestyle='--', label='111')
-pyplot.plot(roc1[['fp2']], roc1[['tp2']], marker='.', label='222')
-# axis labels
-pyplot.xlabel('False Positive Rate')
-pyplot.ylabel('True Positive Rate')
-# show the legend
-pyplot.legend()
-# show the plot
-pyplot.show()
-'''
-
-
 def pul(y,y_test,X,X_test,aux,name_model):
     """
     Input:
@@ -783,9 +733,14 @@ def pul(y,y_test,X,X_test,aux,name_model):
         X = X[y==1]
         #X_train only has positive examples
         #remove C
+        #An upper bound on the fraction of training errors and a
+        #lower bound of the fraction of support vectors.
+        #Should be in the interval (0, 1]. By default 0.5 will be taken.
+        #gamma: Kernel coefficien
         print('OneClassSVM',X.shape[1])
-        model = svm.OneClassSVM(nu=0.2,kernel="rbf",gamma=0.5)# #0.5, 0.5
+        model = svm.OneClassSVM(nu=0.1,kernel="rbf",gamma=0.5)# #0.5, 0.5
         model.fit(X)
+
 
     elif name_model == 'svm':
         #https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html
@@ -793,6 +748,7 @@ def pul(y,y_test,X,X_test,aux,name_model):
         #kernel: poly, rbf, linear, sigmoid
         #gamma=0.2 dones not work
         #remove nu
+        #not currently use
         print('svm',X.shape[1])
         model = svm.SVC(C=0.5,kernel='rbf',gamma='scale') #overfitting
         model.fit(X,y)
@@ -801,7 +757,8 @@ def pul(y,y_test,X,X_test,aux,name_model):
         #keep prob
         #csv don't have nu
         print('adapter',X.shape[1])
-        estimator = SVC(C=0.5, kernel='rbf',gamma='scale',probability=True)
+        #it was c=0.5
+        estimator = SVC(C=0.3, kernel='rbf',gamma='scale',probability=True)
         model = PUAdapter(estimator, hold_out_ratio=0.3)
         X = np.matrix(X)
         y = np.array(y)
@@ -826,7 +783,7 @@ def pul(y,y_test,X,X_test,aux,name_model):
         #upu (Unbiased PU learning)
         #https://github.com/t-sakai-kure/pywsl/blob/master/examples/pul/upu/demo_upu.py
         model = GridSearchCV(estimator=pu_mr.PU_SL(),
-                               param_grid=param_grid, cv=5, n_jobs=-1)
+                               param_grid=param_grid, cv=10, n_jobs=-1)
         X = np.matrix(X)
         y = np.array(y)
         model.fit(X, y)
@@ -835,7 +792,7 @@ def pul(y,y_test,X,X_test,aux,name_model):
         model = sm.Logit(y,X).fit_regularized(method='l1')
     elif name_model=='randomforest':
         print('rd',X.shape[1])
-        model = RandomForestClassifier(max_depth=10, random_state=0)
+        model = RandomForestClassifier(max_depth=4, random_state=0)
         model.fit(X, y)
     else:
         print('random',X.shape[1])
@@ -874,7 +831,7 @@ def pul(y,y_test,X,X_test,aux,name_model):
     tnfpfntp_= confusion_matrix(y_full, y_full_).ravel()
     tp_genes = np.multiply(y_full, y_full_)
     warnings.filterwarnings("default")
-    return [acc, acc_f, f1, f1_f], tnfpfntp, tnfpfntp_, tp_genes
+    return [acc, acc_f, f1, f1_f], tnfpfntp, tnfpfntp_, tp_genes,y_,y_full_
 
 def data_subseting(data0, data1, data2, data3, data4, data5, data6, name_in, name_out):
     '''
@@ -965,7 +922,7 @@ def data_merging(data0,data1,data2,data3, cgc, data_names):
     #print(d0.shape,d1.shape,d2.shape,d3.shape,d4.shape,d5.shape,d6.shape,d7.shape,d8.shape,d9.shape,d10.shape,d11.shape,d12.shape,d13.shape)
     return [d0, d1, d2, d3, d4, d5, d6, d7, d8, d9, d10, d11, d12, d13], data_names_list
 
-def data_running_models(data_list, names, name_in, name_out, is_bin):
+def data_running_models(data_list, names, name_in, name_out, is_bin, id):
     '''
     Run all the pu models for the combination of datsets
     input: list with combinations of features and the names of the datsets
@@ -979,6 +936,7 @@ def data_running_models(data_list, names, name_in, name_out, is_bin):
     nin, nout = [],[]
     error = []
     size = []
+    id_name = []
     models = ['OneClassSVM','adapter','upu','lr','randomforest','random']
     for dt,dtn in zip(data_list,names):
         if dt.shape[1]>2:
@@ -986,15 +944,22 @@ def data_running_models(data_list, names, name_in, name_out, is_bin):
             #dt['y_out'].fillna(0,inplace = True)
             y = dt['y_out'].fillna(0)
             X = dt.drop(['y_out'], axis=1)
+            index_save = X.index
+            scaler = StandardScaler()
+            scaler.fit(X)
+            X = scaler.transform(X)
+            X = pd.DataFrame(X,index=index_save)
             y_train, y_test, X_train, X_test = train_test_split(y, X, test_size=0.3)
             index_ = [list(X_train.index),list(X_test.index)]
             flat_index = [item for sublist in index_ for item in sublist]
             flat_index = np.array(flat_index)
             #print('INDEX',len(flat_index),len(list(X_train.index)),len(list(X_test.index)))
-
+            e_full_ = np.where(y==1,0,0)
+            e_ = np.where(y_test==1,0,0)
+            ensemble_c = 0
             for m in models:
                 try:
-                    scores, cm, cm_, tp_genes01 = pul(y_train, y_test, X_train, X_test,'name',m)
+                    scores, cm, cm_, tp_genes01, y_,y_full_ = pul(y_train, y_test, X_train, X_test,'name',m)
                     acc.append(scores[0])
                     acc_.append(scores[1])
                     f1.append(scores[2])
@@ -1007,6 +972,9 @@ def data_running_models(data_list, names, name_in, name_out, is_bin):
                     nin.append(name_in)
                     nout.append(name_out)
                     error.append(False)
+                    e_full_ = e_full_+y_full_
+                    e_ = e_+y_
+                    ensemble_c = ensemble_c+1
                 except:
                     acc.append(np.nan)
                     acc_.append(np.nan)
@@ -1022,8 +990,33 @@ def data_running_models(data_list, names, name_in, name_out, is_bin):
                     error.append(True)
                     print('Error in PUL model',m,dtn)
                 size.append(X_train.shape[1])
+                id_name.append(id)
+
+            #print('test',ensemble_c,acc)
+            e_full_ = np.multiply(e_full_,1/ensemble_c)
+            e_ = np.multiply(e_,1/ensemble_c)
+            e_full_ = np.where(np.array(e_full_)>0.5,1,0)
+            e_ = np.where(np.array(e_)>0.5,1,0)
+            y_full = np.concatenate((y_train,y_test), axis = 0 )
+            acc.append(accuracy_score(y_test,e_))
+            acc_.append(accuracy_score(y_full,e_full_))
+            f1.append(f1_score(y_test,e_))
+            f1_.append(f1_score(y_full,e_full_))
+            tnfpfntp.append(confusion_matrix(y_test,e_).ravel())
+            tnfpfntp_.append(confusion_matrix(y_full,e_full_).ravel())
+            tp_genes.append([])
+            model_name.append('ensemble')
+            data_name.append(dtn)
+            nin.append(name_in)
+            nout.append(name_out)
+            error.append(False)
+            size.append(X_train.shape[1])
+            id_name.append(id)
+        else:
+            print(dtn, 'only one columns')
     dt_exp = pd.DataFrame({'acc':acc,'acc_':acc_, 'f1':f1, 'f1_':f1_,
                                'tnfpfntp':tnfpfntp, 'tnfpfntp_':tnfpfntp_,
                                'tp_genes':tp_genes,'model_name':model_name , 'data_name':data_name,
-                               'nin':nin, 'nout':nout, 'error':error, 'size': size})
+                               'nin':nin, 'nout':nout, 'error':error, 'size': size,
+                               'id':id_name})
     return dt_exp

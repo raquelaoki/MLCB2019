@@ -18,19 +18,19 @@ Flags
 RUN_MCMC = False
 RUN_LOAD_MCMC = False
 
-RUN_ALL = True
-RUN_ = True
+RUN_ALL = False
+RUN_ = False
 
 RUN_MF = False
 RUN_PMF = False #to implement
 RUN_PCA = False
-RUN_A = True#lab computer outside anaconda
+RUN_A = False#lab computer outside anaconda
 
 RUN_FCI = False
 
-RUN_CREATE_FEATURE_DATASET = False
+RUN_CREATE_FEATURE_DATASET = True
 RUN_CREATE_ROC_CAUSAL_DATASET = False
-RUN_EXPERIMENTS = False
+RUN_EXPERIMENTS = True #RUN_CREATE_FEATURE_DATASET also needs to be true
 RUN_PLOTS = False
 
 
@@ -179,14 +179,18 @@ if RUN_CREATE_FEATURE_DATASET:
 if RUN_CREATE_ROC_CAUSAL_DATASET:
     roc = fc.data_roc_construction(path)
 
-
+RUN_EXPERIMENTS = True
 if RUN_EXPERIMENTS:
     #Description:
     #All, Gender, Cancer, all+gender, all+cancer, gender + cancer, all+cancer+gender
-    name_in = [['all'],['FEMALE','MALE'],[], ['all','FEMALE','MALE'],['all'],['FEMALE','MALE'],[]]
+    name_in = [['all'],['FEMALE','MALE'],[], ['all','FEMALE','MALE'],[],['FEMALE','MALE'],[]]
     name_out = [[],[],['all','FEMALE','MALE'],[],['FEMALE','MALE'],['all'],[]]
+    name_index = [0,1,2,3,4,5,6]
     aux = True
-    for nin, nout in zip(name_in, name_out):
+    #nin = name_in[0]
+    #nout = name_out[0]
+    #id1 = name_index[0]
+    for nin, nout, id1 in zip(name_in, name_out, name_index):
         print(aux,'\n',nin,'\n',nout)
         dt0, dt1, dt2, dt3, dt4, dt5, dt6 = fc.data_subseting(f_bart, f_mf,f_mf_bin , f_ac,f_ac_bin, f_pca,f_pca_bin, nin, nout)
 
@@ -194,11 +198,11 @@ if RUN_EXPERIMENTS:
         data_list, names = fc.data_merging(dt0,dt1,dt3, dt5, cgc_list, ['bart','mf','ac','pca'])
         #data_list_b, names_b = fc.data_merging(dt0,dt2,dt4, dt6, cgc_list, ['bart_b','mf_b','ac_b','pca_b'])
         if aux:
-            dt_exp = fc.data_running_models(data_list, names,nin,nout,False)
+            dt_exp = fc.data_running_models(data_list, names,nin,nout,False,id1)
             #dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list_b, names_b,nin,nout,True)], axis=0)
             aux = False
         else:
-            dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list, names,nin,nout,False)], axis=0)
+            dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list, names,nin,nout,False,id1)], axis=0)
  #           dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list_b, names_b,nin,nout,True)], axis=0)
             dt_exp.to_csv('results\\experiments1.txt', sep=';', index = False)
 
