@@ -792,7 +792,8 @@ def pul(y,y_test,X,X_test,aux,name_model):
         model = sm.Logit(y,X).fit_regularized(method='l1')
     elif name_model=='randomforest':
         print('rd',X.shape[1])
-        model = RandomForestClassifier(max_depth=4, random_state=0)
+        md = max(np.floor(X.shape[1]/3),6)
+        model = RandomForestClassifier(max_depth=md, random_state=0)
         model.fit(X, y)
     else:
         print('random',X.shape[1])
