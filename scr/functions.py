@@ -973,9 +973,10 @@ def data_running_models(data_list, names, name_in, name_out, is_bin, id):
                     nin.append(name_in)
                     nout.append(name_out)
                     error.append(False)
-                    e_full_ = e_full_+y_full_
-                    e_ = e_+y_
-                    ensemble_c = ensemble_c+1
+                    if(m=='adapter' or m=='upu' or m=='lr' or m=='randomforest'):
+                        e_full_ = e_full_+y_full_
+                        e_ = e_+y_
+                        ensemble_c = ensemble_c+1
                 except:
                     acc.append(np.nan)
                     acc_.append(np.nan)

@@ -204,7 +204,7 @@ if RUN_EXPERIMENTS:
         else:
             dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list, names,nin,nout,False,id1)], axis=0)
  #           dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list_b, names_b,nin,nout,True)], axis=0)
-            dt_exp.to_csv('results\\experiments1.txt', sep=';', index = False)
+            dt_exp.to_csv('results\\experiments2.txt', sep=';', index = False)
 
 if RUN_PLOTS:
     dt_exp = pd.read_csv('results\\experiments1.txt',sep=';')
