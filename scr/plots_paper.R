@@ -13,20 +13,22 @@ RUN_F1_PRECISION_RECALL_SCORE = TRUE
 RUN_CAUSAL_ROC = TRUE
 RUN_CGC_comparison = FALSE
 CREATE_CGC_BASELINES = FALSE
-
+PLOT_USE_TAPPLY = FALSE
+PLOT_USE_TEXT = FALSE
 
 setwd("~/GitHub/project_spring2019/results")
 
 if(RUN_F1_PRECISION_RECALL_SCORE){
   require(ggplot2)
   #Comparing F1 score
-  dt = read.table("experiments1.txt", header =T, sep = ';')[,-7]
+  dt = read.table("experiments2.txt", header =T, sep = ';')[,-7]
   old = c('adapter','lr','OneClassSVM','random','randomforest','upu','ensemble')
   new = c('Adapter-PU', 'Logistic Regression','1-SVM','Random','RF','UPU','Ensemble')
   dt$model_name = as.character(dt$model_name)
   for(i in 1:length(old)){
     dt$model_name[dt$model_name==old[i]]=new[i]
   }
+  dt = subset(dt, model_name!='1-SVM')
   table(dt$model_name)
   
   #increase size, work on the colors and dots
@@ -116,13 +118,9 @@ if(RUN_F1_PRECISION_RECALL_SCORE){
   dt = dt[order(dt$f1_,decreasing = TRUE),]
   
   
-  dt1 = subset(dt,model_name==new[1])[1:3,]
+  dt1 = subset(dt,model_name==new[1])[1,]
   for(i in 2:length(new)){
-    dt1 = rbind(dt1,subset(dt,model_name==new[i])[1:3,])
-  }
-  dt0 = subset(dt,model_name==new[1])[1,]
-  for(i in 2:length(new)){
-    dt0 = rbind(dt0,subset(dt,model_name==new[i])[1,])
+    dt1 = rbind(dt1,subset(dt,model_name==new[i])[1,])
   }
 
   }
@@ -365,128 +363,149 @@ if(RUN_CGC_comparison){
 }
 
 
+if(PLOT_USE_TAPPLY){
+  dt1a = cbind(data.frame(tapply(dt1$p,dt1$model_name,mean)),
+               data.frame(tapply(dt1$r,dt1$model_name,mean)),
+               data.frame(tapply(dt1$f1,dt1$model_name,mean)))
+  
+  dt1b = cbind(data.frame(tapply(dt1$p_,dt1$model_name,mean)),
+               data.frame(tapply(dt1$r_,dt1$model_name,mean)),
+               data.frame(tapply(dt1$f1_,dt1$model_name,mean)))
+  
+  names(dt1a) = c('p','r','f1')
+  names(dt1b) = c('p','r','f1')
+  dt1a = data.frame('model_name'=rownames(dt1a),dt1a)
+  dt1b = data.frame('model_name'=rownames(dt1b),dt1b)
+  
+}
 
-baselines = read.table('C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\results\\cgc_baselines.txt',
-                       header = TRUE, sep=';')
-baselines = baselines[,-c(2,3)]
-names(baselines) = c('Baseline','Precision','Recall','F1')
+
+if(PLOT_USE_TEXT){
+  require(ggrepel)
+  pr1 <- ggplot(dt1,aes(x=p,y=r))+
+    geom_point(aes(color=model_name,size=f1),shape=16,alpha=0.75)+
+    scale_y_continuous('Recall',limits=c(-0.1,1.05))+
+    scale_x_continuous('Precision',limits = c(-0.05,1.05))+
+    theme_minimal() +
+    scale_size_continuous(range = c(2,5))+
+    scale_shape_manual(values = c(15, 16, 17,18,19,15,16)) +
+    scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#3cb371','#9370db','#E7B800','#B0C4DE'))+
+    guides(size=FALSE,color=FALSE)+ggtitle('Testing Set')+labs(color='Model',shape='Model')+
+    geom_text_repel(dt1a,mapping=aes(x=p,y=r,label=model_name,color=model_name),
+                    box.padding = unit(0.5, "lines"),
+                    point.padding = unit(0.5, "lines"),
+                    nudge_y = c(0,0,0,0,0,0,0))
+  
+  
+  #FULL
+  
+  pr2<- ggplot(dt1,aes(x=p_,y=r_))+
+    geom_point(aes(color=model_name,size=f1_),shape=16,alpha=0.75)+
+    scale_y_continuous('Recall',limits=c(-0.1,1.05))+
+    scale_x_continuous('Precision',limits = c(-0.05,1.05))+
+    theme_minimal() +
+    scale_size_continuous(range = c(2,5))+
+    scale_shape_manual(values = c(15, 16, 17,18,19,15,16)) +
+    scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#3cb371','#9370db','#E7B800','#B0C4DE'))+
+    guides(size=FALSE,color=FALSE)+ggtitle('Full Set')+labs(color='Model',shape='Model')+
+    geom_text_repel(dt1b,mapping=aes(x=p,y=r,label=model_name,color=model_name),
+                    box.padding = unit(0.5, "lines"),
+                    point.padding = unit(0.5, "lines"),
+                    nudge_y = c(0.2,0,0,0,0,0.2,0),
+                    nudge_x= c(0,0,0,0,0.2,0,0))
+  
+  
+  grid.arrange(g0,g1,pr1,g2,g3, pr2, ncol=3)
+  
+  
+}
+
 require(ggplot2)
 require(RColorBrewer)
-#ggplot(data=baselines,aes(x=Precision,y=Recall,group=Baseline, label=Baseline))+
-#  geom_point(aes(size = F1))+scale_x_continuous(limits=c(0.05,0.65))+
-#  geom_text(hjust = 0, nudge_x = 0.01,nudge_y = 0.001,angle = 0,show.legend = FALSE)
 
-
-#Testing
-#ggplot(dt1,aes(x=p,y=r,color=f1))+geom_point(aes(shape=model_name),size=2)+
-#  theme_minimal()+scale_y_continuous(limits=c(0,1.05))+
-#  scale_colour_gradientn(colours = brewer.pal(n = 8, name = "Oranges")[4:8])
-#FULL
-
-#ggplot(dt1,aes(x=p_,y=r_,color=f1_))+geom_point(aes(shape=model_name),size=2)+
-#  theme_minimal()+scale_y_continuous(limits=c(0,1.05))+
-#  scale_colour_gradientn(colours = brewer.pal(n = 8, name = "Oranges")[4:8])
-
-#Testing
-
+dt$model_name[dt$model_name=='Logistic Regression']='LR'
 dt1$model_name[dt1$model_name=='Logistic Regression']='LR'
+dt1 = subset(dt1, !is.na(r))
+dt$model_name = as.character(dt$model_name)
 
-dt1a = cbind(data.frame(tapply(dt1$p,dt1$model_name,mean)),
-             data.frame(tapply(dt1$r,dt1$model_name,mean)),
-            data.frame(tapply(dt1$f1,dt1$model_name,mean)))
-
-dt1b = cbind(data.frame(tapply(dt1$p_,dt1$model_name,mean)),
-             data.frame(tapply(dt1$r_,dt1$model_name,mean)),
-             data.frame(tapply(dt1$f1_,dt1$model_name,mean)))
-
-names(dt1a) = c('p','r','f1')
-names(dt1b) = c('p','r','f1')
-dt1a = data.frame('model_name'=rownames(dt1a),dt1a)
-dt1b = data.frame('model_name'=rownames(dt1b),dt1b)
-
-require(ggrepel)
-pr1 <- ggplot(dt1,aes(x=p,y=r))+
-     geom_point(aes(color=model_name,size=f1),shape=16,alpha=0.75)+
-     scale_y_continuous('Recall',limits=c(-0.1,1.05))+
-     scale_x_continuous('Precision',limits = c(-0.05,1.05))+
-     theme_minimal() +
-     scale_size_continuous(range = c(2,5))+
-     scale_shape_manual(values = c(15, 16, 17,18,19,15,16)) +
-  scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#3cb371','#9370db','#E7B800','#B0C4DE'))+
-  guides(size=FALSE,color=FALSE)+ggtitle('Testing Set')+labs(color='Model',shape='Model')+
-  geom_text_repel(dt1a,mapping=aes(x=p,y=r,label=model_name,color=model_name),
-                  box.padding = unit(0.5, "lines"),
-                  point.padding = unit(0.5, "lines"),
-                  nudge_y = c(0,0,0,0,0,0,0))
-
-
-#FULL
-
-pr2<- ggplot(dt1,aes(x=p_,y=r_))+
-  geom_point(aes(color=model_name,size=f1_),shape=16,alpha=0.75)+
-  scale_y_continuous('Recall',limits=c(-0.1,1.05))+
-  scale_x_continuous('Precision',limits = c(-0.05,1.05))+
+#missing F1
+pr1 <- ggplot(dt,aes(x=p,y=r,color=model_name,shape=model_name))+
+  stat_ellipse()+
+  geom_point(dt1,mapping=aes(x=p,y=r,color=model_name,
+                             shape=model_name,size=f1),alpha=1)+
+  scale_y_continuous('Recall',limits=c(-0.09,1.05))+
+  scale_x_continuous('Precision',limits = c(-0.09,1.05))+
   theme_minimal() +
   scale_size_continuous(range = c(2,5))+
-  scale_shape_manual(values = c(15, 16, 17,18,19,15,16)) +
-  scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#3cb371','#9370db','#E7B800','#B0C4DE'))+
-  guides(size=FALSE,color=FALSE)+ggtitle('Full Set')+labs(color='Model',shape='Model')+
-  geom_text_repel(dt1b,mapping=aes(x=p,y=r,label=model_name,color=model_name),
-                  box.padding = unit(0.5, "lines"),
-                  point.padding = unit(0.5, "lines"),
-                  nudge_y = c(0.2,0,0,0,0,0.2,0),
-                  nudge_x= c(0,0,0,0,0.2,0,0))
-
-
-grid.arrange(g0,g1,pr1,g2,g3, pr2, ncol=3)
-
-
-
-pr1 <- ggplot(dt1,aes(x=p,y=r))+
-  geom_point(aes(color=model_name,size=f1),shape=16,alpha=0.75)+
-  scale_y_continuous('Recall',limits=c(-0.05,1.05))+
-  scale_x_continuous('Precision',limits = c(-0.05,1.05))+
-  theme_minimal() +
-  scale_size_continuous(range = c(2,5))+
-  scale_shape_manual(values = c(15, 16, 17,18,19,15,16)) +
-  scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#3cb371','#9370db','#E7B800','#B0C4DE'))+
-  guides(size=FALSE)+ggtitle('Testing Set')+labs(color='',shape='')+
-  theme(legend.position = c(0.8,0.6),
-        legend.background= element_rect(fill="white",
-                                        colour ="white"))
-
-#FULL
-
-pr2<- ggplot(dt1,aes(x=p_,y=r_))+
-  geom_point(aes(color=model_name,size=f1_),shape=16,alpha=0.75)+
-  scale_y_continuous('Recall',limits=c(-0.05,1.05))+
-  scale_x_continuous('Precision',limits = c(-0.05,1.05))+
-  theme_minimal() +
-  scale_size_continuous(range = c(2,5))+
-  scale_shape_manual(values = c(15, 16, 17,18,19,15,16)) +
-  scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#3cb371','#9370db','#E7B800','#B0C4DE'))+
-  guides(size=FALSE,color=FALSE)+ggtitle('Full Set')+labs(color='Model',shape='Model')
-
-grid.arrange(g0,g1,pr1,g2,g3, pr2, ncol=3)
-
-pr1 <- ggplot(dt,aes(x=p,y=r))+
-  geom_point(aes(color=model_name),size=2,shape=16)+
-  scale_y_continuous('Recall',limits=c(-0.05,1.05))+
-  scale_x_continuous('Precision',limits = c(-0.05,1.05))+theme_minimal() +
-  scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#3cb371','#9370db','#E7B800','#B0C4DE'))+
+  scale_shape_manual(values = c(18, 16, 17,8,12,15)) +
+  scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#B0C4DE','#E7B800','#3cb371'))+#'#9370db'
+  guides(size=FALSE,color=guide_legend(override.aes=list(linetype=0)))+
   ggtitle('Testing Set')+labs(color='',shape='')+
-  theme(legend.position = c(0.8,0.6),
+  theme(legend.position = c(0.8,0.7),
         legend.background= element_rect(fill="white",
                                         colour ="white"))
-pr1#FULL
 
-pr2<- ggplot(dt,aes(x=p_,y=r_))+
-  geom_point(aes(color=model_name),size=2,shape=16)+
-  scale_y_continuous('Recall',limits=c(-0.05,1.05))+
-  scale_x_continuous('Precision',limits = c(-0.05,1.05))+theme_minimal() +
-  scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#3cb371','#9370db','#E7B800','#B0C4DE'))+
-  ggtitle('Full Set')+guides(color=FALSE)
+#FULL
+
+pr2<- ggplot(dt,aes(x=p_,y=r_,color=model_name,shape=model_name))+
+  stat_ellipse()+
+  geom_point(dt1,mapping=aes(x=p_,y=r_,color=model_name,
+                             shape=model_name,size=f1_),alpha=1)+
+  scale_y_continuous('Recall',limits=c(-0.09,1.05))+
+  scale_x_continuous('Precision',limits = c(-0.09,1.05))+
+  theme_minimal() +
+  scale_size_continuous(range = c(2,5))+
+  scale_shape_manual(values = c(18, 16, 17,8,12,15)) +
+  scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#B0C4DE','#E7B800','#3cb371'))+#'#9370db'
+  guides(size=FALSE,shape=FALSE,color=FALSE)+ggtitle('Full Set')
 
 grid.arrange(g0,g1,pr1,g2,g3, pr2, ncol=3)
 #https://stackoverflow.com/questions/36609476/ggplot2-draw-individual-ellipses-but-color-by-group
 #try barplot (3 bars, one for each)
+
+
+baselines = read.table('C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\results\\cgc_baselines.txt',
+                       header = TRUE, sep=';')
+baselines = baselines[,-c(2,3)]
+names(baselines) = c('Model','Precision','Recall','F1')
+baselines$Type='Baseline'
+dt2 = subset(dt1, select=c(model_name,p_,r_,f1_))
+dt2$Type='New'
+names(dt2)=names(baselines)
+baselines = rbind(baselines,dt2)
+baselines$Type[baselines$Model=='Random']='Random'
+
+require(ggrepel)
+
+ggplot(baselines,aes(Precision,Recall,size=F1,color=Type))+
+  geom_point()+guides(size=FALSE)+theme_minimal()+
+  scale_y_continuous(limits=c(0,1))+
+  scale_x_continuous(limits=c(0,1))+
+  scale_color_manual(values = c("#9baec7", "#00AFBB", "#FC4E07"))+
+  theme(legend.position = c(0.8,0.85),
+        legend.background= element_rect(fill="white",colour ="white"))+
+  geom_text_repel(baselines[baselines$Type=='New',],mapping=aes(x=Precision,y=Recall,size=0.2,label=Model,color=Type),
+                  box.padding = unit(0.5, "lines"),
+                  point.padding = unit(0.5, "lines")) 
+
+ggplot(baselines,aes(Precision,Recall,color=Type),size=2)+
+  geom_point()+guides(size=FALSE,color=FALSE,fill=FALSE)+theme_minimal()+
+  scale_y_continuous(limits=c(0,1))+
+  scale_x_continuous(limits=c(0,1))+
+  theme(legend.position = c(0.8,0.85),
+        legend.background= element_rect(fill="white",colour ="white"))+
+  geom_label_repel(aes(x=Precision,y=Recall,size=0.04,fill=Type,label=Model),
+                  box.padding = unit(0.4, "lines"),
+                  fontface='bold',color='white',segment.color = 'grey50') 
+
+
+baselines$F1 = round(baselines$F1,2)
+baselines$Model = as.character(baselines$Model)
+baselines = baselines[order(baselines$F1,decreasing=TRUE),]
+
+baselines <- within(baselines,Model<-factor(Model,levels=baselines$Model))
+
+ggplot(baselines,aes(Model,F1,fill=Type))+geom_bar(stat='identity')+ 
+  geom_text(aes(label=F1), hjust=1.1, color="white", size=3.5)+
+  guides(fill=FALSE)+theme_minimal()+
+  xlab('')+ylab('F1-score')+coord_flip()
