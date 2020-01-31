@@ -117,7 +117,7 @@ if(RUN_F1_PRECISION_RECALL_SCORE){
 
   dt = dt[order(dt$f1_,decreasing = TRUE),]
   
-  
+  #new[new=='Logistic Regression']='LR'
   dt1 = subset(dt,model_name==new[1])[1,]
   for(i in 2:length(new)){
     dt1 = rbind(dt1,subset(dt,model_name==new[i])[1,])
@@ -218,23 +218,35 @@ if(RUN_CAUSAL_ROC){
   data2 = subset(data, method ==  'mf' )
   data3 = subset(data, method == 'pca' )
   g0 <- ggplot(data0, aes(d = y01, m = pred, fill = id, color = k)) +  
-    geom_roc(show.legend = FALSE,n.cuts = 0) + style_roc() + ggtitle('BART')+
+    geom_roc(show.legend = FALSE,n.cuts = 0) + 
+    style_roc(xlab='False Positive Rate',ylab='True Positive Rate')+ 
+    labs(caption ='a. BART')+
+    theme(plot.caption = element_text(size=10))+
     scale_color_brewer(palette = 'RdYlBu')
   
-  
   g1 <- ggplot(data1, aes(d = y01, m = pred, fill = id, color = k)) + 
-    geom_roc(show.legend = FALSE,n.cuts = 0) + style_roc()+ ggtitle('DA+Autoencoder')  +
+    geom_roc(show.legend = FALSE,n.cuts = 0) + 
+    style_roc(xlab='False Positive Rate',ylab='True Positive Rate')+ 
+    labs(caption ='c. DA+Autoencoder')+ 
+    theme(plot.caption = element_text(size=10))+
     scale_color_brewer(palette = 'Oranges')
     #scale_color_manual(values=wes_palette(n=4, name="Zissou1"))
   
   g2 <- ggplot(data2, aes(d = y01, m = pred, fill = id, color = k)) + 
-    geom_roc(show.legend = FALSE,n.cuts = 0) + style_roc()+ ggtitle('DA+Matrix Factorization')  +
+    geom_roc(show.legend = FALSE,n.cuts = 0) + 
+    style_roc(xlab='False Positive Rate',ylab='True Positive Rate')+ 
+    labs(caption = 'b. DA+Matrix Factorization')+
+    theme(plot.caption = element_text(size=10))+
     scale_color_brewer(palette = 'Oranges')
   
   
   g3 <- ggplot(data3, aes(d = y01, m = pred, fill = id, color = k)) + 
-    geom_roc(show.legend = FALSE,n.cuts = 0) + style_roc()+ ggtitle('DA+PCA')  +
+    geom_roc(show.legend = FALSE,n.cuts = 0) + 
+    style_roc(xlab='False Positive Rate',ylab='True Positive Rate')+ 
+    labs(caption ='d. DA+PCA')+  
+    theme(plot.caption = element_text(size=10))+
     scale_color_brewer(palette = 'Oranges')
+
   
   #+
   #  scale_color_manual(breaks = c("10", "20", "40",'60'),
@@ -422,11 +434,49 @@ if(PLOT_USE_TEXT){
 
 require(ggplot2)
 require(RColorBrewer)
+require(ggrepel)
 
 dt$model_name[dt$model_name=='Logistic Regression']='LR'
 dt1$model_name[dt1$model_name=='Logistic Regression']='LR'
 dt1 = subset(dt1, !is.na(r))
 dt$model_name = as.character(dt$model_name)
+
+#just points 
+pr1<- ggplot(dt,aes(x=p,y=r,color=model_name,shape=model_name))+
+  geom_point()+theme_minimal() +
+  scale_y_continuous('Recall',limits=c(-0.09,1.05))+
+  scale_x_continuous('Precision',limits = c(-0.09,1.05))+
+  scale_shape_manual(values = c(23, 21, 24,8,12,22)) +
+  scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#B0C4DE','#E7B800','#3cb371'))+#'#9370db'
+  guides(size=FALSE,color=guide_legend(override.aes=list(linetype=0)))+
+  labs(color='',shape='',caption = 'e. Testing Set')+
+  theme(legend.position = c(0.8,0.75),
+        legend.background= element_rect(fill="white",colour ="white"),
+        legend.text = element_text(size=9),
+        legend.key.size = unit(0.5,'cm'),
+        plot.caption = element_text(size=10))
+
+#top points 
+dt1 = subset(dt1, !is.na(model_name))
+dt1$f1_ = round(dt1$f1_,2)
+pr2<- ggplot(dt1,aes(x=p_,y=r_,color=model_name,shape=model_name))+
+  geom_point()+ theme_minimal() +
+  scale_y_continuous('Recall',limits=c(-0.09,1.05))+
+  scale_x_continuous('Precision',limits = c(-0.09,1.05))+
+  scale_size_continuous(range = c(2,5))+
+  scale_shape_manual(values = c(23, 21, 24,8,12,22)) +
+  scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#B0C4DE','#E7B800','#3cb371'))+#'#9370db'
+  guides(size=FALSE,shape=FALSE,color=FALSE,fill=FALSE)+
+  labs(caption = 'f. Full set')+
+  theme(plot.caption = element_text(size=10))+
+  geom_label_repel(aes(x=p_,y=r_,label=f1_,fill=model_name),
+                   box.padding = unit(0.4, "lines"),size=3,
+                   fontface='bold',color='white',segment.color = 'grey50') +
+  scale_fill_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#B0C4DE','#E7B800','#3cb371'))
+
+grid.arrange(g0,g1,pr1,g2,g3, pr2, ncol=3)
+
+
 
 #missing F1
 pr1 <- ggplot(dt,aes(x=p,y=r,color=model_name,shape=model_name))+
@@ -475,7 +525,6 @@ names(dt2)=names(baselines)
 baselines = rbind(baselines,dt2)
 baselines$Type[baselines$Model=='Random']='Random'
 
-require(ggrepel)
 
 ggplot(baselines,aes(Precision,Recall,size=F1,color=Type))+
   geom_point()+guides(size=FALSE)+theme_minimal()+
@@ -494,6 +543,8 @@ ggplot(baselines,aes(Precision,Recall,color=Type),size=2)+
   scale_x_continuous(limits=c(0,1))+
   theme(legend.position = c(0.8,0.85),
         legend.background= element_rect(fill="white",colour ="white"))+
+  scale_fill_manual(values = c("#999999",'#56B4E9',"#E69F00"))+
+  scale_color_manual(values = c("#999999",'#56B4E9',"#E69F00"))+
   geom_label_repel(aes(x=Precision,y=Recall,size=0.04,fill=Type,label=Model),
                   box.padding = unit(0.4, "lines"),
                   fontface='bold',color='white',segment.color = 'grey50') 
@@ -505,7 +556,13 @@ baselines = baselines[order(baselines$F1,decreasing=TRUE),]
 
 baselines <- within(baselines,Model<-factor(Model,levels=baselines$Model))
 
+baselines$Type=as.character(baselines$Type)
+baselines$Type[baselines$Type=='New'] = 'ParKCa'
 ggplot(baselines,aes(Model,F1,fill=Type))+geom_bar(stat='identity')+ 
   geom_text(aes(label=F1), hjust=1.1, color="white", size=3.5)+
-  guides(fill=FALSE)+theme_minimal()+
+  theme_minimal()+labs(fill='')+ 
+  theme(legend.position = c(0.8, 0.9),
+        legend.background = element_rect(fill = 'white',linetype='solid',colour='white'))+
+  scale_fill_manual(values = c("#999999",'#56B4E9',"#E69F00"))+
+  scale_color_manual(values = c("#999999",'#56B4E9',"#E69F00"))+
   xlab('')+ylab('F1-score')+coord_flip()
