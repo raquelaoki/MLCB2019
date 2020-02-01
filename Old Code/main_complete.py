@@ -4,7 +4,7 @@ import numpy as np
 import sys
 import os
 from sklearn.metrics import confusion_matrix, f1_score
-path = '~\\Documents\\GitHub\\project_spring2019'
+path = 'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019'
 sys.path.append(path+'\\scr')
 import functions as fc
 os.chdir(path)
