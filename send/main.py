@@ -12,39 +12,45 @@ pd.set_option('display.max_columns', 500)
 
 
 '''
-Flags
+Flags: True the models/functions will run
 '''
-RUN_MCMC = False
-RUN_LOAD_MCMC = False
-
+#_all patients from dataset, _ subsets of patients
 RUN_ALL = False
 RUN_ = False
 
+# Deconfounder Algorithm
 RUN_MF = False
 RUN_PCA = False
 RUN_A = False #outside anaconda
 
+# Create feature datset, evaluation, experiments/classification
 RUN_CREATE_FEATURE_DATASET = True
 RUN_CREATE_ROC_CAUSAL_DATASET = False
 RUN_EXPERIMENTS = True #RUN_CREATE_FEATURE_DATASET also needs to be true
 
 
-'''MCMC Hyperparameters'''
-k_mf_ = [40] #Latents Dimension
+'''Latents Dimension for Deconfounder Algorithm (DA)'''
+k_mf_ = [40] #
 k_pca_ = [40]
 k_ac_ = [10]
 
-#def main():
 '''Loading dataset'''
 filename = "data\\tcga_train_gexpression_cgc_7k.txt" #_2
 
 
-#Running Factor Analysis Models + Predictive Check + outcome model in all
+#Running Factor Analysis Models + Predictive Check + outcome model in all patients
 if RUN_ALL:
     data = pd.read_csv(filename, sep=';')
     #data = data.iloc[0:500, 0:100]
     train, j, v, y01, abr, colnames = fc.data_prep(data)
+    #j: rows, v: columns, y01: initial label, abr: cancer type, colnames: genes names
 
+    '''
+    1) Run factor model;
+    2) Do predictive check;
+    3) If pass on predictive ckeck, run outcome model
+    4) Save results and predictions for ROC curve
+    '''
     if RUN_MF:
         for k_mf in k_mf_:
             W, F = fc.fa_matrixfactorization(train,k_mf,RUN_MF)
@@ -60,7 +66,7 @@ if RUN_ALL:
             ac =  fc.fa_a(train,k_ac,RUN_A)
             pred = fc.check_save(ac,train,colnames, y01,'ac','all', k_ac)
 
-#Running Factor Analysis + Predictive Check + outcome model
+#Running Factor Analysis Models + Predictive Check + outcome model in subsets of patients
 if RUN_:
     files = pd.read_csv('data\\files_names.txt',sep=';')
     # row = files.iloc[0,:]
@@ -89,6 +95,9 @@ if RUN_:
 
 
 if RUN_CREATE_FEATURE_DATASET:
+    '''
+    Intermediate dataset with all the featurse created by one causal model together in one dataset
+    '''
     f_bart, f_mf,f_mf_bin , f_ac,f_ac_bin, f_pca,f_pca_bin = fc.data_features_construction(path)
     print(f_bart.shape, f_mf.shape,f_mf_bin.shape,f_ac.shape,f_ac_bin.shape,f_pca.shape,f_pca_bin.shape)
 

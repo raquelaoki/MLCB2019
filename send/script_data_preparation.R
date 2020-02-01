@@ -8,7 +8,7 @@ donwload_clinical = FALSE
 process_clinical = FALSE
 genes_selection = FALSE
 
-
+#make sure i have tcga_train_gexpression_cgc_7k
 #missing download rna data
 #script_v003_old_preprocessing_datasets
 
