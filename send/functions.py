@@ -29,6 +29,33 @@ from pywsl.pul import pumil_mr, pu_mr
 from pywsl.utils.syndata import gen_twonorm_pumil
 from pywsl.utils.comcalc import bin_clf_err
 
+'''PART 0: Data Preparation'''
+
+def data_prep(data):
+    '''
+    parameters:
+        data: full dataset
+    return:
+        train: training set withouht these elements
+        j,v: dimensions
+        y01: classifications
+        abr: cancer types
+        colnames: gene names
+    '''
+    data = data.reset_index(drop=True)
+    '''Organizing columns names'''
+    remove = data.columns[[0,1,2]]
+    y = data.columns[1]
+    y01 = np.array(data[y])
+    abr = np.array(data[data.columns[2]])
+    train = data.drop(remove, axis = 1)
+    colnames = train.columns
+    train = np.matrix(train)
+
+    j, v = train.shape
+
+    return train, j, v, y01,  abr, colnames
+
 '''PART 1: DECONFOUNDER ALGORITHM'''
 
 def fa_matrixfactorization(train,k,run):
@@ -105,7 +132,6 @@ def fa_a(train,k,run):
         encoded_imgs = encoder.predict(train)
         return encoded_imgs
 
-
 def check_save(Z,train,colnames,y01,name1,name2,k):
     '''
     Run predictive check function and print results
@@ -117,9 +143,10 @@ def check_save(Z,train,colnames,y01,name1,name2,k):
         name: name for the file
         k: size of the latent features (repetitive)
     output:
-        prints
-
+        save features on results folder or print that it failed
+        return the predicted values for the training data on the outcome model
     '''
+
     v_pred, test_result = predictive_check_new(train,Z,True)
     if(test_result):
         print('Predictive Check test: PASS')
@@ -155,7 +182,10 @@ def predictive_check_new(X, Z,run ):
         X: orginal features
         Z: latent (either the reconstruction of X or lower dimension)
     Return:
+        v_obs values and result of the test
     '''
+
+    #If the number of columns is too large, select a subset of columns instead
     if X.shape[1]>10000:
         X = X[:,np.random.randint(0,X.shape[1],10000)]
 
@@ -168,6 +198,7 @@ def predictive_check_new(X, Z,run ):
         v_obs.append(np.less(X_test, X_pred).sum()/len(X_test))
         v_nul.append(np.less(X_test, X_train.mean(),).sum()/len(X_test))
 
+    #Create the Confidence interval
     n = len(v_nul)
     m, se = np.mean(v_nul), np.std(v_nul)
     h = se * stats.t.ppf((1 + 0.95) / 2., n-1)

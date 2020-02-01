@@ -29,17 +29,7 @@ from pywsl.pul import pumil_mr, pu_mr
 from pywsl.utils.syndata import gen_twonorm_pumil
 from pywsl.utils.comcalc import bin_clf_err
 
-'''PART 1: DECONFOUNDER ALGORITHM'''
-
-'''Parameters'''
-class parameters:
-    __slots__ = ( 'la_cj','la_sk','la_ev','lm_phi','lm_tht')
-    def __init__(self,latent_cj,latent_sk, latent_ev,latent_phi ,latent_tht):
-        self.la_cj = latent_cj #string of array J
-        self.la_sk = latent_sk #matrix Kx2
-        self.la_ev = latent_ev #string of  array V
-        self.lm_phi = latent_phi #string of matrix (kv) in array format
-        self.lm_tht = latent_tht #string of matrix  (jk) in array format
+'''PART 0: Data Preparation'''
 
 def data_prep(data):
     '''
@@ -62,160 +52,12 @@ def data_prep(data):
     colnames = train.columns
     train = np.matrix(train)
 
-    # randomly holdout some entries of data
     j, v = train.shape
 
     return train, j, v, y01,  abr, colnames
 
-def gibbs(current,train0,j,v,k,y01):
-    '''
-    Gibbs Sampling: the math, proposal of values
-    Parameters:
-        current: class (parameters)
-        train0: traning set (np.matrix)
-        j patients, v genes, k latent features (int)
-        y01: array true label (np.array)
-    Return:
-        new: class (parameters)
-    '''
-    new = copy.deepcopy(current)
-    lvjk = np.zeros((v,j,k))
+'''PART 1: DECONFOUNDER ALGORITHM'''
 
-    for ki in np.arange(k):
-        lvjk[:,:,ki] = np.dot(0.801*current.lm_phi[:,ki].reshape(v,1), current.lm_tht[:,ki].reshape(1,j))
-        #0.795 previous value, it works
-    lvk = np.random.poisson(lvjk.sum(axis=1))
-    ljk = np.random.poisson(lvjk.sum(axis=0))
-    #print(new.lm_tht.shape, ljk.shape,j,v,k )
-    #print('\nphi:',new.lm_phi.shape)
-    for ki in np.arange(k):
-        new.lm_phi[:,ki] = np.random.dirichlet(alpha = (lvk[:,ki]+current.la_ev),size = 1)
-        new.lm_tht[:,ki] = np.random.gamma(shape=(current.la_sk[y01,ki]+ljk[:,ki]).reshape(j),
-                  scale=np.repeat(0.5,j).reshape(j))
-
-    lk1 = np.dot(y01,ljk)
-    lk0 = np.dot(1-y01,ljk)
-    a2 = 187
-    b2 = 0.8
-    c2 = y01.sum()
-    new.la_sk[0,:] = np.random.gamma((a2/k)+lk0/(j-c2),b2+0.69)
-    new.la_sk[1,:] = np.random.gamma((a2/k)+lk1/c2,b2+0.69)
-
-    #a1 = 40#4000
-    #b1 = 100#10000
-    #c1 = 1/1000
-    #new.la_cj = np.random.beta(a= (a1+c1*train0.sum(axis = 1)).reshape(j,1) ,b=(b1+c1*new.lm_tht.sum(axis =1)).reshape(j,1))
-    new.la_cj = np.repeat(0.5,j).reshape(j,1)
-    return(new)
-
-def fa_mcmc(train,y01, sim, bach_size, step1,k,id,run):
-    '''
-    MCMC: call gibbs function and save proposed parameters in a chain
-    Parameters
-        data: full dataset before splitting (pd)
-        sim, bach_size, step1: simulations, bach size and step size (int)
-        k: latent variables size (int)
-        id: id of the simulation  (str)
-
-    Return
-        save the chain on results folder
-    '''
-    '''Defining variables'''
-    j, v  = train.shape #patients x genes
-    if run:
-        '''Initial Values'''
-        current = parameters(np.repeat(0.5,j), #la_cj 0.25
-                           np.repeat(150.5,k*2).reshape(2,k), #la_sk
-                           np.repeat(1.0004,v), #la_ev FIXED
-                           np.repeat(1/v,v*k).reshape(v,k),#lm_phi v x k
-                           np.repeat(150.5,j*k).reshape(j,k)) #lm_theta k x j
-
-
-
-        '''Creating the chains'''
-        chain_la_sk = np.tile(current.la_sk.reshape(-1,1),(1,int(bach_size/step1)))
-        chain_la_cj = np.tile(current.la_cj.reshape(-1,1),(1,int(bach_size/step1)))
-        chain_lm_tht = np.tile(current.lm_tht.reshape(-1,1),(1,int(bach_size/step1)))
-        chain_lm_phi = np.tile(current.lm_phi.reshape(-1,1),(1,int(bach_size/step1)))
-
-        '''Sampling'''
-        start_time = time.time()
-
-        for ite in np.arange(0,sim//bach_size):
-            count_s1 = 0
-            count_s2 = 0
-            chain_la_sk[:,count_s1]=current.la_sk.reshape(1,-1)
-            chain_la_cj[:,count_s1]=current.la_cj.reshape(1,-1)
-            chain_lm_tht[:,count_s1]=current.lm_tht.reshape(1,-1)
-            chain_lm_phi[:,count_s1]=current.lm_phi.reshape(1,-1)
-            print('iteration--',ite,' of ',sim//bach_size)
-            for i in np.arange(1,bach_size):
-                new  = gibbs(current,train,j,v,k,y01)
-                '''Updating chain'''
-                if i%10==0:
-                    #print('------------', i, ' of ',bach_size)
-                    count_s1+=1
-                    chain_la_sk[:,count_s1]=new.la_sk.reshape(1,-1)
-                    chain_la_cj[:,count_s1]=new.la_cj.reshape(1,-1)
-                    chain_lm_tht[:,count_s1]=new.lm_tht.reshape(1,-1)
-                    chain_lm_phi[:,count_s1]=new.lm_phi.reshape(1,-1)
-                    if i%90 == 0:
-                        test1 = np.dot(current.lm_tht,np.transpose(current.lm_phi))
-                        print(test1.mean(), train.mean())
-
-
-                current= copy.deepcopy(new )
-            np.savetxt('results\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_sk, delimiter=',',fmt='%5s')
-            np.savetxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', chain_la_cj, delimiter=',',fmt='%5s')
-            np.savetxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_tht, delimiter=',',fmt='%5s')
-            np.savetxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', chain_lm_phi, delimiter=',',fmt='%5s')
-
-
-        print("--- %s min ---" % int((time.time() - start_time)/60))
-        print("--- %s hours ---" % int((time.time() - start_time)/(60*60)))
-    return
-
-def load_chain(id,sim,bach_size,j,v,k, run):
-    '''
-    Load chains of values after MCMC
-    paramters:
-        id: id of the experiment (str)
-        sim, bach_size: simulations and bach size (int)
-        j,v,k: patients, genes, latent variables size (int)
-    return:
-        average parameters predicted without the burn-in period
-        la_sk, la_cj, lm_tht, lm_phi: (np.matrix)
-    '''
-    if run:
-        ite0 = 2
-        la_sk = np.loadtxt('results\\output_lask_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
-        la_cj = np.loadtxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
-        lm_phi = np.loadtxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
-        lm_tht = np.loadtxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite0)+'.txt', delimiter=',').mean(axis=1)
-
-        for ite in np.arange(ite0+1,sim//bach_size):
-            la_sk = la_sk + np.loadtxt('results\\output_lask_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-            la_cj = la_cj + np.loadtxt('results\\output_lacj_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-            lm_phi = lm_phi + np.loadtxt('results\\output_lmphi_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-            lm_tht = lm_tht + np.loadtxt('results\\output_lmtht_id'+str(id)+'_bach'+str(ite)+'.txt', delimiter=',').mean(axis=1)
-
-        la_sk = la_sk/((sim//bach_size)-1)
-        la_cj = la_cj/((sim//bach_size)-1)
-        lm_phi = lm_phi/((sim//bach_size)-1)
-        lm_tht = lm_tht/((sim//bach_size)-1)
-
-        la_sk = la_sk.reshape(2,k)
-        la_cj = la_cj.reshape(j,1)
-        lm_tht = lm_tht.reshape(j,k)
-        lm_phi = lm_phi.reshape(v,k)
-    else:
-        la_sk = []
-        la_cj = []
-        lm_tht = []
-        lm_phi = []
-    return la_sk,la_cj,lm_tht,lm_phi
-
-#Failed in run = False
 def fa_matrixfactorization(train,k,run):
     '''
     Matrix Factorization to extract latent features
@@ -290,48 +132,6 @@ def fa_a(train,k,run):
         encoded_imgs = encoder.predict(train)
         return encoded_imgs
 
-def fa_pmc(train,k,run):
-    #https://stats.stackexchange.com/questions/146547/pymc3-implementation-of-probabilistic-matrix-factorization-pmf-map-produces-a
-    #https://gist.github.com/macks22/00a17b1d374dfc267a9a
-    import pymc3 as pm
-    import theano
-    import theano.tensor as t
-
-    """Construct the Probabilistic Matrix Factorization model using pymc3.
-    Note that the `testval` param for U and V initialize the model away from
-    0 using a small amount of Gaussian noise.
-    :param np.ndarray train: Training data (observed) to learn the model on.
-    :param int alpha: Fixed precision to use for the rating likelihood function.
-    :param int dim: Dimensionality of the model; rank of low-rank approximation.
-    :param float std: Standard deviation for Gaussian noise in model initialization.
-    """
-    # Mean value imputation on training data.
-    train = train.copy()
-    nan_mask = np.isnan(train)
-    train[nan_mask] = train[~nan_mask].mean()
-
-    # Low precision reflects uncertainty; prevents overfitting.
-    # We use point estimates from the data to intialize.
-    # Set to mean variance across users and items.
-    alpha_u = 1 / train.var(axis=1).mean()
-    alpha_v = 1 / train.var(axis=0).mean()
-
-    logging.info('building the PMF model')
-    n, m = train.shape
-    with pm.Model() as pmf:
-        U = pm.MvNormal(
-            'U', mu=0, tau=alpha_u * np.eye(dim),
-            shape=(n, dim), testval=np.random.randn(n, dim) * std)
-        V = pm.MvNormal(
-            'V', mu=0, tau=alpha_v * np.eye(dim),
-            shape=(m, dim), testval=np.random.randn(m, dim) * std)
-        R = pm.Normal(
-            'R', mu=t.dot(U, V.T), tau=alpha * np.ones(train.shape),
-            observed=train)
-
-    logging.info('done building PMF model')
-    return pmf
-
 def check_save(Z,train,colnames,y01,name1,name2,k):
     '''
     Run predictive check function and print results
@@ -343,9 +143,10 @@ def check_save(Z,train,colnames,y01,name1,name2,k):
         name: name for the file
         k: size of the latent features (repetitive)
     output:
-        prints
-
+        save features on results folder or print that it failed
+        return the predicted values for the training data on the outcome model
     '''
+
     v_pred, test_result = predictive_check_new(train,Z,True)
     if(test_result):
         print('Predictive Check test: PASS')
@@ -381,10 +182,12 @@ def predictive_check_new(X, Z,run ):
         X: orginal features
         Z: latent (either the reconstruction of X or lower dimension)
     Return:
+        v_obs values and result of the test
     '''
+
+    #If the number of columns is too large, select a subset of columns instead
     if X.shape[1]>10000:
         X = X[:,np.random.randint(0,X.shape[1],10000)]
-
 
     v_obs = []
     v_nul = []
@@ -395,6 +198,7 @@ def predictive_check_new(X, Z,run ):
         v_obs.append(np.less(X_test, X_pred).sum()/len(X_test))
         v_nul.append(np.less(X_test, X_train.mean(),).sum()/len(X_test))
 
+    #Create the Confidence interval
     n = len(v_nul)
     m, se = np.mean(v_nul), np.std(v_nul)
     h = se * stats.t.ppf((1 + 0.95) / 2., n-1)
@@ -448,7 +252,7 @@ def cgc():
     dgenes = pd.read_csv('data\\cancer_gene_census.csv',sep=',')
     dgenes['Tumour Types(Somatic)'] = dgenes['Tumour Types(Somatic)'].fillna(dgenes['Tumour Types(Germline)'])
     return dgenes
-
+#HERE
 def outcome_model(train,colnames , z, y01,name2):
     '''
     Outcome Model + logistic regression
