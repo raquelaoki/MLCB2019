@@ -1,11 +1,8 @@
 #----------#----------#----------#----------#----------#----------#----------#
 #----------#----------#----------#----------#----------#----------#----------#
-#Author: Raquel AOki
-#January 2020 
+#Plots
 #----------#----------#----------#----------#----------#----------#----------#
 #----------#----------#----------#----------#----------#----------#----------#
-
-#Plots 
 
 rm(list=ls())
 
@@ -16,9 +13,14 @@ CREATE_CGC_BASELINES = FALSE
 PLOT_USE_TAPPLY = FALSE
 PLOT_USE_TEXT = FALSE
 
-setwd("~/GitHub/project_spring2019/results")
+require(ggplot2)
+require(RColorBrewer)
+require(ggrepel)
+
 
 if(RUN_F1_PRECISION_RECALL_SCORE){
+  setwd("~/GitHub/project/results")
+  
   require(ggplot2)
   #Comparing F1 score
   dt = read.table("experiments2.txt", header =T, sep = ';')[,-7]
@@ -92,28 +94,6 @@ if(RUN_F1_PRECISION_RECALL_SCORE){
     xlab('Precision')+ylab('Recall')+
     theme(legend.position="bottom")+
     labs(color = "Model")
-  
-
-  #Random: PRecision and score around 0.2
-  
-  #Random Forest: 
-  #  The Precision increases on the training set, meaning that the number of 
-  #FP is low. However, Recall is very low, meaning that there are many 
-  #driver genes from CGC not being identified by the model. 
-  #The model is bad, overfitting. 
-  
-  #Adapter PU: The Recall is amazing, meaning that all the driver genes
-  #are being identified. However, the precision is not beter than random, 
-  #meaning that they are classififyng 5x the size of the driver genes 
-  #training set to have this quality of recall. Also overfitting. 
-  
-  #Logistic Regression: Precision is competitive with Random Model, but 
-  #it's precision is better. 
-
-#Unbiased SVM:Very similar to LR
-
-#One Class SVM: it has some interesting points on 
-#testins set, but its precision on traning set is really bad. 
 
   dt = dt[order(dt$f1_,decreasing = TRUE),]
   
@@ -131,9 +111,9 @@ if(RUN_CAUSAL_ROC){
   require(plotROC)
   require(gridExtra)
   #https://cran.r-project.org/web/packages/plotROC/vignettes/examples.html
-  setwd("~/GitHub/project_spring2019/results_k")
+  setwd("~/GitHub/project/results_k")
   #create a list of the files from your target directory
-  file_list <- list.files(path="~/GitHub/project_spring2019/results_k")
+  file_list <- list.files(path="~/GitHub/project/results_k")
   
   flag = TRUE
   count = 0
@@ -238,7 +218,7 @@ if(RUN_CAUSAL_ROC){
     labs(caption = 'b. DA+Matrix Factorization')+
     theme(plot.caption = element_text(size=10))+
     scale_color_brewer(palette = 'Oranges')
-
+  
   
   g3 <- ggplot(data3, aes(d = y01, m = pred, fill = id, color = k)) + 
     geom_roc(show.legend = FALSE,n.cuts = 0) + 
@@ -247,33 +227,23 @@ if(RUN_CAUSAL_ROC){
     theme(plot.caption = element_text(size=10))+
     scale_color_brewer(palette = 'Oranges')
 
-  
-  #+
-  #  scale_color_manual(breaks = c("10", "20", "40",'60'),
-  #                     values=c("#fcba03", "#e89510", "#e87510",'#e83f10'))
-
-  
-    grid.arrange(g0,g1,g2,g3, ncol=2)
 }
 
 if(CREATE_CGC_BASELINES){
   library("openxlsx")
+  #data downloaded from https://www.pnas.org/content/113/50/14330
+  m_2020 = read.xlsx("~\\Documents\\GitHub\\project\\data\\driver_genes_baselines.xlsx",sheet = 1)
+  m_tuson = read.xlsx("~\\Documents\\GitHub\\project\\data\\driver_genes_baselines.xlsx",sheet = 2)
+  m_mutsigcv = read.xlsx("~\\Documents\\GitHub\\project\\data\\driver_genes_baselines.xlsx",sheet = 3)
+  m_oncodriveFM = read.xlsx("~\\Documents\\GitHub\\project\\data\\driver_genes_baselines.xlsx",sheet = 4)
+  m_oncodriveClust = read.xlsx("~\\Documents\\GitHub\\project\\data\\driver_genes_baselines.xlsx",sheet = 5)
+  m_oncodriveFML = read.xlsx("~\\Documents\\GitHub\\project\\data\\driver_genes_baselines.xlsx",sheet = 6)
+  m_ActiveDriver = read.xlsx("~\\Documents\\GitHub\\project\\data\\driver_genes_baselines.xlsx",sheet = 7)
+  m_Music = read.xlsx("~\\Documents\\GitHub\\project\\data\\driver_genes_baselines.xlsx",sheet = 8)
   
-  m_2020 = read.xlsx("C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\data\\driver_genes_baselines.xlsx",sheet = 1)
-  m_tuson = read.xlsx("C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\data\\driver_genes_baselines.xlsx",sheet = 2)
-  m_mutsigcv = read.xlsx("C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\data\\driver_genes_baselines.xlsx",sheet = 3)
-  m_oncodriveFM = read.xlsx("C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\data\\driver_genes_baselines.xlsx",sheet = 4)
-  m_oncodriveClust = read.xlsx("C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\data\\driver_genes_baselines.xlsx",sheet = 5)
-  m_oncodriveFML = read.xlsx("C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\data\\driver_genes_baselines.xlsx",sheet = 6)
-  m_ActiveDriver = read.xlsx("C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\data\\driver_genes_baselines.xlsx",sheet = 7)
-  m_Music = read.xlsx("C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\data\\driver_genes_baselines.xlsx",sheet = 8)
+  cgc = read.table("~\\Documents\\GitHub\\project\\data\\cancer_gene_census.csv", header = T,sep=',')[,c(1,2)]
   
-  cgc = read.table("C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\data\\cancer_gene_census.csv", header = T,sep=',')[,c(1,2)]
-  
-  #The number of predicted driver genes (q ≤ 0.1) ranged from 
-  #158 (MutsigCV) to 2,600 (OncodriveFM) (Fig. 1C). 
-  #MutSigCV, 20/20+, and TUSON predicted 158–243 genes 
-  #whereas the remaining had over 400 driver genes.
+  #from baseline paper
   q = 0.1
   
   m_2020_q = subset(m_2020, m_2020[,11]<=q) #197
@@ -337,14 +307,13 @@ if(CREATE_CGC_BASELINES){
   baselines$recall = baselines$driver_genes/dim(cgc)[1]
   baselines$f1_ = 2*baselines$precision*baselines$recall/ (baselines$precision+baselines$recall)                 
   
-  write.table(baselines,'C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\results\\cgc_baselines.txt',
+  write.table(baselines,'~\\Documents\\GitHub\\project\\results\\cgc_baselines.txt',
               row.names = FALSE, sep = ';')
   
 }
 
-#runs on my laptop only 
 if(RUN_CGC_comparison){
-  baselines = read.table('C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\results\\cgc_baselines.txt',
+  baselines = read.table('~\\Documents\\GitHub\\project\\results\\cgc_baselines.txt',
               header = TRUE, sep=';')
   baselines = subset(baselines, select = c(method,driver_genes,f1_))
   
@@ -374,67 +343,6 @@ if(RUN_CGC_comparison){
 
 }
 
-
-if(PLOT_USE_TAPPLY){
-  dt1a = cbind(data.frame(tapply(dt1$p,dt1$model_name,mean)),
-               data.frame(tapply(dt1$r,dt1$model_name,mean)),
-               data.frame(tapply(dt1$f1,dt1$model_name,mean)))
-  
-  dt1b = cbind(data.frame(tapply(dt1$p_,dt1$model_name,mean)),
-               data.frame(tapply(dt1$r_,dt1$model_name,mean)),
-               data.frame(tapply(dt1$f1_,dt1$model_name,mean)))
-  
-  names(dt1a) = c('p','r','f1')
-  names(dt1b) = c('p','r','f1')
-  dt1a = data.frame('model_name'=rownames(dt1a),dt1a)
-  dt1b = data.frame('model_name'=rownames(dt1b),dt1b)
-  
-}
-
-
-if(PLOT_USE_TEXT){
-  require(ggrepel)
-  pr1 <- ggplot(dt1,aes(x=p,y=r))+
-    geom_point(aes(color=model_name,size=f1),shape=16,alpha=0.75)+
-    scale_y_continuous('Recall',limits=c(-0.1,1.05))+
-    scale_x_continuous('Precision',limits = c(-0.05,1.05))+
-    theme_minimal() +
-    scale_size_continuous(range = c(2,5))+
-    scale_shape_manual(values = c(15, 16, 17,18,19,15,16)) +
-    scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#3cb371','#9370db','#E7B800','#B0C4DE'))+
-    guides(size=FALSE,color=FALSE)+ggtitle('Testing Set')+labs(color='Model',shape='Model')+
-    geom_text_repel(dt1a,mapping=aes(x=p,y=r,label=model_name,color=model_name),
-                    box.padding = unit(0.5, "lines"),
-                    point.padding = unit(0.5, "lines"),
-                    nudge_y = c(0,0,0,0,0,0,0))
-  
-  
-  #FULL
-  
-  pr2<- ggplot(dt1,aes(x=p_,y=r_))+
-    geom_point(aes(color=model_name,size=f1_),shape=16,alpha=0.75)+
-    scale_y_continuous('Recall',limits=c(-0.1,1.05))+
-    scale_x_continuous('Precision',limits = c(-0.05,1.05))+
-    theme_minimal() +
-    scale_size_continuous(range = c(2,5))+
-    scale_shape_manual(values = c(15, 16, 17,18,19,15,16)) +
-    scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#3cb371','#9370db','#E7B800','#B0C4DE'))+
-    guides(size=FALSE,color=FALSE)+ggtitle('Full Set')+labs(color='Model',shape='Model')+
-    geom_text_repel(dt1b,mapping=aes(x=p,y=r,label=model_name,color=model_name),
-                    box.padding = unit(0.5, "lines"),
-                    point.padding = unit(0.5, "lines"),
-                    nudge_y = c(0.2,0,0,0,0,0.2,0),
-                    nudge_x= c(0,0,0,0,0.2,0,0))
-  
-  
-  grid.arrange(g0,g1,pr1,g2,g3, pr2, ncol=3)
-  
-  
-}
-
-require(ggplot2)
-require(RColorBrewer)
-require(ggrepel)
 
 dt$model_name[dt$model_name=='Logistic Regression']='LR'
 dt1$model_name[dt1$model_name=='Logistic Regression']='LR'
@@ -477,44 +385,7 @@ pr2<- ggplot(dt1,aes(x=p_,y=r_,color=model_name,shape=model_name))+
 grid.arrange(g0,g1,pr1,g2,g3, pr2, ncol=3)
 
 
-
-#missing F1
-pr1 <- ggplot(dt,aes(x=p,y=r,color=model_name,shape=model_name))+
-  stat_ellipse()+
-  geom_point(dt1,mapping=aes(x=p,y=r,color=model_name,
-                             shape=model_name,size=f1),alpha=1)+
-  scale_y_continuous('Recall',limits=c(-0.09,1.05))+
-  scale_x_continuous('Precision',limits = c(-0.09,1.05))+
-  theme_minimal() +
-  scale_size_continuous(range = c(2,5))+
-  scale_shape_manual(values = c(18, 16, 17,8,12,15)) +
-  scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#B0C4DE','#E7B800','#3cb371'))+#'#9370db'
-  guides(size=FALSE,color=guide_legend(override.aes=list(linetype=0)))+
-  ggtitle('Testing Set')+labs(color='',shape='')+
-  theme(legend.position = c(0.8,0.7),
-        legend.background= element_rect(fill="white",
-                                        colour ="white"))
-
-#FULL
-
-pr2<- ggplot(dt,aes(x=p_,y=r_,color=model_name,shape=model_name))+
-  stat_ellipse()+
-  geom_point(dt1,mapping=aes(x=p_,y=r_,color=model_name,
-                             shape=model_name,size=f1_),alpha=1)+
-  scale_y_continuous('Recall',limits=c(-0.09,1.05))+
-  scale_x_continuous('Precision',limits = c(-0.09,1.05))+
-  theme_minimal() +
-  scale_size_continuous(range = c(2,5))+
-  scale_shape_manual(values = c(18, 16, 17,8,12,15)) +
-  scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#B0C4DE','#E7B800','#3cb371'))+#'#9370db'
-  guides(size=FALSE,shape=FALSE,color=FALSE)+ggtitle('Full Set')
-
-grid.arrange(g0,g1,pr1,g2,g3, pr2, ncol=3)
-#https://stackoverflow.com/questions/36609476/ggplot2-draw-individual-ellipses-but-color-by-group
-#try barplot (3 bars, one for each)
-
-
-baselines = read.table('C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\results\\cgc_baselines.txt',
+baselines = read.table('~\\Documents\\GitHub\\project\\results\\cgc_baselines.txt',
                        header = TRUE, sep=';')
 baselines = baselines[,-c(2,3)]
 names(baselines) = c('Model','Precision','Recall','F1')

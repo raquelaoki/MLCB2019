@@ -4,7 +4,7 @@ import numpy as np
 import sys
 import os
 from sklearn.metrics import confusion_matrix, f1_score
-path = 'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019'
+path = '~\\Documents\\GitHub\\project'
 sys.path.append(path+'\\scr')
 import functions as fc
 os.chdir(path)
@@ -21,43 +21,23 @@ RUN_ALL = False
 RUN_ = False
 
 RUN_MF = False
-RUN_PMF = False #to implement
 RUN_PCA = False
-RUN_A = False#lab computer outside anaconda
-
-RUN_FCI = False
+RUN_A = False #outside anaconda
 
 RUN_CREATE_FEATURE_DATASET = True
 RUN_CREATE_ROC_CAUSAL_DATASET = False
 RUN_EXPERIMENTS = True #RUN_CREATE_FEATURE_DATASET also needs to be true
-RUN_PLOTS = False
 
 
 '''MCMC Hyperparameters'''
 k_mf_ = [40] #Latents Dimension
-k_mcmc = 10
 k_pca_ = [40]
 k_ac_ = [10]
-sim = 2000 #Simulations
-bach_size = 200 #Batch size for memory purposes
-step1 = 10 #Saving chain every step1 steps
-id = '21' #identification of simulation
-
 
 #def main():
 '''Loading dataset'''
 filename = "data\\tcga_train_gexpression_cgc_7k.txt" #_2
 
-'''Parameters
-class parameters:
-    __slots__ = ( 'la_cj','la_sk','la_ev','lm_phi','lm_tht')
-    def __init__(self,latent_cj,latent_sk, latent_ev,latent_phi ,latent_tht):
-        self.la_cj = latent_cj #string of array J
-        self.la_sk = latent_sk #matrix Kx2
-        self.la_ev = latent_ev #string of  array V
-        self.lm_phi = latent_phi #string of matrix (kv) in array format
-        self.lm_tht = latent_tht #string of matrix  (jk) in array format
-'''
 
 #Running Factor Analysis Models + Predictive Check + outcome model in all
 if RUN_ALL:
@@ -65,23 +45,10 @@ if RUN_ALL:
     #data = data.iloc[0:500, 0:100]
     train, j, v, y01, abr, colnames = fc.data_prep(data)
 
-    #Old factor model combined with the classification model
-    fc.fa_mcmc(train,y01,sim,bach_size,step1,k_mcmc,id,RUN_MCMC)
-    la_sk,la_cj,lm_tht,lm_phi = fc.load_chain(id,sim,bach_size,j,v,k_mcmc,RUN_LOAD_MCMC)
-    if RUN_LOAD_MCMC:
-        Z = lm_tht.dot(np.transpose(lm_phi))
-        v_pred, test_result = fc.predictive_check_new(train,Z,True)
-        if(test_result):
-            print('Predictive Check test: PASS')
-            fc.outcome_model(train,lm_tht,y01)
-        else:
-            print('Predictive Check Test: FAIL')
-
     if RUN_MF:
         for k_mf in k_mf_:
             W, F = fc.fa_matrixfactorization(train,k_mf,RUN_MF)
             pred = fc.check_save(W,train,colnames, y01,'mf','all', k_mf)
-
 
     if RUN_PCA:
         for k_pca in k_pca_:
@@ -120,22 +87,6 @@ if RUN_:
                 name = str(row[1])+'_'+str(row[2])
                 pred = fc.check_save(ac,train,colnames, y01,'ac',name, k_ac)
 
-if RUN_FCI:
-    from pycausal import search as s
-    from pycausal.pycausal import pycausal as pc
-    from pycausal import prior as p
-    #reference
-    #https://github.com/bd2kccd/py-causal/blob/development/example/py-causal%20-%20GFCI%20Continuous%20in%20Action.ipynb
-    pc = pc()
-    pc.start_vm()
-    tetrad = s.tetradrunner()
-
-    train_p = pd.DataFrame(train[:,0:2000])
-    tetrad.getAlgorithmParameters(algoId = 'gfci', testId = 'fisher-z-test', scoreId = 'sem-bic')
-    tetrad.run(algoId = 'gfci', dfs = train_p, testId = 'fisher-z-test', scoreId = 'sem-bic',
-               maxDegree = 5, maxPathLength = 10,
-               completeRuleSetUsed = False, faithfulnessAssumed = True, verbose = True)
-
 
 if RUN_CREATE_FEATURE_DATASET:
     f_bart, f_mf,f_mf_bin , f_ac,f_ac_bin, f_pca,f_pca_bin = fc.data_features_construction(path)
@@ -151,7 +102,6 @@ if RUN_CREATE_FEATURE_DATASET:
 if RUN_CREATE_ROC_CAUSAL_DATASET:
     roc = fc.data_roc_construction(path)
 
-RUN_EXPERIMENTS = True
 if RUN_EXPERIMENTS:
     #Description:
     #All, Gender, Cancer, all+gender, all+cancer, gender + cancer, all+cancer+gender
@@ -165,47 +115,11 @@ if RUN_EXPERIMENTS:
     for nin, nout, id1 in zip(name_in, name_out, name_index):
         print(aux,'\n',nin,'\n',nout)
         dt0, dt1, dt2, dt3, dt4, dt5, dt6 = fc.data_subseting(f_bart, f_mf,f_mf_bin , f_ac,f_ac_bin, f_pca,f_pca_bin, nin, nout)
-
-        # do the same with bin
+        #Not using the binary version
         data_list, names = fc.data_merging(dt0,dt1,dt3, dt5, cgc_list, ['bart','mf','ac','pca'])
-        #data_list_b, names_b = fc.data_merging(dt0,dt2,dt4, dt6, cgc_list, ['bart_b','mf_b','ac_b','pca_b'])
         if aux:
             dt_exp = fc.data_running_models(data_list, names,nin,nout,False,id1)
-            #dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list_b, names_b,nin,nout,True)], axis=0)
             aux = False
         else:
             dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list, names,nin,nout,False,id1)], axis=0)
- #           dt_exp = pd.concat([dt_exp, fc.data_running_models(data_list_b, names_b,nin,nout,True)], axis=0)
             dt_exp.to_csv('results\\experiments2.txt', sep=';', index = False)
-
-if RUN_PLOTS:
-    dt_exp = pd.read_csv('results\\experiments1.txt',sep=';')
-    dt_exp = dt_exp[dt_exp['error']==False]
-
-    #Comparing for all patients and testing set results for acc and f1
-    aux = []
-    aux_ = [] #saving columns positions
-    columns = ['acc','f1','model_name','data_name','nin','nout','size']
-
-
-    for c in columns:
-        if c=='acc' or c=='f1':
-            aux.append(dt_exp.columns.get_loc(c))
-            aux_.append(dt_exp.columns.get_loc(c+'_'))
-        else:
-            aux.append(dt_exp.columns.get_loc(c))
-            aux_.append(dt_exp.columns.get_loc(c))
-
-    dt_exp1 = dt_exp.iloc[:,aux]
-    dt_exp1_ = dt_exp.iloc[:,aux_]
-    dt_exp1 = dt_exp1.assign(Data='Testing Set')
-    dt_exp1_ = dt_exp1_.assign(Data='Full Set')
-    dt_exp1_.rename(columns={'acc_':'acc','f1_':'f1','model_name':'Model'},inplace = True)
-    dt_exp1.rename(columns={'model_name':'Model'},inplace = True)
-    dt = pd.concat([dt_exp1,dt_exp1_],axis = 0)
-    dt['Model'].replace({'OneClassSVM':'One Class \nSVM','svm':'SVM',
-                              'adapter':'PU-Adapter','upu':'Unbiased \nPU',
-                              'lr':'Logistic \nRegression','randomforest':'Random \nForest'}, inplace=True)
-    print('Mean: \n',dt.groupby('Model').mean())
-    import seaborn as sns
-    sns.boxplot(x = "Model", y = "f1",hue='Data',data = dt,palette="Set3")
