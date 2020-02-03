@@ -492,12 +492,7 @@ pr1<- ggplot(dt,aes(x=p,y=r,color=model_name,shape=model_name))+
         legend.key.size = unit(0.5,'cm'),
         plot.caption = element_text(size=10))
 
-id = as.character(rep('mf_40_lr_all',100))
-id = paste(id,1:100)
-gamma = runif(100,0,50)
-cil = gamma-runif(100,0,5)
-ciu = gamma+runif(100,0,5)
-dt_gamma = data.frame(id,gamma,cil,ciu)  
+dt_gamma= read.table('C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\results\\gamma.txt',sep=';', header = T)
 dt_gamma$fm = c()
 dt_gamma$id = as.character(dt_gamma$id) 
  
@@ -510,14 +505,15 @@ dt_gamma$fm[dt_gamma$fm=='pca']='PCA'
 dt_gamma$fm[dt_gamma$fm=='ac']='Autoencoder'
 dt_gamma = dt_gamma[order(dt_gamma$fm),]
 ggplot(dt_gamma, aes(x=id, y=gamma,color=fm)) + 
-      geom_errorbar(aes(ymin=cil, ymax=ciu), width=.1) +
+      geom_errorbar(aes(ymin=cil, ymax=cip), width=.1) +
       geom_point()+
-      ylab(expression(gamma) )+labs(color='',shape='',caption = 'e. Predictive Check')+
+      scale_y_continuous(expression(gamma),limits=c(0,1.05))+
+      labs(color='',shape='',caption = 'e. Predictive Check')+
       theme_minimal() + 
       theme(axis.title.x=element_blank(),
             axis.text.x=element_blank(),
             axis.ticks.x=element_blank(),
-            legend.position = 'bottom')
+            legend.position = c(0.7,0.95))
 
 grid.arrange(g0,g1,pr3,g2,g3, pr1, ncol=3)
 
