@@ -270,7 +270,7 @@ def outcome_model(train,colnames , z, y01,name2):
     return: list of significant coefs
     '''
     #if ac, change 25 to 9
-    aux = train.shape[0]//25
+    aux = train.shape[0]//9
 
 
     lim = 0
