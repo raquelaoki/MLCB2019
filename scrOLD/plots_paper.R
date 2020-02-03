@@ -238,7 +238,7 @@ if(RUN_CAUSAL_ROC){
     labs(caption = 'b. DA+Matrix Factorization')+
     theme(plot.caption = element_text(size=10))+
     scale_color_brewer(palette = 'Oranges')
-
+  
   
   g3 <- ggplot(data3, aes(d = y01, m = pred, fill = id, color = k)) + 
     geom_roc(show.legend = FALSE,n.cuts = 0) + 
@@ -545,8 +545,8 @@ ggplot(baselines,aes(Precision,Recall,color=Type),size=2)+
         legend.background= element_rect(fill="white",colour ="white"))+
   scale_fill_manual(values = c("#999999",'#56B4E9',"#E69F00"))+
   scale_color_manual(values = c("#999999",'#56B4E9',"#E69F00"))+
-  geom_label_repel(aes(x=Precision,y=Recall,fill=Type,label=Model),size=2.5,
-                  box.padding = unit(0.3, "lines"),
+  geom_label_repel(aes(x=Precision,y=Recall,size=0.04,fill=Type,label=Model),
+                  box.padding = unit(0.4, "lines"),
                   fontface='bold',color='white',segment.color = 'grey50') 
 
 

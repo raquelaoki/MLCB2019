@@ -4,7 +4,7 @@ import numpy as np
 import sys
 import os
 from sklearn.metrics import confusion_matrix, f1_score
-path = 'C:\\Users\\raoki\\Documents\\GitHub\\project_spring2019'
+path = '~\\Documents\\GitHub\\project'
 sys.path.append(path+'\\scr')
 import functions as fc
 os.chdir(path)
@@ -15,28 +15,28 @@ pd.set_option('display.max_columns', 500)
 Flags: True the models/functions will run
 '''
 #_all patients from dataset, _ subsets of patients
-RUN_ALL = True
-RUN_ = True
+RUN_ALL = False
+RUN_ = False
 
 # Deconfounder Algorithm
 RUN_MF = False
 RUN_PCA = False
-RUN_A = True#lab computer outside anaconda
+RUN_A = False #outside anaconda
 
 # Create feature datset, evaluation, experiments/classification
-RUN_CREATE_FEATURE_DATASET = False
+RUN_CREATE_FEATURE_DATASET = True
 RUN_CREATE_ROC_CAUSAL_DATASET = False
-RUN_EXPERIMENTS = False #RUN_CREATE_FEATURE_DATASET also needs to be true
+RUN_EXPERIMENTS = True #RUN_CREATE_FEATURE_DATASET also needs to be true
 
 
 '''Latents Dimension for Deconfounder Algorithm (DA)'''
-k_mf_ = [40]
+k_mf_ = [40] #
 k_pca_ = [40]
 k_ac_ = [10]
 
 '''Loading dataset'''
 filename = "data\\tcga_train_gexpression_cgc_7k.txt" #_2
-filename_gamma = "results\\gamma.txt"
+
 
 #Running Factor Analysis Models + Predictive Check + outcome model in all patients
 if RUN_ALL:
@@ -51,51 +51,24 @@ if RUN_ALL:
     3) If pass on predictive ckeck, run outcome model
     4) Save results and predictions for ROC curve
     '''
-    df_gamma = pd.read_csv(filename_gamma, sep=';')
-    gamma = []
-    cil = []
-    cip = []
-    id2 = []
-
     if RUN_MF:
         for k_mf in k_mf_:
             W, F = fc.fa_matrixfactorization(train,k_mf,RUN_MF)
-            pred,values0,id0 = fc.check_save(W,train,colnames, y01,'mf','all', k_mf)
-            gamma.append(values0[0])
-            cil.append(values0[1])
-            cip.append(values0[2])
-            id2.append(id0)
+            pred = fc.check_save(W,train,colnames, y01,'mf','all', k_mf)
+
     if RUN_PCA:
         for k_pca in k_pca_:
             pc = fc.fa_pca(train,k_pca,RUN_PCA)
-            pred,values0,id0 = fc.check_save(pc,train,colnames, y01,'pca', 'all',k_pca)
-            gamma.append(values0[0])
-            cil.append(values0[1])
-            cip.append(values0[2])
-            id2.append(id0)
+            pred = fc.check_save(pc,train,colnames, y01,'pca', 'all',k_pca)
+
     if RUN_A:
         for k_ac in k_ac_:
             ac =  fc.fa_a(train,k_ac,RUN_A)
-            pred,values0,id0 = fc.check_save(ac,train,colnames, y01,'ac','all', k_ac)
-            gamma.append(values0[0])
-            cil.append(values0[1])
-            cip.append(values0[2])
-            id2.append(id0)
-
- 
-    df_gamma = pd.concat([df_gamma, pd.DataFrame({'id0':id2,'gamma':gamma,'cil':cil,'cip':cip})],axis=0)
-    df_gamma.to_csv('results\\gamma.txt', sep=';', index = False)
-
+            pred = fc.check_save(ac,train,colnames, y01,'ac','all', k_ac)
 
 #Running Factor Analysis Models + Predictive Check + outcome model in subsets of patients
 if RUN_:
     files = pd.read_csv('data\\files_names.txt',sep=';')
-    df_gamma = pd.read_csv(filename_gamma, sep=';')
-    gamma = []
-    cil = []
-    cip = []
-    id2 = []
-
     # row = files.iloc[0,:]
     for i,row in files.iterrows():
         data_ = pd.read_csv('data\\'+row[0],sep=';')
@@ -106,34 +79,19 @@ if RUN_:
             for k_mf in k_mf_:
                 W, F = fc.fa_matrixfactorization(train,k_mf,RUN_MF)
                 name = str(row[1])+'_'+str(row[2])
-                pred,values0,id0  = fc.check_save(W,train,colnames, y01,'mf',name, k_mf)
-                gamma.append(values0[0])
-                cil.append(values0[1])
-                cip.append(values0[2])
-                id2.append(id0)
+                pred = fc.check_save(W,train,colnames, y01,'mf',name, k_mf)
 
         if RUN_PCA and data_.shape[0]>=100:
             for k_pca in k_pca_:
                 pc = fc.fa_pca(train,k_pca,RUN_PCA)
                 name = str(row[1])+'_'+str(row[2])
-                pred,values0,id0  = fc.check_save(pc,train,colnames, y01,'pca', name,k_pca)
-                gamma.append(values0[0])
-                cil.append(values0[1])
-                cip.append(values0[2])
-                id2.append(id0)
-                
+                pred = fc.check_save(pc,train,colnames, y01,'pca', name,k_pca)
+
         if RUN_A and data_.shape[0]>=100:
             for k_ac in k_ac_:
                 ac =  fc.fa_a(train,k_ac,RUN_A)
                 name = str(row[1])+'_'+str(row[2])
-                pred,values0,id0  = fc.check_save(ac,train,colnames, y01,'ac',name, k_ac)
-                gamma.append(values0[0])
-                cil.append(values0[1])
-                cip.append(values0[2])
-                id2.append(id0)
-        
-    df_gamma = pd.concat([df_gamma, pd.DataFrame({'id0':id2,'gamma':gamma,'cil':cil,'cip':cip})],axis=0)
-    df_gamma.to_csv('results\\gamma.txt', sep=';', index = False)
+                pred = fc.check_save(ac,train,colnames, y01,'ac',name, k_ac)
 
 
 if RUN_CREATE_FEATURE_DATASET:
@@ -166,7 +124,7 @@ if RUN_EXPERIMENTS:
     for nin, nout, id1 in zip(name_in, name_out, name_index):
         print(aux,'\n',nin,'\n',nout)
         dt0, dt1, dt2, dt3, dt4, dt5, dt6 = fc.data_subseting(f_bart, f_mf,f_mf_bin , f_ac,f_ac_bin, f_pca,f_pca_bin, nin, nout)
-
+        #Not using the binary version
         data_list, names = fc.data_merging(dt0,dt1,dt3, dt5, cgc_list, ['bart','mf','ac','pca'])
         if aux:
             dt_exp = fc.data_running_models(data_list, names,nin,nout,False,id1)

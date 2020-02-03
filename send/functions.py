@@ -147,7 +147,7 @@ def check_save(Z,train,colnames,y01,name1,name2,k):
         return the predicted values for the training data on the outcome model
     '''
 
-    gamma,cil,cip, test_result = predictive_check_new(train,Z,True)
+    v_pred, test_result = predictive_check_new(train,Z,True)
     if(test_result):
         print('Predictive Check test: PASS')
         resul, output, pred = outcome_model( train,colnames, Z,y01,name2)
@@ -163,7 +163,7 @@ def check_save(Z,train,colnames,y01,name1,name2,k):
     else:
         print('Predictive Check Test: FAIL')
         np.savetxt('results\\FAIL_pcheck_feature_'+name1+'_'+str(k)+'_lr_'+name2+'.txt',[], fmt='%s')
-    return pred,[gamma,cil,cip], name1+'_'+str(k)+'_lr_'+name2
+    return pred
 
 def predictive_check_new(X, Z,run ):
     from sklearn.linear_model import LinearRegression
@@ -203,9 +203,9 @@ def predictive_check_new(X, Z,run ):
     m, se = np.mean(v_nul), np.std(v_nul)
     h = se * stats.t.ppf((1 + 0.95) / 2., n-1)
     if m-h<= np.mean(v_obs) and np.mean(v_obs) <= m+h:
-        return np.mean(v_obs), m-h, m+h, True
+        return v_obs, True
     else:
-        return np.mean(v_obs), m-h, m+h, False
+        return v_obs, False
 
 def preprocessing_dg1(name):
     '''
@@ -252,7 +252,7 @@ def cgc():
     dgenes = pd.read_csv('data\\cancer_gene_census.csv',sep=',')
     dgenes['Tumour Types(Somatic)'] = dgenes['Tumour Types(Somatic)'].fillna(dgenes['Tumour Types(Germline)'])
     return dgenes
-#HERE
+
 def outcome_model(train,colnames , z, y01,name2):
     '''
     Outcome Model + logistic regression
@@ -281,8 +281,6 @@ def outcome_model(train,colnames , z, y01,name2):
     pred = []
     warnings.filterwarnings("ignore")
 
-
-    #while flag == 0 and lim<=50:
     if train.shape[1]>aux:
         columns_split = np.random.randint(0,train.shape[1]//aux,train.shape[1] )
 
@@ -423,12 +421,6 @@ def pul(y,y_test,X,X_test,aux,name_model):
     if name_model == 'OneClassSVM':
         #modify dataset to have only positive examples on testing set
         X = X[y==1]
-        #X_train only has positive examples
-        #remove C
-        #An upper bound on the fraction of training errors and a
-        #lower bound of the fraction of support vectors.
-        #Should be in the interval (0, 1]. By default 0.5 will be taken.
-        #gamma: Kernel coefficien
         print('OneClassSVM',X.shape[1])
         model = svm.OneClassSVM(nu=0.1,kernel="rbf",gamma=0.5)# #0.5, 0.5
         model.fit(X)
@@ -436,20 +428,12 @@ def pul(y,y_test,X,X_test,aux,name_model):
 
     elif name_model == 'svm':
         #https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html
-        #gamma: value, 'scale' or 'auto'
-        #kernel: poly, rbf, linear, sigmoid
-        #gamma=0.2 dones not work
-        #remove nu
-        #not currently use
         print('svm',X.shape[1])
         model = svm.SVC(C=0.5,kernel='rbf',gamma='scale') #overfitting
         model.fit(X,y)
 
     elif name_model == 'adapter':
-        #keep prob
-        #csv don't have nu
         print('adapter',X.shape[1])
-        #it was c=0.5
         estimator = SVC(C=0.3, kernel='rbf',gamma='scale',probability=True)
         model = PUAdapter(estimator, hold_out_ratio=0.3)
         X = np.matrix(X)
@@ -500,8 +484,6 @@ def pul(y,y_test,X,X_test,aux,name_model):
         y_full_ = model.predict(X_full)
 
     if name_model == 'lr':
-        #y_ = 1- y_
-        #y_full_ = 1- y_full_
         y_[y_<0.5] = 0
         y_[y_>=0.5] = 1
         y_full_[y_full_< 0.5] = 0
@@ -510,12 +492,6 @@ def pul(y,y_test,X,X_test,aux,name_model):
     y_ = np.where(y_==-1,0,y_)
     y_full_ = np.where(y_full_==-1, 0,y_full_)
 
-    #cm = confusion_matrix(y_test,y_)
-    #cm_ = confusion_matrix(y_full, y_full_)
-    #ROC VALUES TO MAKE TOC PLOT
-    #roc_curve_points(y_, y_test, 'svm_oneclass'+str(aux))
-
-    #return cm,cm_, y_all_
     acc = accuracy_score(y_test,y_)
     acc_f = accuracy_score(y_full, y_full_)
     f1 = f1_score(y_test,y_)
@@ -646,7 +622,6 @@ def data_running_models(data_list, names, name_in, name_out, is_bin, id):
             index_ = [list(X_train.index),list(X_test.index)]
             flat_index = [item for sublist in index_ for item in sublist]
             flat_index = np.array(flat_index)
-            #print('INDEX',len(flat_index),len(list(X_train.index)),len(list(X_test.index)))
             e_full_ = np.where(y==1,0,0)
             e_ = np.where(y_test==1,0,0)
             ensemble_c = 0
