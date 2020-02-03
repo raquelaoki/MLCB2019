@@ -15,7 +15,7 @@ pd.set_option('display.max_columns', 500)
 Flags: True the models/functions will run
 '''
 #_all patients from dataset, _ subsets of patients
-RUN_ALL = True
+RUN_ALL = False
 RUN_ = True
 
 # Deconfounder Algorithm
