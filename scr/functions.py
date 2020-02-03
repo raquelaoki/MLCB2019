@@ -147,7 +147,7 @@ def check_save(Z,train,colnames,y01,name1,name2,k):
         return the predicted values for the training data on the outcome model
     '''
 
-    v_pred, test_result = predictive_check_new(train,Z,True)
+    gamma,cil,cip, test_result = predictive_check_new(train,Z,True)
     if(test_result):
         print('Predictive Check test: PASS')
         resul, output, pred = outcome_model( train,colnames, Z,y01,name2)
@@ -163,7 +163,7 @@ def check_save(Z,train,colnames,y01,name1,name2,k):
     else:
         print('Predictive Check Test: FAIL')
         np.savetxt('results\\FAIL_pcheck_feature_'+name1+'_'+str(k)+'_lr_'+name2+'.txt',[], fmt='%s')
-    return pred
+    return pred,[gamma,cil,cip], name1+'_'+str(k)+'_lr_'+name2
 
 def predictive_check_new(X, Z,run ):
     from sklearn.linear_model import LinearRegression
@@ -203,9 +203,9 @@ def predictive_check_new(X, Z,run ):
     m, se = np.mean(v_nul), np.std(v_nul)
     h = se * stats.t.ppf((1 + 0.95) / 2., n-1)
     if m-h<= np.mean(v_obs) and np.mean(v_obs) <= m+h:
-        return v_obs, True
+        return np.mean(v_obs), m-h, m+h, True
     else:
-        return v_obs, False
+        return np.mean(v_obs), m-h, m+h, False
 
 def preprocessing_dg1(name):
     '''
