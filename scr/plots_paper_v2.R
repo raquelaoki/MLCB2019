@@ -238,7 +238,7 @@ if(RUN_CAUSAL_ROC){
     labs(caption = 'b. DA+Matrix Factorization')+
     theme(plot.caption = element_text(size=10))+
     scale_color_brewer(palette = 'Oranges')
-
+  
   
   g3 <- ggplot(data3, aes(d = y01, m = pred, fill = id, color = k)) + 
     geom_roc(show.legend = FALSE,n.cuts = 0) + 
@@ -477,6 +477,51 @@ pr2<- ggplot(dt1,aes(x=p_,y=r_,color=model_name,shape=model_name))+
 grid.arrange(g0,g1,pr1,g2,g3, pr2, ncol=3)
 
 
+#6 plots with gamma
+pr1<- ggplot(dt,aes(x=p,y=r,color=model_name,shape=model_name))+
+  geom_point()+theme_minimal() +
+  scale_y_continuous('Recall',limits=c(-0.09,1.05))+
+  scale_x_continuous('Precision',limits = c(-0.09,1.05))+
+  scale_shape_manual(values = c(23, 21, 24,8,12,22)) +
+  scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#B0C4DE','#E7B800','#3cb371'))+#'#9370db'
+  guides(size=FALSE,color=guide_legend(override.aes=list(linetype=0)))+
+  labs(color='',shape='',caption = 'f. Testing Set')+
+  theme(legend.position = c(0.8,0.75),
+        legend.background= element_rect(fill="white",colour ="white"),
+        legend.text = element_text(size=9),
+        legend.key.size = unit(0.5,'cm'),
+        plot.caption = element_text(size=10))
+
+id = as.character(rep('mf_40_lr_all',100))
+id = paste(id,1:100)
+gamma = runif(100,0,50)
+cil = gamma-runif(100,0,5)
+ciu = gamma+runif(100,0,5)
+dt_gamma = data.frame(id,gamma,cil,ciu)  
+dt_gamma$fm = c()
+dt_gamma$id = as.character(dt_gamma$id) 
+ 
+for(i in 1:dim(dt_gamma)[1]){
+  dt_gamma$fm[i]=strsplit(dt_gamma$id[i],'_')[[1]][1]
+}
+
+dt_gamma$fm[dt_gamma$fm=='mf']='Matrix Factorization'
+dt_gamma$fm[dt_gamma$fm=='pca']='PCA'
+dt_gamma$fm[dt_gamma$fm=='ac']='Autoencoder'
+dt_gamma = dt_gamma[order(dt_gamma$fm),]
+ggplot(dt_gamma, aes(x=id, y=gamma,color=fm)) + 
+      geom_errorbar(aes(ymin=cil, ymax=ciu), width=.1) +
+      geom_point()+
+      ylab(expression(gamma) )+labs(color='',shape='',caption = 'e. Predictive Check')+
+      theme_minimal() + 
+      theme(axis.title.x=element_blank(),
+            axis.text.x=element_blank(),
+            axis.ticks.x=element_blank(),
+            legend.position = 'bottom')
+
+grid.arrange(g0,g1,pr3,g2,g3, pr1, ncol=3)
+
+
 
 #missing F1
 pr1 <- ggplot(dt,aes(x=p,y=r,color=model_name,shape=model_name))+
@@ -512,6 +557,10 @@ pr2<- ggplot(dt,aes(x=p_,y=r_,color=model_name,shape=model_name))+
 grid.arrange(g0,g1,pr1,g2,g3, pr2, ncol=3)
 #https://stackoverflow.com/questions/36609476/ggplot2-draw-individual-ellipses-but-color-by-group
 #try barplot (3 bars, one for each)
+
+
+
+
 
 
 baselines = read.table('C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\results\\cgc_baselines.txt',
