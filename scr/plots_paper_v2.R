@@ -221,31 +221,40 @@ if(RUN_CAUSAL_ROC){
     geom_roc(show.legend = FALSE,n.cuts = 0) + 
     style_roc(xlab='False Positive Rate',ylab='True Positive Rate')+ 
     labs(caption ='a. BART')+
-    theme(plot.caption = element_text(size=10))+
+    theme(plot.caption = element_text(size=10),
+          axis.text.x = element_text(angle = 30))+
     scale_color_brewer(palette = 'RdYlBu')
   
   g1 <- ggplot(data1, aes(d = y01, m = pred, fill = id, color = k)) + 
     geom_roc(show.legend = FALSE,n.cuts = 0) + 
     style_roc(xlab='False Positive Rate',ylab='True Positive Rate')+ 
     labs(caption ='c. DA+Autoencoder')+ 
-    theme(plot.caption = element_text(size=10))+
-    scale_color_brewer(palette = 'Oranges')
+    theme(plot.caption = element_text(size=10),
+          axis.text.x = element_text(angle = 30))+
+    scale_color_brewer(palette = 'Oranges')+
+    guides(fill=FALSE)+theme(legend.position = c(0.75,0.25))
     #scale_color_manual(values=wes_palette(n=4, name="Zissou1"))
   
   g2 <- ggplot(data2, aes(d = y01, m = pred, fill = id, color = k)) + 
     geom_roc(show.legend = FALSE,n.cuts = 0) + 
     style_roc(xlab='False Positive Rate',ylab='True Positive Rate')+ 
     labs(caption = 'b. DA+Matrix Factorization')+
-    theme(plot.caption = element_text(size=10))+
-    scale_color_brewer(palette = 'Oranges')
+    theme(plot.caption = element_text(size=10),
+          axis.text.x = element_text(angle = 30))+
+    scale_color_brewer(palette = 'Oranges')+
+    guides(fill=FALSE)+theme(legend.position = c(0.75,0.25))
+  
   
   
   g3 <- ggplot(data3, aes(d = y01, m = pred, fill = id, color = k)) + 
-    geom_roc(show.legend = FALSE,n.cuts = 0) + 
+    geom_roc(show.legend = TRUE,n.cuts = 0) + 
     style_roc(xlab='False Positive Rate',ylab='True Positive Rate')+ 
     labs(caption ='d. DA+PCA')+  
-    theme(plot.caption = element_text(size=10))+
-    scale_color_brewer(palette = 'Oranges')
+    theme(plot.caption = element_text(size=10),
+          axis.text.x = element_text(angle = 30))+
+    scale_color_brewer(palette = 'Oranges')+
+    guides(fill=FALSE)+theme(legend.position = c(0.85,0.45))
+  
 
   
   #+
@@ -486,11 +495,11 @@ pr1<- ggplot(dt,aes(x=p,y=r,color=model_name,shape=model_name))+
   scale_color_manual(values = c("#00AFBB", "#DB7093", "#FC4E07",'#B0C4DE','#E7B800','#3cb371'))+#'#9370db'
   guides(size=FALSE,color=guide_legend(override.aes=list(linetype=0)))+
   labs(color='',shape='',caption = 'f. Testing Set')+
-  theme(legend.position = c(0.8,0.75),
-        legend.background= element_rect(fill="white",colour ="white"),
+  theme(legend.position = c(0.8,0.7),
         legend.text = element_text(size=9),
         legend.key.size = unit(0.5,'cm'),
-        plot.caption = element_text(size=10))
+        plot.caption = element_text(size=10),
+        panel.border = element_rect(colour = "black", fill=NA, size=1))
 
 dt_gamma= read.table('C:\\Users\\raque\\Documents\\GitHub\\project_spring2019\\results\\gamma.txt',sep=';', header = T)
 dt_gamma$fm = c()
@@ -500,20 +509,23 @@ for(i in 1:dim(dt_gamma)[1]){
   dt_gamma$fm[i]=strsplit(dt_gamma$id[i],'_')[[1]][1]
 }
 
-dt_gamma$fm[dt_gamma$fm=='mf']='Matrix Factorization'
+dt_gamma$fm[dt_gamma$fm=='mf']='Matrix \n Factorization'
 dt_gamma$fm[dt_gamma$fm=='pca']='PCA'
 dt_gamma$fm[dt_gamma$fm=='ac']='Autoencoder'
 dt_gamma = dt_gamma[order(dt_gamma$fm),]
-ggplot(dt_gamma, aes(x=id, y=gamma,color=fm)) + 
+pr3<-ggplot(dt_gamma, aes(x=id, y=gamma,color=fm)) + 
       geom_errorbar(aes(ymin=cil, ymax=cip), width=.1) +
-      geom_point()+
+      geom_point()+ 
+      facet_wrap(. ~ fm, scales = "free_x",strip.position = 'bottom')+
       scale_y_continuous(expression(gamma),limits=c(0,1.05))+
       labs(color='',shape='',caption = 'e. Predictive Check')+
-      theme_minimal() + 
-      theme(axis.title.x=element_blank(),
-            axis.text.x=element_blank(),
-            axis.ticks.x=element_blank(),
-            legend.position = c(0.7,0.95))
+      theme_minimal() + guides(color=FALSE)+
+      theme(axis.text.x=element_blank(),
+            axis.title.x = element_blank(),
+            plot.caption = element_text(size=10),
+            legend.text = element_text(size=9),
+            legend.key.size = unit(0.5,'cm'),
+            panel.border = element_rect(colour = "black", fill=NA, size=1))
 
 grid.arrange(g0,g1,pr3,g2,g3, pr1, ncol=3)
 
@@ -582,18 +594,6 @@ ggplot(baselines,aes(Precision,Recall,size=F1,color=Type))+
                   box.padding = unit(0.5, "lines"),
                   point.padding = unit(0.5, "lines")) 
 
-ggplot(baselines,aes(Precision,Recall,color=Type),size=2)+
-  geom_point()+guides(size=FALSE,color=FALSE,fill=FALSE)+theme_minimal()+
-  scale_y_continuous(limits=c(0,1))+
-  scale_x_continuous(limits=c(0,1))+
-  theme(legend.position = c(0.8,0.85),
-        legend.background= element_rect(fill="white",colour ="white"))+
-  scale_fill_manual(values = c("#999999",'#56B4E9',"#E69F00"))+
-  scale_color_manual(values = c("#999999",'#56B4E9',"#E69F00"))+
-  geom_label_repel(aes(x=Precision,y=Recall,fill=Type,label=Model),size=2.5,
-                  box.padding = unit(0.3, "lines"),
-                  fontface='bold',color='white',segment.color = 'grey50') 
-
 
 baselines$F1 = round(baselines$F1,2)
 baselines$Model = as.character(baselines$Model)
@@ -603,11 +603,42 @@ baselines <- within(baselines,Model<-factor(Model,levels=baselines$Model))
 
 baselines$Type=as.character(baselines$Type)
 baselines$Type[baselines$Type=='New'] = 'ParKCa'
+
+
+ggplot(baselines,aes(Precision,Recall,color=Type,shape=Type),size=2)+
+  geom_point()+guides(size=FALSE,fill=FALSE)+theme_minimal()+
+  scale_y_continuous(limits=c(0,1))+labs(shape='',color='')+
+  scale_x_continuous(limits=c(0,1))+
+  theme(legend.position = c(0.8,0.85),
+        legend.background= element_rect(fill="white",colour ="white"))+
+  scale_fill_manual(values = c("#999999",'#56B4E9',"#E69F00"))+
+  scale_color_manual(values = c("#999999",'#56B4E9',"#E69F00"))+
+  geom_label_repel(aes(x=Precision,y=Recall,fill=Type,label=Model),size=2.5,
+                  box.padding = unit(0.3, "lines"),
+                  fontface='bold',color='white',segment.color = 'grey50') 
+
 ggplot(baselines,aes(Model,F1,fill=Type))+geom_bar(stat='identity')+ 
   geom_text(aes(label=F1), hjust=1.1, color="white", size=3.5)+
-  theme_minimal()+labs(fill='')+ 
+  theme_minimal()+labs(fill='')+ guides(color=FALSE)+
   theme(legend.position = c(0.8, 0.9),
         legend.background = element_rect(fill = 'white',linetype='solid',colour='white'))+
   scale_fill_manual(values = c("#999999",'#56B4E9',"#E69F00"))+
-  scale_color_manual(values = c("#999999",'#56B4E9',"#E69F00"))+
+  scale_color_manual(values = c('#000000','#56B4E9',"#E69F00"))+
   xlab('')+ylab('F1-score')+coord_flip()
+
+alpha = as.character(baselines$Type)
+alpha[alpha=='Baseline']=1
+alpha[alpha=='Random']=1
+alpha[alpha=='ParKCa']=0.9
+alpha=as.numeric(alpha)
+ggplot(baselines,aes(Model,F1,fill=Type,alpha=alpha))+geom_bar(stat='identity')+ 
+  geom_text(aes(label=F1), hjust=1.1, color="white", size=3.5)+
+  theme_minimal()+labs(fill='')+ guides(color=FALSE,alpha=FALSE)+
+  coord_flip()+
+  theme(legend.position = c(0.8, 0.9),
+        legend.background = element_rect(fill = 'white',linetype='solid',colour='white'))+
+  scale_fill_manual(values = c("#999999",'#56B4E9',"#E69F00"))+
+  scale_color_manual(values = c('#000000','#56B4E9',"#E69F00"))+
+  xlab('')+ylab('F1-score')
+
+
