@@ -145,9 +145,10 @@ def check_save(Z,train,colnames,y01,name1,name2,k):
     output:
         save features on results folder or print that it failed
         return the predicted values for the training data on the outcome model
+        return gamma and its CI
     '''
 
-    v_pred, test_result = predictive_check_new(train,Z,True)
+    gamma,cil,cip, test_result = predictive_check_new(train,Z,True)
     if(test_result):
         print('Predictive Check test: PASS')
         resul, output, pred = outcome_model( train,colnames, Z,y01,name2)
@@ -163,7 +164,7 @@ def check_save(Z,train,colnames,y01,name1,name2,k):
     else:
         print('Predictive Check Test: FAIL')
         np.savetxt('results\\FAIL_pcheck_feature_'+name1+'_'+str(k)+'_lr_'+name2+'.txt',[], fmt='%s')
-    return pred
+    return pred,[gamma,cil,cip], name1+'_'+str(k)+'_lr_'+name2
 
 def predictive_check_new(X, Z,run ):
     from sklearn.linear_model import LinearRegression
@@ -176,7 +177,6 @@ def predictive_check_new(X, Z,run ):
     Create an Confidence interval for the null model, check if the average value
     across the predicted values using LM is inside this interval
 
-    Sample a few columns (300 hundred?) to do this math
 
     Parameters:
         X: orginal features
@@ -203,9 +203,9 @@ def predictive_check_new(X, Z,run ):
     m, se = np.mean(v_nul), np.std(v_nul)
     h = se * stats.t.ppf((1 + 0.95) / 2., n-1)
     if m-h<= np.mean(v_obs) and np.mean(v_obs) <= m+h:
-        return v_obs, True
+        return np.mean(v_obs), m-h, m+h, True
     else:
-        return v_obs, False
+        return np.mean(v_obs), m-h, m+h, False
 
 def preprocessing_dg1(name):
     '''
@@ -248,6 +248,12 @@ def preprocessing_dg1(name):
     dgenes.to_csv('data\\'+name,index=False)
 
 def cgc():
+    '''
+    Known Causes/Driver Genes
+    Input: none
+    Load a csv file previously downloaded
+    output: Return the csv file
+    '''
     path = 'data\\cancer_gene_census.csv'
     dgenes = pd.read_csv('data\\cancer_gene_census.csv',sep=',')
     dgenes['Tumour Types(Somatic)'] = dgenes['Tumour Types(Somatic)'].fillna(dgenes['Tumour Types(Germline)'])
@@ -267,7 +273,7 @@ def outcome_model(train,colnames , z, y01,name2):
         z: latent features, jxk
         y01: response, jx1
 
-    return: list of significant coefs
+    return: list of coefs
     '''
     #if ac, change 25 to 9
     aux = train.shape[0]//25
@@ -281,10 +287,11 @@ def outcome_model(train,colnames , z, y01,name2):
     pred = []
     warnings.filterwarnings("ignore")
 
+    #random division of the columns
     if train.shape[1]>aux:
         columns_split = np.random.randint(0,train.shape[1]//aux,train.shape[1] )
 
-    #print('Aux value: ',aux)
+    #if lr does not converge (flag1=0), then the coef is just 0
     flag1 = 0
     for cs in range(0,train.shape[1]//aux):
 
@@ -293,6 +300,7 @@ def outcome_model(train,colnames , z, y01,name2):
         col_new_order.extend(colnames_sub)
         X = pd.concat([pd.DataFrame(train[:,cols]),pd.DataFrame(z)], axis= 1)
         X.columns = range(0,X.shape[1])
+        #flag and lim help to track if the lr converged or not
         flag = 0
         lim = 0
         while flag==0 and lim <= 50:
@@ -324,11 +332,28 @@ def outcome_model(train,colnames , z, y01,name2):
     return resul, output, pred1
 
 def roc_curve_points(pred,y01,name):
+    '''
+    input:
+        pred: predicted  values by one of the models
+        y01: observed label
+        name: the name of the model and dataset used
+    '''
     roc_data = pd.DataFrame({'pred':pred,'y01':y01})
     roc_data.to_csv('results\\roc_'+name+'.txt', sep=';', index = False)
 
 def data_features_da_create(data,files):
-    #create 2 dataset
+    '''
+    Description: Received the model output and files name.
+    Rename and reorganize the data to use in the further analysis.
+    Create a set with all the info, a other that is binary.
+    input:
+        data: has genes, coef and pvalue associated from a model used
+        files: factor model used
+    output:
+        feature_data: same as data, but in a format to join with others
+        and renamed
+        feature_data: same as data, but binary
+    '''
     data['aux'] = np.where(data['pvalue']<0.05,1,0)
     features_data_bin = data.iloc[:,[0,-1]]
     features_data_bin.rename(columns={ 'aux':files[-1].split('.')[0]}, inplace = True)
