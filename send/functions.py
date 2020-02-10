@@ -469,9 +469,8 @@ def pul(y,y_test,X,X_test,aux,name_model):
         '''
         pul: nnpu (Non-negative PU Learning), pu_skc(PU Set Kernel Classifier),
         pnu_mr:PNU classification and PNU-AUC optimization (the one tht works: also use negative data)
-        nnpu is more complicated (neural nets, other methos seems to be easier)
-        try https://github.com/t-sakai-kure/pywsl/blob/master/examples/pul/pu_skc/demo_pu_skc.py
-        and https://github.com/t-sakai-kure/pywsl/blob/master/examples/pul/upu/demo_upu.py
+        https://github.com/t-sakai-kure/pywsl/blob/master/examples/pul/pu_skc/demo_pu_skc.py
+        https://github.com/t-sakai-kure/pywsl/blob/master/examples/pul/upu/demo_upu.py
          '''
         print('upu', X.shape[1])
         #Implement these, packages only work on base anaconda (as autoenconder)
@@ -500,7 +499,6 @@ def pul(y,y_test,X,X_test,aux,name_model):
         print('random',X.shape[1])
 
 
-    #I changed here
     if name_model=='random':
         y_ = np.random.binomial(n=1,p=y.sum()/len(y),size =X_test.shape[0])
         y_full_ = np.random.binomial(n=1,p=y.sum()/len(y),size=X_full.shape[0])

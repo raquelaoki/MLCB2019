@@ -30,13 +30,12 @@ RUN_EXPERIMENTS = True #RUN_CREATE_FEATURE_DATASET also needs to be true
 
 
 '''Latents Dimension for Deconfounder Algorithm (DA)'''
-k_mf_ = [40] #
+k_mf_ = [40]
 k_pca_ = [40]
 k_ac_ = [10]
 
 '''Loading dataset'''
 filename = "data\\tcga_train_gexpression_cgc_7k.txt" #_2
-
 
 #Running Factor Analysis Models + Predictive Check + outcome model in all patients
 if RUN_ALL:
