@@ -90,6 +90,7 @@ if(RUN_F1_PRECISION_RECALL_SCORE){
   }
 
 if(RUN_CAUSAL_ROC){
+  #references
   #https://cran.r-project.org/web/packages/plotROC/vignettes/examples.html
   setwd("~/GitHub/project/results_k")
   #create a list of the files from your target directory
@@ -210,6 +211,7 @@ if(RUN_CAUSAL_ROC){
 }
 
 if(CREATE_CGC_BASELINES){
+  #References
   #data downloaded from https://www.pnas.org/content/113/50/14330
   m_2020 = read.xlsx("~\\Documents\\GitHub\\project\\data\\driver_genes_baselines.xlsx",sheet = 1)
   m_tuson = read.xlsx("~\\Documents\\GitHub\\project\\data\\driver_genes_baselines.xlsx",sheet = 2)

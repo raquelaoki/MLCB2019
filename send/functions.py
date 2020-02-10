@@ -452,6 +452,7 @@ def pul(y,y_test,X,X_test,aux,name_model):
 
 
     elif name_model == 'svm':
+        #References
         #https://scikit-learn.org/stable/modules/generated/sklearn.svm.SVC.html
         print('svm',X.shape[1])
         model = svm.SVC(C=0.5,kernel='rbf',gamma='scale') #overfitting
@@ -467,6 +468,7 @@ def pul(y,y_test,X,X_test,aux,name_model):
 
     elif name_model == 'upu':
         '''
+        #References
         pul: nnpu (Non-negative PU Learning), pu_skc(PU Set Kernel Classifier),
         pnu_mr:PNU classification and PNU-AUC optimization (the one tht works: also use negative data)
         https://github.com/t-sakai-kure/pywsl/blob/master/examples/pul/pu_skc/demo_pu_skc.py
@@ -474,13 +476,15 @@ def pul(y,y_test,X,X_test,aux,name_model):
          '''
         print('upu', X.shape[1])
         #Implement these, packages only work on base anaconda (as autoenconder)
+        #References
         #https://github.com/t-sakai-kure/pywsl
-        prior =.5 #change for the proportion of 1 and 0
+        prior =.5
         param_grid = {'prior': [prior],
                           'lam': np.logspace(-3, 1, 5), #what are these values
                           'basis': ['lm']}
         lambda_list = np.logspace(-3, 1, 5)
         #upu (Unbiased PU learning)
+        #References
         #https://github.com/t-sakai-kure/pywsl/blob/master/examples/pul/upu/demo_upu.py
         model = GridSearchCV(estimator=pu_mr.PU_SL(),
                                param_grid=param_grid, cv=10, n_jobs=-1)

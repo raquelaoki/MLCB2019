@@ -34,6 +34,7 @@ if(RUN_BART&RUN_ALL){
   options(java.parameters = "-Xmx5g")
   library(bartMachine)
   library(ROCR)
+  #Reference
   #https://cran.r-project.org/web/packages/bartMachine/vignettes/bartMachine.pdf
 
   setwd("~/GitHub/project")
@@ -86,8 +87,8 @@ if(RUN_BART&RUN_){
   library(bartMachine)
   library(ROCR)
   set_bart_machine_num_cores(4) #new
+  #Reference
   #https://cran.r-project.org/web/packages/bartMachine/vignettes/bartMachine.pdf
-  #recommended package BayesTrees is not functional anymore
 
   setwd("~/GitHub/project_spring2019")
   files = read.table('data/files_names.txt', sep = ';', header = T)
