@@ -82,7 +82,7 @@ if RUN_ALL:
             cip.append(values0[2])
             id2.append(id0)
 
- 
+
     df_gamma = pd.concat([df_gamma, pd.DataFrame({'id0':id2,'gamma':gamma,'cil':cil,'cip':cip})],axis=0)
     df_gamma.to_csv('results\\gamma.txt', sep=';', index = False)
 
@@ -121,7 +121,7 @@ if RUN_:
                 cil.append(values0[1])
                 cip.append(values0[2])
                 id2.append(id0)
-                
+
         if RUN_A and data_.shape[0]>=100:
             for k_ac in k_ac_:
                 ac =  fc.fa_a(train,k_ac,RUN_A)
@@ -131,7 +131,7 @@ if RUN_:
                 cil.append(values0[1])
                 cip.append(values0[2])
                 id2.append(id0)
-        
+
     df_gamma = pd.concat([df_gamma, pd.DataFrame({'id0':id2,'gamma':gamma,'cil':cil,'cip':cip})],axis=0)
     df_gamma.to_csv('results\\gamma.txt', sep=';', index = False)
 
