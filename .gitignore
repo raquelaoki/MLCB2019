@@ -7,6 +7,9 @@ data_old/
 Files/
 pywsl/
 plots/
+scrOLD/
+results/
+results_k/
 DatadataIn/
 Probabilistic-Matrix-Factorization-master/
 __pycache__/
@@ -31,3 +34,4 @@ bartpy_OLD/
 .dll 
 .obj
 causal-cmd.log
+gamma.txt
